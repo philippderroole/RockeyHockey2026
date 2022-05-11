@@ -71,9 +71,9 @@ class MoveMotor:
 
             #if motor_coordinate_height > self.old_motor_height - 150 and motor_coordinate_height < self.old_motor_height + 150:
             #    motor_coordinate_height += 300
-            if motor_coordinate_width > self.old_motor_width - 1000 and motor_coordinate_width < self.old_motor_width + 1000:
+            if motor_coordinate_width > self.old_motor_width - 50 and motor_coordinate_width < self.old_motor_width + 50:
                 continue
-                motor_coordinate_width += 300
+                motor_coordinate_width += 25
             print(motor_coordinate_width)
             #print(motor_coordinate_height)
             rnd_value = 2000 + round(int(random.random() * 4000), -2)
@@ -88,7 +88,7 @@ class MoveMotor:
                 self.arduino.write(bytes("ready\n", "utf-8"))
                 data = self.arduino.readline()
                 print(data)
-                if data == b'True':
+                if data == b'bewegt':
                         print (string)
                         self.arduino.write(bytes(string + "\n", "utf-8"))
                         self.old_random = rnd_value

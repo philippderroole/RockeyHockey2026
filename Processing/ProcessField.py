@@ -23,8 +23,9 @@ class ProcessField:
         # frame = cv2.resize(frame, (0, 0), fx=0.7, fy=0.7)
         self.image = frame.copy()
         self.draw_img = frame.copy()
-        self.ptHuman = []
-        self.ptRobot = []
+        self.ptHuman = [[1647, 919], [1644, 183]]
+
+        self.ptRobot = [[165, 180], [177, 919]]
 
         # Points in the source image: Corners of the game-field. values getting set by self.chooseCorner()
         self.pts1 = np.float32([[56, 65], [368, 52], [28, 387], [389, 390]])
@@ -60,6 +61,7 @@ class ProcessField:
     def click_event(self, event, x, y, flags, param):
         # checking for left mouse clicks
         if event == cv2.EVENT_LBUTTONDOWN and len(self.ptRobot) < 2:
+            print(x, y)
             pt = [x, y]
             self.ptRobot.append(pt)
             print(self.ptRobot)
@@ -94,18 +96,18 @@ class ProcessField:
         # print(self.image)
         # Show image as long as there aren't 4 corners for the field
         # Quit by pressing "q"
-        while True:
-            while True:
-                key = cv2.waitKey(1)
-                # Enter or "q"
-                if key == 13 or key == ord("q"):
-                    break
-                cv2.imshow("image", self.draw_img)
-                cv2.setMouseCallback("image", self.click_event)
-            if len(self.ptRobot) == 2 and len(self.ptHuman) == 2:
-                break
+        #while True:
+        #    while True:
+        #        key = cv2.waitKey(1)
+        #        # Enter or "q"
+        #        if key == 13 or key == ord("q"):
+        #            break
+        #        cv2.imshow("image", self.draw_img)
+        #        cv2.setMouseCallback("image", self.click_event)
+        #    if len(self.ptRobot) == 2 and len(self.ptHuman) == 2:
+        #        break
         # cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
 
         # height = self.image.shape[0]
         # width = self.image.shape[1]
@@ -250,34 +252,34 @@ class ProcessField:
         plt.subplot(122), plt.imshow(dst), plt.title("Output")
         plt.show()
 
-        answer_corners_ok = None
-        while answer_corners_ok not in ("1", "2"):
-            answer_corners_ok = input("1 -> Feld passt. 2 -> Ecken erneut setzen: ")
-            if answer_corners_ok == "1":
-                continue
-            elif answer_corners_ok == "2":
-                self.ptHuman = []
-                self.ptRobot = []
-                self.draw_img = img.copy()
-                self.chooseCorner()
-                return
-            else:
-                print("Bitte gebe 1 oder 2 ein")
+        #answer_corners_ok = None
+        #while answer_corners_ok not in ("1", "2"):
+        #    answer_corners_ok = input("1 -> Feld passt. 2 -> Ecken erneut setzen: ")
+        #    if answer_corners_ok == "1":
+        #        continue
+        #    elif answer_corners_ok == "2":
+        #        self.ptHuman = []
+        #        self.ptRobot = []
+        #        self.draw_img = img.copy()
+        #        self.chooseCorner()
+        #        return
+        #    else:
+        #        print("Bitte gebe 1 oder 2 ein")
 
         # Answer wether or not you want to flip the camera-input vertically.
         # If you flip: left and right for the robot gets switched
-        answerFlip = None
-        while answerFlip not in ("J", "j", "n", "N"):
-            answerFlip = input("Willst du das Bild spiegeln? (J/N): ")
-            if answerFlip == "j" or answerFlip == "J":
-                self.flipImage = True
-                flippedDst = cv2.flip(dst, 0)
-                plt.imshow(flippedDst), plt.title("Output")
-                plt.show()
-            elif answerFlip == "n" or answerFlip == "N":
-                self.flipImage = False
-            else:
-                print("Bitte gebe (J/N) ein. J = Ja und N = Nein.")
+        #answerFlip = None
+        #while answerFlip not in ("J", "j", "n", "N"):
+        #    answerFlip = input("Willst du das Bild spiegeln? (J/N): ")
+        #    if answerFlip == "j" or answerFlip == "J":
+        #        self.flipImage = True
+        #        flippedDst = cv2.flip(dst, 0)
+        #        plt.imshow(flippedDst), plt.title("Output")
+        #        plt.show()
+        #    elif answerFlip == "n" or answerFlip == "N":
+        #        self.flipImage = False
+        #    else:
+        #        print("Bitte gebe (J/N) ein. J = Ja und N = Nein.")
 
         self.choosenCorner = True
 

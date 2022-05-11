@@ -16,7 +16,7 @@ GOAL_SPAN = 240
 CHAMBER_SIZE = 30  # on both size - eg: 30 = 30mm x 30mm
 
 # Motor dimensions
-MOTOR_WIDTH = 15000
+MOTOR_WIDTH = 15700
 MOTOR_HEIGHT = 22000
 # Objects sizes in game units
 PUCK_RADIUS = 31
