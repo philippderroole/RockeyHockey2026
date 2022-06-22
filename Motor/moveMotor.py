@@ -81,7 +81,6 @@ class MoveMotor:
             while rnd_value == self.old_random:
                 rnd_value = 2000 + round(int(random.random() * 4000), -2)
             if motor_coordinate_height < 10000:
-                motor_coordinate_height = motor_coordinate_height - 1000
                 string = str(motor_coordinate_height) + "," + str(motor_coordinate_width)
             else:
                 string = str(3000) + "," + str(motor_coordinate_width)
