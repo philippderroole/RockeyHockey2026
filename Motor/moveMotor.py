@@ -58,28 +58,32 @@ class MoveMotor:
             motor_coordinate_width = (self.center[1]) * multiplier_width
             motor_coordinate_width = int(motor_coordinate_width)
             motor_coordinate_width = round(motor_coordinate_width, -2)
-            if self.center[0] > constants.FIELD_HEIGHT * 0.4:
-                if self.old_motor_height > 1850 and self.old_motor_height < 2150:
-                        motor_coordinate_height = 4000
-                else:
-                    motor_coordinate_height = 2000
-            else:
-                multiplier_height = constants.MOTOR_HEIGHT / constants.FIELD_HEIGHT
-                motor_coordinate_height = (self.center[0]) * multiplier_height
-                motor_coordinate_height = int(motor_coordinate_height)
-                motor_coordinate_height = round(motor_coordinate_height, -2)
+            #if self.center[0] > constants.FIELD_HEIGHT * 0.4:
+            #    if self.old_motor_height > 1850 and self.old_motor_height < 2150:
+            #            motor_coordinate_height = 4000
+            #    else:
+            #        motor_coordinate_height = 2000
+            #else:
+            multiplier_height = constants.MOTOR_HEIGHT / constants.FIELD_HEIGHT
+            motor_coordinate_height = (self.center[0]) * multiplier_height
+            motor_coordinate_height = int(motor_coordinate_height)
+            motor_coordinate_height = round(motor_coordinate_height, -2)
+
 
             if motor_coordinate_height > self.old_motor_height - 150 and motor_coordinate_height < self.old_motor_height + 150:
                motor_coordinate_height += 300
             if motor_coordinate_width > self.old_motor_width - 50 and motor_coordinate_width < self.old_motor_width + 50:
                 continue
-                motor_coordinate_width += 25
+                motor_coordinate_width += 50
             print(motor_coordinate_width)
-            #print(motor_coordinate_height)
+            print(motor_coordinate_height)
             rnd_value = 2000 + round(int(random.random() * 4000), -2)
             while rnd_value == self.old_random:
                 rnd_value = 2000 + round(int(random.random() * 4000), -2)
-            string = str(rnd_value) + "," + str(motor_coordinate_width)
+            if motor_coordinate_height < 10000:
+                string = str(motor_coordinate_height) + "," + str(motor_coordinate_width)
+            else:
+                string = str(3000) + "," + str(motor_coordinate_width)
             # string = "random"
 
 
