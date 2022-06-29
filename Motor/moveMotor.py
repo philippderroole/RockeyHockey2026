@@ -8,7 +8,7 @@ from Constants import constants
 class MoveMotor:
     def __init__(self, processPuckHSV=0):
         self.process_puck = processPuckHSV
-        self.arduino = serial.Serial(port="COM4", baudrate=115200, timeout=0.1)
+        self.arduino = serial.Serial(port="COM4", baudrate=1152000, timeout=0.008)
         self.center = (0, 0)
         self.movement_allowed = True
         self.old_motor_height = 0
@@ -80,10 +80,12 @@ class MoveMotor:
             rnd_value = 2000 + round(int(random.random() * 4000), -2)
             while rnd_value == self.old_random:
                 rnd_value = 2000 + round(int(random.random() * 4000), -2)
-            if motor_coordinate_height < 10000:
+            if motor_coordinate_height > 40000:
+                motor_coordinate_height = motor_coordinate_height*2
+                motor_coordinate_height = motor_coordinate_height + 500
                 string = str(motor_coordinate_height) + "," + str(motor_coordinate_width)
             else:
-                string = str(3000) + "," + str(motor_coordinate_width)
+                string = str(1000) + "," + str(motor_coordinate_width)
             # string = "random"
 
 

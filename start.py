@@ -30,15 +30,17 @@ newProcessPuckHSV.setHSV()
 
 #newProcessPuckHSV.show_puck()
 
+#new_path_prediction = PathPrediction(newProcessPuckHSV)
+
+#new_path_prediction.predictPath()
+
 
 
 new_motor = MoveMotor(newProcessPuckHSV)
 
 new_motor.testMove()
 
-#new_path_prediction = PathPrediction(newProcessPuckHSV)
 
-#new_path_prediction.draw_predicted_path()
 
 newVideoStream.stop()
 
