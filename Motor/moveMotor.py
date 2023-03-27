@@ -8,7 +8,7 @@ from Constants import constants
 class MoveMotor:
     def __init__(self, processPuckHSV=0):
         self.process_puck = processPuckHSV
-        self.arduino = serial.Serial(port="COM4", baudrate=1152000, timeout=0.008)
+        self.arduino = serial.Serial(port="COM4", baudrate=115200, timeout=0.008)
         self.center = (0, 0)
         self.movement_allowed = True
         self.old_motor_height = 0
