@@ -51,6 +51,7 @@ void SafeMoveTo(Steppers stepper, long absolute) {
       } else {
         stepperx.setMaxSpeed(MAX_SPEED);
       }
+      if(absolute < MAX_X_POS)
       stepperx.moveTo(absolute);
       break;
     case Y:  // y
@@ -59,6 +60,7 @@ void SafeMoveTo(Steppers stepper, long absolute) {
       } else {
         steppery.setMaxSpeed(MAX_SPEED);
       }
+      if(absolute < MAX_Y_POS)
       steppery.moveTo(absolute);
       break;
   }
