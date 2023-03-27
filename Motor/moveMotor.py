@@ -94,7 +94,7 @@ class MoveMotor:
                 self.arduino.write(bytes("ready\n", "utf-8"))
                 data = self.arduino.readline()
                 print(data)
-                if data == b'bewegt':
+                if data == b'moved':
                         #print (string)
                         self.arduino.write(bytes(string + "\n", "utf-8"))
                         self.old_random = rnd_value
