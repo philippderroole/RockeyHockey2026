@@ -26,7 +26,7 @@ class MoveMotor:
         motor_width, motor_height = self._real_to_motor(width, height)
         string = str(motor_height) + "," + str(motor_width)
         self.arduino.write(bytes(string, "utf-8"))
-        time.sleep(2)
+        time.sleep(1)
 
     # Calculate the values you have to send the motor, when you get real pixel values
     def _real_to_motor(self, width, height):
@@ -37,9 +37,9 @@ class MoveMotor:
         return (motor_coordinate_width, motor_coordinate_height)
 
     def testMove(self):
-        time.sleep(5)
+        time.sleep(2)
         self.arduino.write(bytes("calibrate", "utf-8"))
-        time.sleep(5)
+        time.sleep(2)
 
         amountOfFrames = self.read_position()
         while amountOfFrames == 0:
@@ -125,7 +125,7 @@ class MoveMotor:
             data = self.arduino.readline()
             print(data)
             if data == b'True':
-                    print (x)
+                    print(x)
                     self.arduino.write(bytes(x + "\n", "utf-8"))
                     stop = True
             else: 
@@ -135,7 +135,7 @@ class MoveMotor:
     
     def write(self, x):
         self.arduino.write(bytes(x + "\n", "utf-8"))
-        time.sleep(3)
+        time.sleep(0.5)
         data = self.arduino.readline()
         return data
 
