@@ -7,7 +7,7 @@
 #define MOTOR_X_DIR_PIN 6
 #define END_PIN_X 9
 #define END_PIN_Y 10
-#define MAX_ACCEL 4000
+#define MAX_ACCEL 8000
 #define MAX_SPEED 4000
 #define MIN_SPEED 2000
 #define MAX_X 1960
@@ -19,8 +19,6 @@ AccelStepper steppery(1, MOTOR_Y_STEP_PIN, MOTOR_Y_DIR_PIN);
 bool st_enabled = false;
 long movement_x = 0;
 long movement_y = 0;
-
-
 void setup() {
   pinMode(ENABLE_PIN, OUTPUT);
   pinMode(END_PIN_X, INPUT_PULLUP);
@@ -37,10 +35,11 @@ void setup() {
   steppery.setEnablePin(ENABLE_PIN);
   Serial.begin(115200);
 }
-void GotoStartPosition(){
-  movement_x = MAX_X/2;
-  movement_y = MAX_Y/2;
+void GoToStartPosition() {
+  movement_x = MAX_X / 2;
+  movement_y = MAX_Y / 2;
 }
+
 void calibrate_x() {
   long homing = -1;
   stepperx.enableOutputs();
@@ -54,7 +53,6 @@ void calibrate_x() {
   stepperx.setCurrentPosition(0);
   stepperx.disableOutputs();
 }
-
 void calibrate_y() {
   long homing = -1;
   steppery.enableOutputs();
@@ -68,100 +66,74 @@ void calibrate_y() {
   steppery.setCurrentPosition(0);
   steppery.disableOutputs();
 }
-bool moveAllowedy()
-{
-    if (digitalRead(END_PIN_Y) == 0)
-    {
-        if (steppery.distanceToGo() > 0)
-        {
-            return true;
-        }
-        else
-        {
-            steppery.stop();
-            steppery.setCurrentPosition(0);
-            return false;
-        }
+bool moveAllowedY() {
+  if (digitalRead(END_PIN_Y) == 0) {
+    if (steppery.distanceToGo() > 0) {
+      return true;
+    } else {
+      steppery.stop();
+      steppery.setCurrentPosition(0);
+      return false;
     }
-    else if (steppery.targetPosition() > MAX_Y)
-    {
-        steppery.stop();
-        return false;
-    }
-    else
-    {
-        return true;
-    }
+  } else if (steppery.targetPosition() > MAX_Y) {
+    steppery.stop();
+    return false;
+  } else {
+    return true;
+  }
 }
-bool moveAllowedx()
-{
-    if (digitalRead(END_PIN_X) == 0)
-    {
-        if (stepperx.distanceToGo() > 0)
-        {
-            return true;
-        }
-        else
-        {
-            stepperx.stop();
-            stepperx.setCurrentPosition(0);
-            return false;
-        }
+bool moveAllowedX() {
+  if (digitalRead(END_PIN_X) == 0) {
+    if (stepperx.distanceToGo() > 0) {
+      return true;
+    } else {
+      stepperx.stop();
+      stepperx.setCurrentPosition(0);
+      return false;
     }
-    else if (stepperx.targetPosition() > MAX_X)
-    {
-        stepperx.stop();
-        return false;
-    }
-    else
-    {
-        return true;
-    }
+  } else if (stepperx.targetPosition() > MAX_X) {
+    stepperx.stop();
+    return false;
+  } else {
+    return true;
+  }
 }
 void loop() {
-   if ((stepperx.distanceToGo() != 0) || (steppery.distanceToGo() != 0) && !st_enabled)
-    {
-        st_enabled = true;
-        stepperx.enableOutputs();
-        steppery.enableOutputs();
+  if ((stepperx.distanceToGo() != 0) || (steppery.distanceToGo() != 0) && !st_enabled) {
+    st_enabled = true;
+    stepperx.enableOutputs();
+    steppery.enableOutputs();
+  }
+  while ((stepperx.distanceToGo() != 0 || steppery.distanceToGo() != 0)) {
+    if (!st_enabled) {
+      st_enabled = true;
+      stepperx.enableOutputs();
+      steppery.enableOutputs();
     }
-
-    while ((stepperx.distanceToGo() != 0 || steppery.distanceToGo() != 0))
-    {
-        if (!st_enabled)
-        {
-            st_enabled = true;
-            stepperx.enableOutputs();
-            steppery.enableOutputs();
-        }
-        if (stepperx.distanceToGo() != 0 && moveAllowedx())
-        {
-            stepperx.runSpeedToPosition();
-        }
-        if (steppery.distanceToGo() != 0 && moveAllowedy())
-        {
-            steppery.runSpeedToPosition();
-        }
+    if (stepperx.distanceToGo() != 0 && moveAllowedX()) {
+      stepperx.runSpeedToPosition();
     }
-
-    if (stepperx.distanceToGo() == 0 && steppery.distanceToGo() == 0 && st_enabled)
-    {
-        st_enabled = false;
-
-        stepperx.disableOutputs();
-        steppery.disableOutputs();
+    if (steppery.distanceToGo() != 0 && moveAllowedY()) {
+      steppery.runSpeedToPosition();
     }
+  }
+  if (stepperx.distanceToGo() == 0 && steppery.distanceToGo() == 0 && st_enabled) {
+    st_enabled = false;
+    stepperx.disableOutputs();
+    steppery.disableOutputs();
+  }
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     if ((command == "position\n") || (command == "position")) {
-      Serial.print("{\"x_position\": \"" + String(stepperx.currentPosition()) + "\",");
-      Serial.println("\"y_position\": \"" + String(steppery.currentPosition()) + "\"}");
+      Serial.print(stepperx.currentPosition());
+      Serial.print(",");
+      Serial.println(steppery.currentPosition());
     } else if ((command == "calibrate\n") || (command == "calibrate")) {
       movement_x = 0;
       movement_y = 0;
       calibrate_x();
       calibrate_y();
-      GotoStartPosition();
+      GoToStartPosition();
     } else {
       int delimiterIndex = command.indexOf(',');
       movement_x = command.substring(0, delimiterIndex).toInt();
