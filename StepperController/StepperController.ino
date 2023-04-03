@@ -52,6 +52,11 @@ void calibrate_y() {
   steppery.setAcceleration(MAX_ACCEL);
   steppery.disableOutputs();
 }
+void calibrate(){
+  calibrate_x();
+  calibrate_y();
+  Serial.println("ready");
+}
 void GoToStartPosition() {
   movement_x = MAX_X / 2;
   movement_y = MAX_Y / 2;
@@ -128,6 +133,11 @@ void loop() {
       calibrate_x();
       calibrate_y();
       GoToStartPosition();
+    }else if((command == "status") || (command == "status\n")){
+      if(stepperx.isRunning()||steppery.isRunning())
+      Serial.println("busy");
+      else
+      Serial.println("ready");
     } else {
       int delimiterIndex = command.indexOf(',');
       movement_x = command.substring(0, delimiterIndex).toInt();
