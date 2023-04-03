@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 /*
  * 11: Limit Z-Axis
  * 10: Limit Y-Axis
@@ -24,6 +25,7 @@
  * X Postive = Tür
  * X Negative = Fenster
  */
+
 #define ENABLE_PIN 8
 #define MOTOR_X_STEP_PIN 2
 #define MOTOR_X_DIR_PIN 5
@@ -31,138 +33,250 @@
 #define MOTOR_Y_DIR_PIN 6
 #define END_PIN_X 9
 #define END_PIN_Y 10
-
+#define MAX_ACCEL 2500000000
 #define MAX_SPEED 9000
-#define SAFE_SPEED 1000
-#define MAX_ACCELERATION 2500000000
-#define MAX_X_POS 22800
-#define MAX_Y_POS 15600
 AccelStepper stepperx(1, MOTOR_X_STEP_PIN, MOTOR_X_DIR_PIN);
 AccelStepper steppery(1, MOTOR_Y_STEP_PIN, MOTOR_Y_DIR_PIN);
-enum Steppers { X,
-                Y };
 
 
-void SafeMoveTo(Steppers stepper, long absolute) {
-  //check distance to endstops and direction to set speed -> avoid crash
-  switch (stepper) {
-    case X:  //X
-      if ((absolute < 0 && stepperx.currentPosition() + absolute < 200) || (absolute >= 0 && stepperx.currentPosition() + absolute > MAX_X_POS - 200)) {
-        stepperx.setMaxSpeed(SAFE_SPEED);
-      } else {
-        stepperx.setMaxSpeed(MAX_SPEED);
-      }
-      if (absolute < MAX_X_POS)
-        stepperx.moveTo(absolute);
-      break;
-    case Y:  // y
-      if ((absolute < 0 && steppery.currentPosition() + absolute < 200) || (absolute >= 0 && steppery.currentPosition() + absolute > MAX_Y_POS - 200)) {
-        steppery.setMaxSpeed(SAFE_SPEED);
-      } else {
-        steppery.setMaxSpeed(MAX_SPEED);
-      }
-      if (absolute < MAX_Y_POS)
-        steppery.moveTo(absolute);
-      break;
-  }
-}
-int random_x() {
-  int rand_x;
+//constants
+long max_x_position = 22800;
+long max_y_position = 15600;
+bool st_enabled = false;
+//used variables
+long movement_x = 0;
+long movement_y = 0;
+
+void random_movement() {
   int lowerx = -20000;
-  do {
-    rand_x = random(lowerx, MAX_X_POS);
-    rand_x = (rand_x + 500) / 1000;
-    rand_x = rand_x * 1000;
-  } while (((rand_x + stepperx.currentPosition()) > MAX_X_POS) || ((rand_x + stepperx.currentPosition()) < 1000) || (rand_x == 0));
-  return rand_x;
-}
-int random_y() {
   int lowery = -15000;
+  int rand_x;
   int rand_y;
   do {
-    rand_y = random(lowery, MAX_Y_POS);
-    rand_y = (rand_y + 500) / 1000;
-    rand_y = rand_y * 1000;
-  } while (((rand_y + steppery.currentPosition()) > MAX_Y_POS) || ((rand_y + steppery.currentPosition()) < 1000) || (rand_y == 0));
-  return rand_y;
-}
+      rand_x = random(lowerx, max_x_position);
+      rand_x = (rand_x+500)/1000;
+      rand_x = rand_x*1000;
+  } while (((rand_x + stepperx.currentPosition()) > max_x_position) ||
+  ((rand_x + stepperx.currentPosition()) < 1000) ||
+  (rand_x == 0));
 
+  do {
+      rand_y = random(lowery, max_y_position);
+      rand_y = (rand_y+500)/1000;
+      rand_y = rand_y*1000;
+  } while (((rand_y + steppery.currentPosition()) > max_y_position) ||
+  ((rand_y + steppery.currentPosition()) < 1000) ||
+  (rand_y == 0));
+
+  Serial.println("Random: ");
+  Serial.println(rand_x);
+  Serial.println(rand_y);
+  stepperx.move(rand_x);
+  steppery.move(rand_y);
+}
 
 //calibrates position by moving till end switch toggled
-void calibrate_x() {
-  long homing = -1;
-  while (digitalRead(END_PIN_X)) {
-    SafeMoveTo(X, homing);
-    homing--;
-    stepperx.run();
-  }
-  stepperx.setCurrentPosition(0);
-  SafeMoveTo(X, 11400);
-  stepperx.run();
-}
-
-void calibrate_y() {
-  long homing = -1;
-  steppery.enableOutputs();
-  stepperx.enableOutputs();
-  while (digitalRead(END_PIN_Y)) {
-    SafeMoveTo(Y, homing);
-    homing--;
-    steppery.run();
-  }
-  steppery.setCurrentPosition(0);
-  SafeMoveTo(Y, 7800);
-  steppery.run();
-}
-
-void setup() {
-  pinMode(ENABLE_PIN, OUTPUT);
-  pinMode(END_PIN_X, INPUT_PULLUP);
-  pinMode(END_PIN_Y, INPUT_PULLUP);
-  steppery.setMinPulseWidth(10);
-  stepperx.setPinsInverted(false, false, true);
-  steppery.setPinsInverted(false, false, true);
-  stepperx.setMinPulseWidth(10);
-  stepperx.setMaxSpeed(MAX_SPEED);
-  stepperx.setAcceleration(MAX_ACCELERATION);
-  stepperx.setSpeed(MAX_SPEED);
-  steppery.setMaxSpeed(MAX_SPEED);
-  steppery.setAcceleration(MAX_ACCELERATION);
-  steppery.setSpeed(MAX_SPEED);
-  stepperx.setEnablePin(ENABLE_PIN);
-  steppery.setEnablePin(ENABLE_PIN);
-  Serial.begin(115200);
-}
-
-void loop() {
-  if (Serial.available() > 0) {
-    String movement_string = Serial.readStringUntil('\n');
-    if ((movement_string == "ready\n") || (movement_string == "ready")) {
-      Serial.print("moved");
-    } else if ((movement_string == "calibrate\n") || (movement_string == "calibrate")) {
-      calibrate_x();
-      calibrate_y();
-    } else if ((movement_string == "rand") || (movement_string == "rand\n")) {
-      int rand_x = random_x();
-      int rand_y = random_y();
-      SafeMoveTo(X, stepperx.currentPosition() + rand_x);
-      SafeMoveTo(Y, steppery.currentPosition() + rand_y);
-    } else if ((movement_string == "randx") || (movement_string == "randx\n")) {
-      int rand_x = random_x();
-      SafeMoveTo(X, stepperx.currentPosition() + rand_x);
-    } else if ((movement_string == "randy") || (movement_string == "randy\n")) {
-      int rand_y = random_y();
-      SafeMoveTo(Y, steppery.currentPosition() + rand_y);
-    } else {
-      int delimiterIndex = movement_string.indexOf(',');
-      String XValue = movement_string.substring(0, delimiterIndex);
-      String YValue = movement_string.substring(delimiterIndex + 1);
-      Serial.println("YValue" + YValue + ',' + "XValue" + XValue);
-      long movement_x = XValue.toInt();
-      long movement_y = YValue.toInt();
-      SafeMoveTo(X, movement_x);
-      SafeMoveTo(Y, movement_y);
+void calibrate_x()
+{
+    long homing=-1;
+    stepperx.enableOutputs();
+    Serial.println("Calibrate X");
+    while (digitalRead(END_PIN_X)) {
+        stepperx.moveTo(homing);
+        homing--;
+        stepperx.run();
     }
-  }
-  steppery.run();
+
+    stepperx.setCurrentPosition(0);
+    stepperx.moveTo(11400);
+    stepperx.run();
+    stepperx.disableOutputs();
+}
+
+void calibrate_y()
+{
+    long homing=-1;
+    steppery.enableOutputs();
+    Serial.println("Calibrate Y");
+    while (digitalRead(END_PIN_Y)) {
+        steppery.moveTo(homing);
+        homing--;
+        steppery.run();
+    }
+
+    steppery.setCurrentPosition(0);
+    steppery.moveTo(7800);
+    steppery.run();
+    steppery.disableOutputs();
+}
+
+void setup()
+{
+    pinMode(ENABLE_PIN, OUTPUT);
+    pinMode(END_PIN_X, INPUT_PULLUP);
+    pinMode(END_PIN_Y, INPUT_PULLUP);
+
+    stepperx.setPinsInverted(false, false, true);
+    steppery.setPinsInverted(false, false, true);
+
+    stepperx.setMaxSpeed(MAX_SPEED);
+    stepperx.setAcceleration(MAX_ACCEL);
+    stepperx.setSpeed(MAX_SPEED);
+
+    steppery.setMaxSpeed(MAX_SPEED);
+    steppery.setAcceleration(MAX_ACCEL);
+    steppery.setSpeed(MAX_SPEED);
+
+    stepperx.setEnablePin(ENABLE_PIN);
+    steppery.setEnablePin(ENABLE_PIN);
+
+    Serial.begin(115200);
+}
+
+
+bool moveAllowedx()
+{
+    if (digitalRead(END_PIN_X) == 0)
+    {
+        if (stepperx.distanceToGo() > 0)
+        {
+            return true;
+        }
+        else
+        {
+            stepperx.stop();
+            stepperx.setCurrentPosition(0);
+            Serial.println("X Movement not allowed");
+            return false;
+        }
+    }
+    else if (stepperx.targetPosition() > max_x_position)
+    {
+        stepperx.stop();
+        Serial.println("X Movement not allowed");
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+bool moveAllowedy()
+{
+    if (digitalRead(END_PIN_Y) == 0)
+    {
+        if (steppery.distanceToGo() > 0)
+        {
+            return true;
+        }
+        else
+        {
+            steppery.stop();
+            steppery.setCurrentPosition(0);
+            Serial.println("Y Movement not allowed");
+            return false;
+        }
+    }
+    else if (steppery.targetPosition() > max_y_position)
+    {
+        steppery.stop();
+        Serial.println("Y Movement not allowed");
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+void loop()
+{
+    if (digitalRead(END_PIN_X) != 1) {
+        Serial.println("END_PIN_X: ");
+        Serial.println(digitalRead(END_PIN_X));
+    }
+
+    if (digitalRead(END_PIN_Y) != 1) {
+        Serial.println("END_PIN_Y: ");
+        Serial.println(digitalRead(END_PIN_Y));
+    }
+
+    if ((stepperx.distanceToGo() != 0) || (steppery.distanceToGo() != 0) && !st_enabled)
+    {
+        Serial.println("Enable steppers");
+        st_enabled = true;
+        stepperx.enableOutputs();
+        steppery.enableOutputs();
+    }
+
+    while ((stepperx.distanceToGo() != 0 || steppery.distanceToGo() != 0))
+    {
+        if (!st_enabled)
+        {
+            st_enabled = true;
+            stepperx.enableOutputs();
+            steppery.enableOutputs();
+        }
+        if (stepperx.distanceToGo() != 0 && moveAllowedx())
+        {
+            stepperx.runSpeedToPosition();
+        }
+        if (steppery.distanceToGo() != 0 && moveAllowedy())
+        {
+            steppery.runSpeedToPosition();
+        }
+    }
+
+    if (stepperx.distanceToGo() == 0 && steppery.distanceToGo() == 0 && st_enabled)
+    {
+        Serial.println("Disable steppers");
+        st_enabled = false;
+
+        stepperx.disableOutputs();
+        steppery.disableOutputs();
+    }
+
+    if (Serial.available() > 0)
+    {
+        String movement_string = Serial.readStringUntil('\n');
+        if ((movement_string == "position\n") || (movement_string == "position"))
+        {
+            Serial.print("{\"x_position\": \"" + String(stepperx.currentPosition()) + "\",");
+            Serial.println("\"y_position\": \"" + String(steppery.currentPosition()) + "\"}");
+        }
+        else if ((movement_string == "calibrate\n") || (movement_string == "calibrate"))
+        {
+            Serial.println("Calibrate triggered");
+            calibrate_x();
+            calibrate_y();
+        }
+        else if ((movement_string == "xcalibrate\n") || (movement_string == "xcalibrate"))
+        {
+            Serial.println("Calibrate X only triggered");
+            calibrate_x();
+        }
+        else if ((movement_string == "ycalibrate\n") || (movement_string == "ycalibrate"))
+        {
+            Serial.println("Calibrate Y only triggered");
+            calibrate_y();
+        }
+        else if ((movement_string == "random\n") || (movement_string == "random"))
+        {
+            Serial.println("Random movement");
+            random_movement();
+        }
+        else
+        {
+            int delimiterIndex = movement_string.indexOf(',');
+            String XValue = movement_string.substring(0, delimiterIndex);
+            String YValue = movement_string.substring(delimiterIndex + 1);
+            movement_x = XValue.toInt();
+            movement_y = YValue.toInt();
+            Serial.println("stepperx.move: " + String(movement_x));
+            Serial.println("steppery.move: " + String(movement_y));
+            stepperx.move(movement_x);
+            steppery.move(movement_y);
+        }
+    }
 }
