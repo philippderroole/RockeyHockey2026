@@ -33,6 +33,8 @@ void calibrate_x() {
     stepperx.run();
   }
   stepperx.setCurrentPosition(0);
+  stepperx.setMaxSpeed(MAX_SPEED);
+  stepperx.setAcceleration(MAX_ACCEL);
   stepperx.disableOutputs();
 }
 void calibrate_y() {
@@ -46,6 +48,8 @@ void calibrate_y() {
     steppery.run();
   }
   steppery.setCurrentPosition(0);
+  steppery.setMaxSpeed(MAX_SPEED);
+  steppery.setAcceleration(MAX_ACCEL);
   steppery.disableOutputs();
 }
 void GoToStartPosition() {
