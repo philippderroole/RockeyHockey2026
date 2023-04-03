@@ -114,7 +114,11 @@ void loop() {
   }
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
-    if ((command == "position\n") || (command == "position")) {
+    if((command == "maximum\n")||(command == "maximum")){
+      Serial.print(MAX_X);
+      Serial.print(",");
+      Serial.println(MAX_Y);
+    }else if ((command == "position\n") || (command == "position")) {
       Serial.print(stepperx.currentPosition());
       Serial.print(",");
       Serial.println(steppery.currentPosition());

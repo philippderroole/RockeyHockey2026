@@ -1,12 +1,16 @@
 import serial
+import time
 
 
 class StepperController:
     def __init__(self, port, baud):
         self.ser = serial.Serial(port, baud)
         self.ser.open()
-        self.max_x = 1000
-        self.max_y = 1000
+        time.sleep(1)
+        self.ser.write("maximum\n")
+        tmp = self.ser.readline()
+        tmp = tmp.split(",")
+        self.max_x, self.max_y = int(tmp[0]), int(tmp[1])
 
     def move_to_position(self, x, y):
         self.ser.write(str(x) + "," + str(y) + "\n")
@@ -17,7 +21,7 @@ class StepperController:
         tmp = tmp.split(",")
         return {int(tmp[0]), int(tmp[1])}
 
-    def get_controller_status(self):
+    def get_status(self):
         self.ser.write("status\n")
         return self.ser.readline()
 
