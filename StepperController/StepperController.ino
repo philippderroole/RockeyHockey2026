@@ -90,22 +90,23 @@ void loop() {
   }
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
-    if((command == "maximum\n")||(command == "maximum")){
+    command.trim();
+    if(strcmp(command.c_str(), "maximum") == 0){
       Serial.print(MAX_X);
       Serial.print(",");
       Serial.println(MAX_Y);
-    }else if ((command == "position\n") || (command == "position")) {
+    }else if(strcmp(command.c_str(), "position") == 0) {
       Serial.print(stepperx.currentPosition());
       Serial.print(",");
       Serial.println(steppery.currentPosition());
-    } else if ((command == "calibrate\n") || (command == "calibrate")) {
+    } else if (strcmp(command.c_str(), "calibrate") == 0){
       movement_x = 0;
       movement_y = 0;
       calibrate_x();
       calibrate_y();
       movement_x = MAX_X / 2;
       movement_y = MAX_Y / 2;
-    }else if((command == "status") || (command == "status\n")){
+    }else if(strcmp(command.c_str(), "status") == 0) {
       if(stepperx.isRunning()||steppery.isRunning())
       Serial.println("busy");
       else
