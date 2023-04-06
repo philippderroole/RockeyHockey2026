@@ -18,7 +18,8 @@ class StepperController:
         self.ser.write(line + "\n")
 
     def move_to_position(self, x, y):
-        self.writeline(str(x) + "," + str(y))
+        if 0 <= x <= self.max_x and 0 <= y <= self.max_y:
+            self.writeline(str(x) + "," + str(y))
 
     def get_current_position(self):
         self.writeline("position")
