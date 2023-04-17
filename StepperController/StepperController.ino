@@ -5,8 +5,8 @@
 AccelStepper stepperx(1, MOTOR_X_STEP_PIN, MOTOR_X_DIR_PIN);
 AccelStepper steppery(1, MOTOR_Y_STEP_PIN, MOTOR_Y_DIR_PIN);
 bool st_enabled = false;
-long movement_x = 0;
-long movement_y = 0;
+long movement_x = -1;
+long movement_y = -1;
 void setup() {
   pinMode(ENABLE_PIN, OUTPUT);
   pinMode(END_PIN_X, INPUT_PULLUP);
@@ -79,10 +79,10 @@ void loop() {
       enable_steppers();
     }
     if (stepperx.distanceToGo() != 0 && moveAllowedX()) {
-      stepperx.runSpeedToPosition();
+      stepperx.run();
     }
     if (steppery.distanceToGo() != 0 && moveAllowedY()) {
-      steppery.runSpeedToPosition();
+      steppery.run();
     }
   }
   if (stepperx.distanceToGo() == 0 && steppery.distanceToGo() == 0 && st_enabled) {
@@ -104,8 +104,6 @@ void loop() {
       movement_y = 0;
       calibrate_x();
       calibrate_y();
-      movement_x = MAX_X / 2;
-      movement_y = MAX_Y / 2;
     }else if(strcmp(command.c_str(), "status") == 0) {
       if(stepperx.isRunning()||steppery.isRunning())
       Serial.println("busy");

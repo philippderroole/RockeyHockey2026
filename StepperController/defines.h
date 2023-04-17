@@ -9,7 +9,7 @@
 #define END_PIN_Y 10
 #define MAX_ACCEL 8000
 #define MAX_SPEED 4000
-#define MIN_SPEED 2000
+#define MIN_SPEED 1000
 #define MAX_X 1960
 #define MAX_Y 2900
 #define END_PIN_Y 9

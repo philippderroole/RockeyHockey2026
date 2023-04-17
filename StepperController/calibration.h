@@ -8,11 +8,12 @@ void calibrate_x() {
   while (digitalRead(END_PIN_X)) {
     stepperx.moveTo(homing);
     homing--;
-    delay(5);
+    delay(1);
     stepperx.run();
   }
   stepperx.setCurrentPosition(0);
   stepperx.setMaxSpeed(MAX_SPEED);
+  stepperx.setSpeed(MAX_SPEED);
   stepperx.setAcceleration(MAX_ACCEL);
   stepperx.disableOutputs();
 }
@@ -21,12 +22,13 @@ void calibrate_y() {
   steppery.enableOutputs();
   while (digitalRead(END_PIN_Y)) {
     steppery.moveTo(homing);
-    delay(5);
+    delay(1);
     homing--;
     steppery.run();
   }
   steppery.setCurrentPosition(0);
   steppery.setMaxSpeed(MAX_SPEED);
+  steppery.setSpeed(MAX_SPEED);
   steppery.setAcceleration(MAX_ACCEL);
   steppery.disableOutputs();
 }
