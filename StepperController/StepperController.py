@@ -5,8 +5,7 @@ import time
 class StepperController:
     def __init__(self, port, baud):
         self.ser = serial.Serial(port, baud)
-        self.ser.open()
-        time.sleep(3)
+        time.sleep(5)
         self.writeline("maximum")
         tmp = self.readline().split(",")
         self.max_x, self.max_y = int(tmp[0]), int(tmp[1])
@@ -15,7 +14,7 @@ class StepperController:
         return self.ser.readline().decode('utf-8').rstrip()
 
     def writeline(self, line):
-        self.ser.write(line + "\n")
+        self.ser.write((line + "\n").encode('utf-8'))
 
     def move_to_position(self, x, y):
         if 0 <= x <= self.max_x and 0 <= y <= self.max_y:

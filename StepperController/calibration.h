@@ -11,6 +11,7 @@ void calibrate_x() {
     delay(1);
     stepperx.run();
   }
+  stepperx.stop();
   stepperx.setCurrentPosition(0);
   stepperx.setMaxSpeed(MAX_SPEED);
   stepperx.setSpeed(MAX_SPEED);
@@ -26,6 +27,7 @@ void calibrate_y() {
     homing--;
     steppery.run();
   }
+  steppery.stop();
   steppery.setCurrentPosition(0);
   steppery.setMaxSpeed(MAX_SPEED);
   steppery.setSpeed(MAX_SPEED);
