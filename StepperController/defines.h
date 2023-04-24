@@ -5,11 +5,9 @@
 #define MOTOR_Y_DIR_PIN 5
 #define MOTOR_X_STEP_PIN 3
 #define MOTOR_X_DIR_PIN 6
-#define END_PIN_X 9
-#define END_PIN_Y 10
-#define MAX_ACCEL 1000
-#define MAX_SPEED 4000
-#define MIN_SPEED 1000
+#define MAX_ACCEL 10000
+#define MAX_SPEED 15000
+#define MIN_SPEED 2000
 #define MAX_X 1960
 #define MAX_Y 2900
 #define END_PIN_Y 9

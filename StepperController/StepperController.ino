@@ -38,38 +38,6 @@ void disable_steppers() {
   }
 }
 
-bool moveAllowedY() {
-  if (digitalRead(END_PIN_Y) == 0) {
-    if (steppery.distanceToGo() > 0) {
-      return true;
-    } else {
-      steppery.stop();
-      steppery.setCurrentPosition(0);
-      return false;
-    }
-  } else if (steppery.targetPosition() > MAX_Y) {
-    steppery.stop();
-    return false;
-  } else {
-    return true;
-  }
-}
-bool moveAllowedX() {
-  if (digitalRead(END_PIN_X) == 0) {
-    if (stepperx.distanceToGo() > 0) {
-      return true;
-    } else {
-      stepperx.stop();
-      stepperx.setCurrentPosition(0);
-      return false;
-    }
-  } else if (stepperx.targetPosition() > MAX_X) {
-    stepperx.stop();
-    return false;
-  } else {
-    return true;
-  }
-}
 void loop() {
   if ((stepperx.distanceToGo() != 0) || (steppery.distanceToGo() != 0) && !st_enabled) {
     enable_steppers();
@@ -78,10 +46,10 @@ void loop() {
     if (!st_enabled) {
       enable_steppers();
     }
-    if (stepperx.distanceToGo() != 0 && moveAllowedX()) {
+    if (stepperx.distanceToGo() != 0 && stepperx.targetPosition() <= MAX_X &&  stepperx.targetPosition()>=0) {
       stepperx.run();
     }
-    if (steppery.distanceToGo() != 0 && moveAllowedY()) {
+    if (steppery.distanceToGo() != 0 && steppery.targetPosition() <= MAX_Y &&  steppery.targetPosition()>=0) {
       steppery.run();
     }
   }
