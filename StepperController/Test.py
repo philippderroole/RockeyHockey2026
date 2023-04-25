@@ -1,6 +1,8 @@
+import time
+
 from StepperController import StepperController
-controller = StepperController("COM4", 115200)
-print("MAX XY=("+str(controller.get_max_x())+"|"+str(controller.get_max_y())+")")
+controller = StepperController("COM3", 115200)
+controller.connect()
 controller.calibrate()
-print("goto center")
-controller.move_to_position(controller.get_max_x()/2, controller.get_max_y()/2)
+controller.move(100,100)
+time.sleep(10)

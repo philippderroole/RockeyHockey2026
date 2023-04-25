@@ -1,43 +1,44 @@
 import serial
 import time
 
-
 class StepperController:
-    def __init__(self, port, baud):
-        self.ser = serial.Serial(port, baud)
-        time.sleep(5)
-        self.writeline("maximum")
-        tmp = self.readline().split(",")
-        self.max_x, self.max_y = int(tmp[0]), int(tmp[1])
+    def __init__(self, port, baudrate):
+        self.port = port
+        self.baudrate = baudrate
+        self.connection = None
 
-    def readline(self):
-        return self.ser.readline().decode('utf-8').rstrip()
+    def connect(self):
+        self.connection = serial.Serial(self.port, self.baudrate, timeout=1)
+        time.sleep(2) # wait for the Arduino to reset
+        self.connection.flushInput()
 
-    def writeline(self, line):
-        self.ser.write((line + "\n").encode('utf-8'))
-
-    def move_to_position(self, x, y):
-        if 0 <= x <= self.max_x and 0 <= y <= self.max_y:
-            self.writeline(str(x) + "," + str(y))
-
-    def get_current_position(self):
-        self.writeline("position")
-        tmp = self.readline().split(",")
-        return {int(tmp[0]), int(tmp[1])}
-
-    def get_status(self):
-        self.writeline("status")
-        return self.readline()
-
-    def get_max_x(self):
-        return self.max_x
-
-    def get_max_y(self):
-        return self.max_y
+    def move(self, x, y):
+        command = str(x) + ',' + str(y) + '\n'
+        self.connection.write(command.encode())
+        response = self.connection.readline().decode().strip()
+        return response
 
     def calibrate(self):
-        self.writeline("calibrate")
-        self.ser.readline()
+        self.connection.write(b'calibrate\n')
+        response = self.connection.readline().decode().strip()
+        return response
 
-    def close(self):
-        self.ser.close()
+    def get_status(self):
+        self.connection.write(b'status\n')
+        response = self.connection.readline().decode().strip()
+        return response
+
+    def get_position(self):
+        self.connection.write(b'position\n')
+        response = self.connection.readline().decode().strip()
+        x, y = response.split(',')
+        return int(x), int(y)
+
+    def get_maxima(self):
+        self.connection.write(b'maxima\n')
+        response = self.connection.readline().decode().strip()
+        x, y = response.split(',')
+        return int(x), int(y)
+
+    def disconnect(self):
+        self.connection.close()

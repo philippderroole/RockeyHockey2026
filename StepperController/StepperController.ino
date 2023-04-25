@@ -59,28 +59,30 @@ void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim();
-    if(strcmp(command.c_str(), "maximum") == 0){
+    if(strcmp(command.c_str(), "MAXIMA") == 0){
       Serial.print(MAX_X);
       Serial.print(",");
       Serial.println(MAX_Y);
-    }else if(strcmp(command.c_str(), "position") == 0) {
+    }else if(strcmp(command.c_str(), "POSITION") == 0) {
       Serial.print(stepperx.currentPosition());
       Serial.print(",");
       Serial.println(steppery.currentPosition());
-    } else if (strcmp(command.c_str(), "calibrate") == 0){
+    } else if (strcmp(command.c_str(), "CALIBRATE") == 0){
       movement_x = 0;
       movement_y = 0;
       calibrate_x();
       calibrate_y();
-    }else if(strcmp(command.c_str(), "status") == 0) {
+      Serial.println("OK");
+    }else if(strcmp(command.c_str(), "STATUS") == 0) {
       if(stepperx.isRunning()||steppery.isRunning())
-      Serial.println("busy");
+      Serial.println("BUSY");
       else
-      Serial.println("ready");
+      Serial.println("READY");
     } else {
       int delimiterIndex = command.indexOf(',');
       movement_x = command.substring(0, delimiterIndex).toInt();
       movement_y = command.substring(delimiterIndex + 1).toInt();
+      Serial.println("OK");
     }
     stepperx.moveTo(movement_x);
     steppery.moveTo(movement_y);
