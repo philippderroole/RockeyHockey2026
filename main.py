@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow, QLabel, QP
 from Constants import *
 from Camera import Camera
 from StepperController import StepperController
+from Processing.ProcessFrame import filterFrameHSV
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -222,7 +223,7 @@ class MainWindow(QMainWindow):
                 x = int(self.xCoordTextBox.toPlainText())
                 y = int(self.yCoordTextBox.toPlainText())
                 self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
-                self.stepperController.move_to_position(x, y)
+                self.stepperController.move(x, y)
             except ValueError:
                 self.logTextbox.append("ERROR: X and/or Y value is not an integer. Cannot move to position.")
         else:
@@ -232,50 +233,56 @@ class MainWindow(QMainWindow):
         #ret, frame = self.cap.read()
         ret, frame = self.camera.get_frame()
         if ret:
-            filteredFrame = self.filterFrame(frame)
-            self.lowerBoundary = np.array([self.lowerHueSlider.value(), self.lowerSaturationSlider.value(), self.lowerValueSlider.value()])
-            self.upperBoundary = np.array([self.upperHueSlider.value(), self.upperSaturationSlider.value(), self.upperValueSlider.value()])
-            hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, self.lowerBoundary, self.upperBoundary)
-            # We use medianBlur to get rid of so calles salt and pepper noise.
-            # If our mask gets other pixels besides the puck, we hope to eliminate them as best as possible with this "filter"
-            mask_blur = cv2.medianBlur(mask, 19)
-            contours, hierarchy = cv2.findContours(mask_blur, 1, 2)
-            if not contours:
-                return ((0, 0), 0)
-            cnt = contours[0]
-            # We use minEnclosingCircle(), because if part of the puck is not detected (perhaps an arm above the puck), we might still be
-            # able to get the correct center
-            # We also tried cv2.HoughCircles as seen in "testHSV.py", but somehow it doesn't work.
-            # It might be faster than this method though. So if you are able to get the center with cv2.HoughCircles... give it a try
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            lowerBoundary = np.array([self.lowerHueSlider.value(), self.lowerSaturationSlider.value(), self.lowerValueSlider.value()])
+            upperBoundary = np.array([self.upperHueSlider.value(), self.upperSaturationSlider.value(), self.upperValueSlider.value()])
+            filteredFrame = filterFrameHSV(frame, lowerBoundary, upperBoundary)
+            self.updateImageFromFrame(self.cameraImageLabel, frame)            
+            self.updateImageFromFrame(self.filteredImageLabel, filteredFrame)
 
-            self.logTextbox.setText("X: " + str(x) + " | Y: " + str(y))
+    def updateImageFromFrame(self, image, frame):
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        height, width, ch = frame.shape
+        bytesPerLine = ch * width
+        qtImg = QImage(frame.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        pixmap = QPixmap(qtImg)
+        image.setPixmap(pixmap)
 
-            # Regular frame.
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = frame.shape
-            bytes_per_line = ch * w
-            q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            pixmap = QPixmap(q_img)
-            self.cameraImageLabel.setPixmap(pixmap)
 
-            # Filtered frame.
-            filteredFrame = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2RGB)
-            h, w, ch = filteredFrame.shape
-            bytes_per_line = ch * w
-            q_img = QImage(filteredFrame.data, w, h, bytes_per_line, QImage.Format_RGB888)
-            pixmap = QPixmap(q_img)
-            self.filteredImageLabel.setPixmap(pixmap)
+        # filteredFrame = self.filterFrame(frame)
+        # self.lowerBoundary = np.array([self.lowerHueSlider.value(), self.lowerSaturationSlider.value(), self.lowerValueSlider.value()])
+        # self.upperBoundary = np.array([self.upperHueSlider.value(), self.upperSaturationSlider.value(), self.upperValueSlider.value()])
+        # hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
+        # mask = cv2.inRange(hsv, self.lowerBoundary, self.upperBoundary)
+        # # We use medianBlur to get rid of so calles salt and pepper noise.
+        # # If our mask gets other pixels besides the puck, we hope to eliminate them as best as possible with this "filter"
+        # mask_blur = cv2.medianBlur(mask, 19)
+        # contours, hierarchy = cv2.findContours(mask_blur, 1, 2)
+        # if not contours:
+        #     return ((0, 0), 0)
+        # cnt = contours[0]
+        # # We use minEnclosingCircle(), because if part of the puck is not detected (perhaps an arm above the puck), we might still be
+        # # able to get the correct center
+        # # We also tried cv2.HoughCircles as seen in "testHSV.py", but somehow it doesn't work.
+        # # It might be faster than this method though. So if you are able to get the center with cv2.HoughCircles... give it a try
+        # (x, y), radius = cv2.minEnclosingCircle(cnt)
 
-    def filterFrame(self, frame):
-        #frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        self.lowerBoundary = np.array([self.lowerHueSlider.value(), self.lowerSaturationSlider.value(), self.lowerValueSlider.value()])
-        self.upperBoundary = np.array([self.upperHueSlider.value(), self.upperSaturationSlider.value(), self.upperValueSlider.value()])
-        mask = cv2.inRange(hsv, self.lowerBoundary, self.upperBoundary)
-        res = cv2.bitwise_and(frame, frame, mask=mask)
-        return res
+        # #self.logTextbox.setText("X: " + str(x) + " | Y: " + str(y))
+
+        # # Regular frame.
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # h, w, ch = frame.shape
+        # bytes_per_line = ch * w
+        # q_img = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+        # pixmap = QPixmap(q_img)
+        # self.cameraImageLabel.setPixmap(pixmap)
+
+        # # Filtered frame.
+        # filteredFrame = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2RGB)
+        # h, w, ch = filteredFrame.shape
+        # bytes_per_line = ch * w
+        # q_img = QImage(filteredFrame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+        # pixmap = QPixmap(q_img)
+        # self.filteredImageLabel.setPixmap(pixmap)
 
 
 
