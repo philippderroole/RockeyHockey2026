@@ -1,6 +1,7 @@
 import serial
 import time
 
+
 class StepperController:
     def __init__(self, port, baudrate):
         self.port = port
@@ -9,10 +10,10 @@ class StepperController:
 
     def connect(self):
         self.connection = serial.Serial(self.port, self.baudrate, timeout=1)
-        time.sleep(2) # wait for the Arduino to reset
+        time.sleep(2)  # wait for the Arduino to reset
         self.connection.flushInput()
 
-    def move(self, x, y):
+    def move_to_position(self, x, y):
         command = str(x) + ',' + str(y) + '\n'
         self.connection.write(command.encode())
         response = self.connection.readline().decode().strip()
