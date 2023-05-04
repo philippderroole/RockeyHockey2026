@@ -1,8 +1,7 @@
 class ProcessField:
-    def __init__(self, max_x, max_y):
-        self.max_x = max_x  # max values from StepperControllerClass
-        self.max_y = max_y
-    def set_img_offset(self, x0,y0,y1,y2):
+    def __init__(self, field_x0,field_y0,field_x1,field_y1,controller_max_x,controller_max_y):
 
-    def get_real_pos_from_img_pos(self, x, y):
+
+
+    def get_real_pos(self, x, y):
         return {x, y}  # not implemented yet
