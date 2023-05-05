@@ -60,13 +60,9 @@ void loop() {
     String command = Serial.readStringUntil('\n');
     command.trim();
     if(strcmp(command.c_str(), "MAXIMA") == 0){
-      Serial.print(MAX_X);
-      Serial.print(",");
-      Serial.println(MAX_Y);
+      Serial.println(String(MAX_X)+","+String(MAX_Y));
     }else if(strcmp(command.c_str(), "POSITION") == 0) {
-      Serial.print(stepperx.currentPosition());
-      Serial.print(",");
-      Serial.println(steppery.currentPosition());
+      Serial.println(String(stepperx.currentPosition()) + "," + String(steppery.currentPosition()));
     } else if (strcmp(command.c_str(), "CALIBRATE") == 0){
       movement_x = 0;
       movement_y = 0;
