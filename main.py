@@ -10,7 +10,7 @@ import cv2
 import math
 import numpy as np
 import qdarkstyle
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow, QLabel, QPushButton, QTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QSizePolicy, QSlider
 
@@ -18,6 +18,34 @@ from Constants import *
 from Camera import Camera
 from StepperController import StepperController
 from Processing.ProcessFrame import filterFrameHSV, detectPuck, markPuckInFrame
+
+class MoveWorker(QThread):
+    def __init__(self, stepperController, parent=None):
+        super().__init__(parent)
+        self.mutex = QMutex()
+        self.stepperController = stepperController
+        self.x = None
+        self.y = None
+
+    def run(self):
+        while True:
+            # Wait for x and y to be set by the main thread
+            with QMutexLocker(self.mutex):
+                while self.x is None or self.y is None:
+                    self.mutex.unlock()
+                    self.msleep(10)
+                    self.mutex.lock()
+                x, y = self.x, self.y
+                self.x = None
+                self.y = None
+            #print(f"Moving X={x}, Y={y}")
+            self.stepperController.move_to_position(int(x), int(y))
+
+    def set_values(self, x, y):
+        with QMutexLocker(self.mutex):
+            self.x = x
+            self.y = y
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -27,6 +55,7 @@ class MainWindow(QMainWindow):
         # Create a label to display the camera image.
         self.cameraImageLabel = QLabel(self)
         self.cameraImageLabel.setAlignment(Qt.AlignCenter)
+        self.cameraImageLabel.mousePressEvent = self.getImageClickPos
 
         self.filteredImageLabel = QLabel(self)
         self.filteredImageLabel.setAlignment(Qt.AlignCenter)
@@ -47,6 +76,10 @@ class MainWindow(QMainWindow):
         self.moveToPositionButton = QPushButton("Move To Position", self)
         self.moveToPositionButton.clicked.connect(self.moveToPosition)
 
+        # Create the "Maxima" button.
+        self.getMaximaButton = QPushButton("Get Maxima", self)
+        self.getMaximaButton.clicked.connect(self.getMaxima)
+
         self.xCoordTextBox = QTextEdit()
         self.xCoordTextBox.setFixedHeight(25)
         self.xCoordTextBox.setText("0")
@@ -56,6 +89,7 @@ class MainWindow(QMainWindow):
 
         self.controlHorizontalBox = QHBoxLayout()
         self.controlHorizontalBox.addWidget(self.calibrateButton)
+        self.controlHorizontalBox.addWidget(self.getMaximaButton)
         self.controlHorizontalBox.addWidget(self.moveToPositionButton)
         self.controlHorizontalBox.addWidget(QLabel(text="X"))
         self.controlHorizontalBox.addWidget(self.xCoordTextBox)
@@ -171,12 +205,22 @@ class MainWindow(QMainWindow):
         self.puckYLabel = QLabel(text="Y: 0")
         self.puckRadiusLabel = QLabel(text="Radius: 0")
         self.puckVecLabel = QLabel(text="Vec: 0")
+        self.puckSpeedLabel = QLabel(text="Speed: 0")
         self.puckValuesHbox.addWidget(QLabel(text="Puck Values: "))
         self.puckValuesHbox.addWidget(self.puckXLabel)
         self.puckValuesHbox.addWidget(self.puckYLabel)
         self.puckValuesHbox.addWidget(self.puckRadiusLabel)
         self.puckValuesHbox.addWidget(self.puckVecLabel)
-        
+        self.puckValuesHbox.addWidget(self.puckSpeedLabel)
+
+        # Corner setting.
+        self.cornersHBox = QHBoxLayout()
+        self.cornersApplyButton = QPushButton("Apply Corners", self)
+        self.cornersApplyButton.clicked.connect(self.applyCorners)
+        self.cornersResetButton = QPushButton("Reset Corners", self)
+        self.cornersResetButton.clicked.connect(self.resetCorners)
+        self.cornersHBox.addWidget(self.cornersApplyButton)
+        self.cornersHBox.addWidget(self.cornersResetButton)
 
         # Create the left vertical box.
         self.vboxLeft = QVBoxLayout()
@@ -184,6 +228,7 @@ class MainWindow(QMainWindow):
         self.vboxLeft.addWidget(QLabel(text="Adjust filters"))
         self.vboxLeft.addLayout(self.filterVbox)
         self.vboxLeft.addLayout(self.puckValuesHbox)
+        self.vboxLeft.addLayout(self.cornersHBox)
         self.vboxLeft.addWidget(self.logTextbox)
         # self.vboxLeft.addWidget(self.calibrateButton)
         # self.vboxLeft.addWidget(self.gotoPositionButton)
@@ -207,7 +252,7 @@ class MainWindow(QMainWindow):
         self.timer.start(30)
 
         # Camera used for image.
-        self.camera = Camera(CAMERA_INDEX, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT, 60)
+        self.camera = Camera(CAMERA_INDEX, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT, CAMERA_FOCUS, CAMERA_BUFFERSIZE, CAMERA_FRAMERATE)
         self.stepperController = None
         # Stepper Controller
         try:
@@ -215,14 +260,54 @@ class MainWindow(QMainWindow):
         except Exception:
             self.logTextbox.append("ERROR: No Arduino found on " + STEPPER_COM_PORT + ".")
 
-        self.showMaximized()
+        self.stepperController.connect()
+
+        self.moveWorker = MoveWorker(stepperController=self.stepperController)
+        self.moveWorker.start()
+
+        self.robotCornerCoords = []
+        self.humanCornerCoords = []
+        self.cornersApplied = False
+        self.originalCorners = np.float32([[0 ,0], [0, CAMERA_FRAME_HEIGHT - 1], [CAMERA_FRAME_WIDTH - 1, CAMERA_FRAME_HEIGHT - 1], [CAMERA_FRAME_WIDTH - 1, 0]])
+
         self.lastPosition = (0,0)
         self.currentPosition = (0,0)
         self.frameCounter = 0
+        self.moveForward = True
 
     def exitApp(self):
         self.timer.stop()
         sys.exit()
+
+    def applyCorners(self):
+        if len(self.robotCornerCoords) == 2 and len(self.humanCornerCoords) == 2:
+            self.logTextbox.append("Applied corners. Fitting image...")
+            self.cornersApplied = True
+        else:
+            self.logTextbox.append("ERROR: Not all corners set. There must be 2 corners set for the robot side and 2 for the human player side. Use left click for the robot side and right click for the human side.")
+            self.cornersApplied = False
+
+    def resetCorners(self):
+        self.logTextbox.append("Reset corners. Resetting image fit.")
+        self.cornersApplied = False
+        self.robotCornerCoords = []
+        self.humanCornerCoords = []
+
+
+    def getImageClickPos(self, event):
+        x = event.pos().x()
+        y = event.pos().y()
+        # 1 is left click, 2 is right click
+        mouseButton = event.button()
+        if mouseButton == 1 and len(self.robotCornerCoords) < 2:
+            self.robotCornerCoords.append((x,y))
+        if mouseButton == 2 and len(self.humanCornerCoords) < 2:
+            self.humanCornerCoords.append((x,y))       
+        
+        #print(f"Image clicked at X:{x}, Y:{y}")
+
+    def sendMoveValues(self, x, y):
+        self.moveWorker.set_values(x, y)
 
     def calibrate(self):
         # Add your calibration code here
@@ -233,13 +318,21 @@ class MainWindow(QMainWindow):
         else:
             self.logTextbox.append("ERROR: Cannot calibrate. No Arduino found on " + STEPPER_COM_PORT + ".")
 
+    def getMaxima(self):
+        if self.stepperController is not None:
+            x, y = self.stepperController.get_maxima()
+            self.logTextbox.append(f"Maxima: X={x}, Y={y}")
+        else:
+            self.logTextbox.append("ERROR: Cannot get maxima. No Arduino found on " + STEPPER_COM_PORT + ".")
+
     def moveToPosition(self):
         if self.stepperController is not None:
             try:
                 x = int(self.xCoordTextBox.toPlainText())
                 y = int(self.yCoordTextBox.toPlainText())
                 self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
-                self.stepperController.move(x, y)
+                #self.stepperController.move_to_position(x, y)
+                self.sendMoveValues(x, y)
             except ValueError:
                 self.logTextbox.append("ERROR: X and/or Y value is not an integer. Cannot move to position.")
         else:
@@ -249,6 +342,21 @@ class MainWindow(QMainWindow):
         #ret, frame = self.cap.read()
         ret, frame = self.camera.get_frame()
         if ret:
+            if self.cornersApplied:                
+                # If the corners are set then fit the image.
+                # Corners have to be inputted counter clockwise.
+                selectedCorners = np.float32([[self.robotCornerCoords[0][0], self.robotCornerCoords[0][1]],
+                                            [self.robotCornerCoords[1][0], self.robotCornerCoords[1][1]],
+                                            [self.humanCornerCoords[1][0], self.humanCornerCoords[1][1]],
+                                            [self.humanCornerCoords[0][0], self.humanCornerCoords[0][1]]])
+
+                # Calculate transformation matrix.
+                matrix = cv2.getPerspectiveTransform(selectedCorners, self.originalCorners)
+                # Warp the image.
+                frame = cv2.warpPerspective(frame, matrix, (CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT))
+
+
+
             self.frameCounter = self.frameCounter + 1
             lowerBoundary = np.array([self.lowerHueSlider.value(), self.lowerSaturationSlider.value(), self.lowerValueSlider.value()])
             upperBoundary = np.array([self.upperHueSlider.value(), self.upperSaturationSlider.value(), self.upperValueSlider.value()])
@@ -265,6 +373,9 @@ class MainWindow(QMainWindow):
             vec = (x - self.lastPosition[0], y - self.lastPosition[1])
             self.puckVecLabel.setText(f"Vec: {vec[0]:.1f}, {vec[1]:.1f}")
 
+            speed = vec[0] * vec[1]
+            self.puckSpeedLabel.setText(f"Speed: {speed:.1f}")
+
 
             # Outputs the vector to the log. Only for debugging.
             # if (x,y) != (0,0):
@@ -279,14 +390,61 @@ class MainWindow(QMainWindow):
             length = 500
             end_point = (int(pointA[0] + length*math.cos(angle)), int(pointA[1] + length*math.sin(angle)))
             #if vec[0] > 1 or vec[1] > 1:
-            if self.frameCounter > 10:
-                self.lastPosition = (x, y)
-                self.frameCounter = 0
+            #if self.frameCounter > 5:
+            self.lastPosition = (x, y)
+            #self.frameCounter = 0
                 
-            cv2.line(frame, pointA, end_point, (0, 0, 255), 2)            
+            cv2.line(frame, pointA, end_point, (0, 0, 255), 2)
+
+
+            # Coordinates from table and camera are inverted.
+            #
+            # Camera:
+            # |----WIDTH (X)---------|
+            # |                      |
+            # | HEIGHT (Y)           |
+            # |                      |
+            # |----------------------|
+            #
+            # Table:
+            # |----Y-----------------|
+            # |                      |
+            # | X                    |
+            # |                      |
+            # |----------------------|
+
+            
+
+            if self.frameCounter > 5 and x != 0 and y != 0 and abs(speed) > 50:
+                moveY, moveX = self.mapCoordinates(x, y, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT, TABLE_MAX_Y, TABLE_MAX_X)
+                cameraX, cameraY = self.mapCoordinates(moveY, moveX, TABLE_MAX_Y, TABLE_MAX_X, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT)
+
+                cv2.circle(frame, (int(cameraX), int(cameraY)), 10, (0, 255, 255), 2)
+
+                # We only have half the field to work with so half the y.
+                moveY = 500
+                self.sendMoveValues(int(moveX), int(moveY))
+
+                #self.logTextbox.append(f"Moving based on image to X={int(moveX)}, Y={moveY}...")
+                self.frameCounter = 0
+
+            if self.cornersApplied == False:
+                # Draw the corners if they are set.
+                for corner in self.robotCornerCoords:
+                    cv2.circle(frame, (corner[0], corner[1]), 5, (255,255,0), 2)
+                for corner in self.humanCornerCoords:
+                    cv2.circle(frame, (corner[0], corner[1]), 5, (255,255,255), 2)
+
 
             self.updateImageFromFrame(self.cameraImageLabel, frame)            
             self.updateImageFromFrame(self.filteredImageLabel, filteredFrame)
+
+    def mapCoordinates(self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo):
+        xScale = maxWidthTo / maxWidthFrom
+        yScale = maxHeightTo / maxHeightFrom
+        x = x * xScale
+        y = y * yScale
+        return x, y
 
     def updateImageFromFrame(self, image, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
