@@ -10,6 +10,7 @@ import cv2
 import math
 import numpy as np
 import qdarkstyle
+from shapely.geometry import LineString, Point
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow, QLabel, QPushButton, QTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QSizePolicy, QSlider
@@ -39,7 +40,8 @@ class MoveWorker(QThread):
                 self.x = None
                 self.y = None
             #print(f"Moving X={x}, Y={y}")
-            self.stepperController.move_to_position(int(x), int(y))
+            if self.stepperController != None:
+                self.stepperController.move_to_position(int(x), int(y))
 
     def set_values(self, x, y):
         with QMutexLocker(self.mutex):
@@ -222,6 +224,18 @@ class MainWindow(QMainWindow):
         self.cornersHBox.addWidget(self.cornersApplyButton)
         self.cornersHBox.addWidget(self.cornersResetButton)
 
+        self.botSettingsHBox = QHBoxLayout()
+        self.botSettingsHBox.addWidget(QLabel(text="Bot Settings: "))
+        self.botSettingsHBox.addWidget(QLabel(text="SpeedThreshold: "))        
+        self.speedThresholdSlider = QSlider(Qt.Horizontal)
+        self.botSettingsHBox.addWidget(self.speedThresholdSlider)
+        self.speedThresholdSlider.setMinimum(0)
+        self.speedThresholdSlider.setMaximum(1000)
+        self.speedThresholdLabel = QLabel(str(self.speedThresholdSlider.value()))
+        self.botSettingsHBox.addWidget(self.speedThresholdLabel)
+        self.speedThresholdSlider.valueChanged.connect(lambda value: self.speedThresholdLabel.setText(str(value)))
+
+
         # Create the left vertical box.
         self.vboxLeft = QVBoxLayout()
         self.vboxLeft.addLayout(self.controlHorizontalBox)        
@@ -229,6 +243,7 @@ class MainWindow(QMainWindow):
         self.vboxLeft.addLayout(self.filterVbox)
         self.vboxLeft.addLayout(self.puckValuesHbox)
         self.vboxLeft.addLayout(self.cornersHBox)
+        self.vboxLeft.addLayout(self.botSettingsHBox)
         self.vboxLeft.addWidget(self.logTextbox)
         # self.vboxLeft.addWidget(self.calibrateButton)
         # self.vboxLeft.addWidget(self.gotoPositionButton)
@@ -256,11 +271,11 @@ class MainWindow(QMainWindow):
         self.stepperController = None
         # Stepper Controller
         try:
-            self.stepperController = StepperController(STEPPER_COM_PORT, STEPPER_BAUDRATE)        
+            self.stepperController = StepperController(STEPPER_COM_PORT, STEPPER_BAUDRATE) 
+            self.stepperController.connect()       
         except Exception:
             self.logTextbox.append("ERROR: No Arduino found on " + STEPPER_COM_PORT + ".")
-
-        self.stepperController.connect()
+            self.stepperController = None       
 
         self.moveWorker = MoveWorker(stepperController=self.stepperController)
         self.moveWorker.start()
@@ -269,6 +284,13 @@ class MainWindow(QMainWindow):
         self.humanCornerCoords = []
         self.cornersApplied = False
         self.originalCorners = np.float32([[0 ,0], [0, CAMERA_FRAME_HEIGHT - 1], [CAMERA_FRAME_WIDTH - 1, CAMERA_FRAME_HEIGHT - 1], [CAMERA_FRAME_WIDTH - 1, 0]])
+
+        self.speedThreshold = SPEED_THRESHOLD
+
+        self.upperBorder = [(0,0), (CAMERA_FRAME_WIDTH, 0)]
+        self.lowerBorder = [(0, CAMERA_FRAME_HEIGHT), (CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT)]
+        self.leftBorder = [(0,0), (0, CAMERA_FRAME_HEIGHT)]
+        self.rightBorder = [(CAMERA_FRAME_WIDTH, 0), (CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT)]
 
         self.lastPosition = (0,0)
         self.currentPosition = (0,0)
@@ -376,26 +398,71 @@ class MainWindow(QMainWindow):
             speed = vec[0] * vec[1]
             self.puckSpeedLabel.setText(f"Speed: {speed:.1f}")
 
+            if abs(speed) > 0:
+                pointLast = (int(self.lastPosition[0]), int(self.lastPosition[1]))
+                pointCurr = (int(self.currentPosition[0]), int(self.currentPosition[1]))
 
-            # Outputs the vector to the log. Only for debugging.
-            # if (x,y) != (0,0):
-            #     string = f"{self.lastPosition[0]},{self.lastPosition[1]},{self.currentPosition[0]},{self.currentPosition[1]}"
-            #     self.logTextbox.append(string)
+                # Up in this case is to the top of the image.
+                puckIsGoingUp = pointCurr[1] < pointLast[1]
 
-
-            pointA = (int(self.lastPosition[0]), int(self.lastPosition[1]))
-            pointB = (int(self.currentPosition[0]), int(self.currentPosition[1]))
-
-            angle = math.atan2(pointB[1] - pointA[1], pointB[0] - pointA[0])
-            length = 500
-            end_point = (int(pointA[0] + length*math.cos(angle)), int(pointA[1] + length*math.sin(angle)))
-            #if vec[0] > 1 or vec[1] > 1:
-            #if self.frameCounter > 5:
-            self.lastPosition = (x, y)
-            #self.frameCounter = 0
+                intersectsTop = False
+                intersectsBottom = False
+                if puckIsGoingUp:
+                    # Check upper border.
+                    intersectsTop, intersectsX, intersectsY = self.line_intersection((pointLast, pointCurr), (self.upperBorder[0], self.upperBorder[1]))
+                else:
+                    intersectsBottom, intersectsX, intersectsY = self.line_intersection((pointLast, pointCurr), (self.lowerBorder[0], self.lowerBorder[1]))
                 
-            cv2.line(frame, pointA, end_point, (0, 0, 255), 2)
+                if intersectsTop or intersectsBottom:
+                    cv2.line(frame, (int(pointCurr[0]), int(pointCurr[1])), (int(intersectsX), int(intersectsY)), (255,255,0), 2)
+                    
+                    pointA = pointCurr
+                    if intersectsTop:
+                        pointB = (int(pointCurr[0]),0)
+                    else:
+                        pointB = (int(pointCurr[0]), CAMERA_FRAME_HEIGHT)
+                    pointC = (int(intersectsX), int(intersectsY))
+                    angle = self.getAngle(pointA, pointC, pointB)
 
+                    refAngle = self.reflection_angle(angle, 90)
+
+                    # Draw reflection angle.
+                    length = 1000
+                    refEndPoint = (int(pointC[0] + length * math.cos(refAngle)), int(pointC[1] + length * math.sin(refAngle)))
+                    cv2.line(frame, pointC, refEndPoint, (0, 0, 255), 2)
+            
+
+            # # Up in this case is to the top of the image.
+            # puckIsGoingUp = pointB[1] < pointA[1]
+            # #print(f"Puck is going up: {puckIsGoingUp}")
+
+            # # Use pythagoras or sth idk.
+            # straightX = pointB[0]
+            # if puckIsGoingUp:
+            #     straightY = 0
+            # else:
+            #     straightY = CAMERA_FRAME_HEIGHT           
+
+            # angle = math.atan2(pointB[1] - pointA[1], pointB[0] - pointA[0])
+
+            # borderLength = int(math.tan(angle) * (CAMERA_FRAME_HEIGHT - pointB[1]))
+            # if borderLength < 1000:
+            #     cv2.line(frame, pointB, (straightX, straightY), (255, 255, 255), 2)
+            #     if angle > 0:
+            #         end_point = (int(pointA[0] + borderLength * math.cos(angle)), int(pointA[1] + borderLength * math.sin(angle)))
+            #     else:
+            #         end_point = (int(pointA[0] - borderLength * math.cos(angle)), int(pointA[1] - borderLength * math.sin(angle)))
+            #     print(angle)
+            #     print(end_point)
+            #     #if vec[0] > 1 or vec[1] > 1:
+            #     #if self.frameCounter > 5:
+            #     #self.frameCounter = 0
+                    
+            #     cv2.line(frame, pointA, end_point, (0, 0, 255), 2)
+
+
+            
+            self.lastPosition = (x, y)
 
             # Coordinates from table and camera are inverted.
             #
@@ -415,7 +482,7 @@ class MainWindow(QMainWindow):
 
             
 
-            if self.frameCounter > 5 and x != 0 and y != 0 and abs(speed) > 50:
+            if self.frameCounter > 5 and x != 0 and y != 0 and abs(speed) > self.speedThresholdSlider.value():
                 moveY, moveX = self.mapCoordinates(x, y, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT, TABLE_MAX_Y, TABLE_MAX_X)
                 cameraX, cameraY = self.mapCoordinates(moveY, moveX, TABLE_MAX_Y, TABLE_MAX_X, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT)
 
@@ -445,6 +512,42 @@ class MainWindow(QMainWindow):
         x = x * xScale
         y = y * yScale
         return x, y
+    
+    def reflection_angle(self, incident_angle, surface_angle):
+        # Convert angles to radians
+        incident_angle = math.radians(incident_angle)
+        surface_angle = math.radians(surface_angle)
+        
+        # Calculate the reflection angle
+        reflection_angle = 2*surface_angle - incident_angle
+        
+        # Convert reflection angle back to degrees
+        reflection_angle = math.degrees(reflection_angle)
+        
+        return reflection_angle
+    
+    # a is starting point
+    # b is middle point (intersection point)
+    # c is ending point of line
+    def getAngle(self, a, b, c):
+        ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
+        return ang + 360 if ang < 0 else ang
+    
+    def line_intersection(self, line1, line2):
+        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+        def det(a, b):
+            return a[0] * b[1] - a[1] * b[0]
+
+        div = det(xdiff, ydiff)
+        if div == 0:
+            return False, 0, 0
+
+        d = (det(*line1), det(*line2))
+        x = det(d, xdiff) / div
+        y = det(d, ydiff) / div
+        return True, x, y
 
     def updateImageFromFrame(self, image, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
