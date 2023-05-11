@@ -37,7 +37,7 @@ def get_gradient(p1, p2):  # Steigung der Geraden
 
 
 cv2.namedWindow(WINDOW_TITLE)
-cv2.createTrackbar("Robot Y-Pos:", WINDOW_TITLE, 0, int(HOCKEY_TABLE_HEIGHT/2), on_trackbar)
+cv2.createTrackbar("Robot Y-Pos:", WINDOW_TITLE, 0, int(HOCKEY_TABLE_HEIGHT / 2), on_trackbar)
 # Draw Table
 hockey_table = np.zeros((HOCKEY_TABLE_HEIGHT, HOCKEY_TABLE_WIDTH, 3), dtype=np.uint8)
 cv2.line(hockey_table, (0, int(HOCKEY_TABLE_HEIGHT / 2)), (HOCKEY_TABLE_WIDTH, int(HOCKEY_TABLE_HEIGHT / 2)),
@@ -72,13 +72,13 @@ while True:
             except:
                 pass
         try:
-            final_point = (int(line.get_x(robot_pos[1])), int(robot_pos[1]))
+            final_point = (int(line.get_x(robot_pos[1])), int(robot_pos[1]))  # normal line prediction
             cv2.circle(frame, final_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
         except:
             pass
         b = HOCKEY_TABLE_HEIGHT / 2
         m = line.get_m()
-        if m == 0:# puck_pos2 -> This simulates the second camera frame
+        if m == 0:  # puck_pos2 -> This simulates the second camera frame
             puck_pos2 = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2 - 12))
         else:
             puck_pos2 = (int(((puck_pos2[1] - b) / m) + (HOCKEY_TABLE_WIDTH / 2)), int(HOCKEY_TABLE_HEIGHT / 2 - 12))
