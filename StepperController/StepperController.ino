@@ -72,8 +72,9 @@ void loop() {
       movement_x = command.substring(0, delimiterIndex).toInt();
       movement_y = command.substring(delimiterIndex + 1).toInt();
       Serial.println("OK");
+      stepperx.moveTo(movement_x);
+      steppery.moveTo(movement_y);
     }
-    stepperx.moveTo(movement_x);
-    steppery.moveTo(movement_y);
+
   }
 }
