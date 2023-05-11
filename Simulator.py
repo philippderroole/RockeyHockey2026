@@ -50,8 +50,9 @@ while True:
     cv2.circle(frame, puck_pos, HOCKEY_PUCK_RADIUS, (0, 0, 255), -1)
     cv2.line(frame, puck_pos, user_pos, (255, 255, 255), thickness=1, lineType=4)
     if 0 <= puck_pos2[1] <= HOCKEY_TABLE_HEIGHT and 0 <= puck_pos2[0] <= HOCKEY_TABLE_WIDTH:
+        line = Line(user_pos, puck_pos2)
         b = HOCKEY_TABLE_HEIGHT / 2
-        m = get_gradient(user_pos, puck_pos)
+        m = line.get_m()
         if m == 0:
             puck_pos2 = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2 - 100))
         else:
