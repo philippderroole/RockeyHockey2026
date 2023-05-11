@@ -21,7 +21,7 @@ def mouse_event_handler(event, x, y, flags, userdata):
         user_pos = (x, y)
 
 
-def get_gradient(p1, p2):#Steigung der Geraden
+def get_gradient(p1, p2):  # Steigung der Geraden
     dY = p2[1] - p1[1]
     dX = p2[0] - p1[0]
     result = 0
@@ -32,14 +32,14 @@ def get_gradient(p1, p2):#Steigung der Geraden
 
 # Draw Table
 hockey_table = np.zeros((HOCKEY_TABLE_HEIGHT, HOCKEY_TABLE_WIDTH, 3), dtype=np.uint8)
-cv2.line(hockey_table, (0, int(HOCKEY_TABLE_HEIGHT/2)), (HOCKEY_TABLE_WIDTH, int(HOCKEY_TABLE_HEIGHT/2)), (255, 255, 255))
-
+cv2.line(hockey_table, (0, int(HOCKEY_TABLE_HEIGHT / 2)), (HOCKEY_TABLE_WIDTH, int(HOCKEY_TABLE_HEIGHT / 2)),
+         (255, 255, 255))
 
 # Convert image to 8-bit
 hockey_table = cv2.convertScaleAbs(hockey_table)
 
 puck_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2))
-robot_pos = (int(HOCKEY_TABLE_WIDTH / 2),int(20))
+robot_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(20))
 user_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT - 20))
 
 while True:
@@ -51,8 +51,14 @@ while True:
     cv2.line(frame, puck_pos, user_pos, (255, 255, 255), thickness=1, lineType=4)
     if 0 <= puck_pos2[1] <= HOCKEY_TABLE_HEIGHT and 0 <= puck_pos2[0] <= HOCKEY_TABLE_WIDTH:
         line = Line(user_pos, puck_pos2)
+
+        if line.get_angle() >= 0:  # linker rand
+            auf_point = (int(0), int(line.get_y(0)))
+        else:  # rechter rand
+            auf_point = (int(HOCKEY_TABLE_WIDTH), int(line.get_y(HOCKEY_TABLE_WIDTH)))
         b = HOCKEY_TABLE_HEIGHT / 2
         m = line.get_m()
+        cv2.circle(frame, auf_point, HOCKEY_PUCK_RADIUS, (0, 100, 255), -1)
         if m == 0:
             puck_pos2 = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2 - 50))
         else:
