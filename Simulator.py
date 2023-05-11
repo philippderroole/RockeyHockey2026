@@ -57,11 +57,11 @@ while True:
     reflected = False
     if 0 <= puck_pos2[1] <= HOCKEY_TABLE_HEIGHT and 0 <= puck_pos2[0] <= HOCKEY_TABLE_WIDTH:
         line = Line(user_pos, puck_pos2)
-        if line.get_angle() >= 0:  # linker rand
+        if line.get_angle() >= 0:  # left edge
             auf_point = (int(0), int(line.get_y(0)))
-        else:  # rechter rand
+        else:  # right edge
             auf_point = (int(HOCKEY_TABLE_WIDTH), int(line.get_y(HOCKEY_TABLE_WIDTH)))
-        if auf_point[1] > robot_pos[1]:
+        if auf_point[1] > robot_pos[1]:  # reflection is disabled if point is behind robot
             try:
                 reflection_line = Line(auf_point, None, (1 / line.get_m()))
                 reflection_point = (int(HOCKEY_TABLE_WIDTH - reflection_line.get_x(robot_pos[0])), int(robot_pos[1]))
@@ -76,11 +76,9 @@ while True:
             cv2.circle(frame, final_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
         except:
             pass
-
         b = HOCKEY_TABLE_HEIGHT / 2
         m = line.get_m()
-
-        if m == 0:
+        if m == 0:# puck_pos2 -> This simulates the second camera frame
             puck_pos2 = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2 - 12))
         else:
             puck_pos2 = (int(((puck_pos2[1] - b) / m) + (HOCKEY_TABLE_WIDTH / 2)), int(HOCKEY_TABLE_HEIGHT / 2 - 12))
