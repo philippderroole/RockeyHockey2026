@@ -1,8 +1,7 @@
-#Written by Lukas Karg 2023
+# Written by Lukas Karg 2023
 import numpy as np
 from Processing.Line import *
 import cv2
-import math
 
 WINDOW_TITLE = "HockeySimulator"
 HOCKEY_TABLE_HEIGHT = 600
