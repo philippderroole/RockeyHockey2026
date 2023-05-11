@@ -21,7 +21,7 @@ def mouse_event_handler(event, x, y, flags, userdata):
         user_pos = (x, y)
 
 
-def get_gradient(p1, p2):
+def get_gradient(p1, p2):#Steigung der Geraden
     dY = p2[1] - p1[1]
     dX = p2[0] - p1[0]
     result = 0
