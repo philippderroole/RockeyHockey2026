@@ -73,6 +73,7 @@ while True:
         try:
             final_point = (int(line.get_x(robot_pos[1])), int(robot_pos[1]))  # normal line prediction
             cv2.circle(frame, final_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
+            cv2.line(frame, puck_pos, final_point, (255, 255, 255), thickness=1, lineType=4)
         except:
             pass
         b = HOCKEY_TABLE_HEIGHT / 2
