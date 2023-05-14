@@ -6,7 +6,6 @@ import numpy as np
 import qdarkstyle
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QSplashScreen, QApplication
-
 from Processing.Line import *
 import cv2
 
@@ -15,7 +14,6 @@ HOCKEY_TABLE_HEIGHT = 600
 HOCKEY_TABLE_WIDTH = 300
 HOCKEY_BAT_RADIUS = 10
 HOCKEY_PUCK_RADIUS = 5
-
 puck_pos = (0, 0)
 puck_pos2 = (0, 0)
 robot_pos = (0, 0)
@@ -49,7 +47,6 @@ cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH // 2) - 40, 0), ((HOCKEY_TABLE_
               2)
 cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH // 2) - 40, HOCKEY_TABLE_HEIGHT - 10),
               ((HOCKEY_TABLE_WIDTH // 2) + 40, HOCKEY_TABLE_HEIGHT), (255, 255, 255), 2)
-
 # Convert image to 8-bit
 hockey_table = cv2.convertScaleAbs(hockey_table)
 puck_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2))
@@ -90,6 +87,6 @@ while True:
     cv2.setMouseCallback(WINDOW_TITLE, mouse_event_handler)
     if cv2.waitKey(10) == 27:  # exit if ESC is pressed
         break
-    if cv2.getWindowProperty(WINDOW_TITLE, cv2.WND_PROP_VISIBLE) < 1: # regular window close
+    if cv2.getWindowProperty(WINDOW_TITLE, cv2.WND_PROP_VISIBLE) < 1:  # regular window close
         break
 cv2.destroyAllWindows()
