@@ -26,17 +26,8 @@ def on_trackbar(val):
     robot_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(val))
 
 
-def get_gradient(p1, p2):  # Steigung der Geraden
-    dY = p2[1] - p1[1]
-    dX = p2[0] - p1[0]
-    result = 0
-    if dX != 0:
-        result = dY / dX
-    return result
-
-
 cv2.namedWindow(WINDOW_TITLE)
-cv2.createTrackbar("Robot Y-Pos:", WINDOW_TITLE, 0, int(HOCKEY_TABLE_HEIGHT / 2), on_trackbar)
+cv2.createTrackbar("Robot Y:", WINDOW_TITLE, 0, int(HOCKEY_TABLE_HEIGHT / 2), on_trackbar)
 # Draw Table
 hockey_table = np.zeros((HOCKEY_TABLE_HEIGHT, HOCKEY_TABLE_WIDTH, 3), dtype=np.uint8)
 cv2.line(hockey_table, (0, int(HOCKEY_TABLE_HEIGHT / 2)), (HOCKEY_TABLE_WIDTH, int(HOCKEY_TABLE_HEIGHT / 2)),
