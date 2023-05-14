@@ -32,6 +32,9 @@ cv2.createTrackbar("Robot Y:", WINDOW_TITLE, 0, int(HOCKEY_TABLE_HEIGHT / 2), on
 hockey_table = np.zeros((HOCKEY_TABLE_HEIGHT, HOCKEY_TABLE_WIDTH, 3), dtype=np.uint8)
 cv2.line(hockey_table, (0, int(HOCKEY_TABLE_HEIGHT / 2)), (HOCKEY_TABLE_WIDTH, int(HOCKEY_TABLE_HEIGHT / 2)),
          (255, 255, 255))
+cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH//2)-40, 0), ((HOCKEY_TABLE_WIDTH//2)+40, 10), (255, 255, 255), 2)
+cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH//2)-40, HOCKEY_TABLE_HEIGHT-10), ((HOCKEY_TABLE_WIDTH//2)+40, HOCKEY_TABLE_HEIGHT), (255, 255, 255), 2)
+
 # Convert image to 8-bit
 hockey_table = cv2.convertScaleAbs(hockey_table)
 puck_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(HOCKEY_TABLE_HEIGHT / 2))
