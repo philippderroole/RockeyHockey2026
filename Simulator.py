@@ -61,19 +61,20 @@ while True:
     cv2.line(frame, puck_pos, user_pos, (255, 20, 255), thickness=1, lineType=4)
     reflected = False
     line = Line(user_pos, puck_pos)
-    if line.get_angle() >= 0:  # left edge
-        collision_point = (int(0), int(line.get_y(0)))
-    else:  # right edge
-        collision_point = (int(HOCKEY_TABLE_WIDTH), int(line.get_y(HOCKEY_TABLE_WIDTH)))
-    if collision_point[1] > robot_pos[1]:  # reflection is disabled if point is behind robot
-        if line.get_m() != 0:
-            reflection_line = Line(collision_point, None, (1 / line.get_m()))
-            reflection_point = (int(HOCKEY_TABLE_WIDTH - reflection_line.get_x(robot_pos[0])), int(robot_pos[1]))
-            cv2.circle(frame, reflection_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
-            cv2.line(frame, puck_pos, collision_point, (255, 255, 255), thickness=1, lineType=4)
-            cv2.line(frame, collision_point, reflection_point, (255, 255, 255), thickness=1, lineType=4)
-            cv2.circle(frame, collision_point, HOCKEY_PUCK_RADIUS, (0, 100, 255), -1)
-    if line.get_m() != 0:
+    if line.get_m() is not None:
+        if line.get_angle() >= 0:  # left edge
+            collision_point = (int(0), int(line.get_y(0)))
+        else:  # right edge
+            collision_point = (int(HOCKEY_TABLE_WIDTH), int(line.get_y(HOCKEY_TABLE_WIDTH)))
+        if collision_point[1] > robot_pos[1]:  # reflection is disabled if point is behind robot
+            if line.get_m() is not None:
+                reflection_line = Line(collision_point, None, (1 / line.get_m()))
+                reflection_point = (int(HOCKEY_TABLE_WIDTH - reflection_line.get_x(robot_pos[0])), int(robot_pos[1]))
+                cv2.circle(frame, reflection_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
+                cv2.line(frame, puck_pos, collision_point, (255, 255, 255), thickness=1, lineType=4)
+                cv2.line(frame, collision_point, reflection_point, (255, 255, 255), thickness=1, lineType=4)
+                cv2.circle(frame, collision_point, HOCKEY_PUCK_RADIUS, (0, 100, 255), -1)
+    if line.get_m() is not None:
         final_point = (int(line.get_x(robot_pos[1])), int(robot_pos[1]))  # normal line prediction
         cv2.circle(frame, final_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
         cv2.line(frame, puck_pos, final_point, (255, 255, 255), thickness=1, lineType=4)

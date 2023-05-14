@@ -6,10 +6,11 @@ class Line:
         self.p1 = p1
         if p2 is not None:
             if(p2[0] - p1[0]) == 0:
-                self.m = 0
+                self.m = None
+                self.b = None
             else:
                 self.m = (p2[1] - p1[1]) / (p2[0] - p1[0])
-            self.b = p1[1] - self.m * p1[0]
+                self.b = p1[1] - self.m * p1[0]
         else:
             self.m = m
             self.b = p1[1] - self.m * p1[0]
