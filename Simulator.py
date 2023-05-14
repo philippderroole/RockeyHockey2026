@@ -1,5 +1,12 @@
 # Written by Lukas Karg 2023
+import sys
+import time
+
 import numpy as np
+import qdarkstyle
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QSplashScreen, QApplication
+
 from Processing.Line import *
 import cv2
 
@@ -26,14 +33,22 @@ def on_trackbar(val):
     robot_pos = (int(HOCKEY_TABLE_WIDTH / 2), int(val))
 
 
+app = QApplication(sys.argv)
+app.setStyleSheet(qdarkstyle.load_stylesheet())
+splash = QSplashScreen(QPixmap("splash.png"))
+splash.show()
+time.sleep(0.5)
+splash.close()
 cv2.namedWindow(WINDOW_TITLE)
 cv2.createTrackbar("Robot Y:", WINDOW_TITLE, 0, int(HOCKEY_TABLE_HEIGHT / 2), on_trackbar)
 # Draw Table
 hockey_table = np.zeros((HOCKEY_TABLE_HEIGHT, HOCKEY_TABLE_WIDTH, 3), dtype=np.uint8)
 cv2.line(hockey_table, (0, int(HOCKEY_TABLE_HEIGHT / 2)), (HOCKEY_TABLE_WIDTH, int(HOCKEY_TABLE_HEIGHT / 2)),
          (255, 255, 255))
-cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH//2)-40, 0), ((HOCKEY_TABLE_WIDTH//2)+40, 10), (255, 255, 255), 2)
-cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH//2)-40, HOCKEY_TABLE_HEIGHT-10), ((HOCKEY_TABLE_WIDTH//2)+40, HOCKEY_TABLE_HEIGHT), (255, 255, 255), 2)
+cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH // 2) - 40, 0), ((HOCKEY_TABLE_WIDTH // 2) + 40, 10), (255, 255, 255),
+              2)
+cv2.rectangle(hockey_table, ((HOCKEY_TABLE_WIDTH // 2) - 40, HOCKEY_TABLE_HEIGHT - 10),
+              ((HOCKEY_TABLE_WIDTH // 2) + 40, HOCKEY_TABLE_HEIGHT), (255, 255, 255), 2)
 
 # Convert image to 8-bit
 hockey_table = cv2.convertScaleAbs(hockey_table)
