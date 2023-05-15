@@ -10,6 +10,7 @@ import cv2
 import math
 import numpy as np
 import qdarkstyle
+from collections import deque
 from shapely.geometry import LineString, Point
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker
 from PyQt5.QtGui import QImage, QPixmap
@@ -303,13 +304,15 @@ class MainWindow(QMainWindow):
         self.frameCounter = 0
         self.moveForward = True
 
+        self.puckPositions = deque(maxlen=10)
+
     def exitApp(self):
         self.timer.stop()
         sys.exit()
 
     def applyCorners(self):
         if len(self.tableCordnerCoords) == 4:
-            self.logTextbox.append("Applied corners. Fitting image...")
+            self.logTextbox.append("Applied corners. Fitting image. If the image does not look right then reset the corners. Start at the top left and then go counter clock wise.")
             self.cornersApplied = True
         else:
             self.logTextbox.append("ERROR: Not all corners set. There must be 4 corners set. Use left click to set the corners.")
@@ -368,6 +371,9 @@ class MainWindow(QMainWindow):
             # Rotate the camera frame so we have it in "portrait mode" and the robot is on top.
             frame = cv2.rotate(frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
 
+            # Blur the frame a bit
+            #frame = cv2.GaussianBlur(frame, (5,5), 0)
+
             if self.cornersApplied:                
                 # If the corners are set then fit the image.
                 # Corners have to be inputted counter clockwise.
@@ -390,19 +396,25 @@ class MainWindow(QMainWindow):
 
             # Detect the puck and update UI values.
             (x, y), radius = detectPuck(filteredFrame, lowerBoundary, upperBoundary)
-            frame = markPuckInFrame(frame, x, y, radius)
+            frame = markPuckInFrame(frame, x, y, radius)            
+            self.currentPosition = (x, y)
+
+            self.puckPositions.append((x, y))
 
             self.puckXLabel.setText(str(f"X: {x:.1f}"))
             self.puckYLabel.setText(str(f"Y: {y:.1f}"))
-            self.puckRadiusLabel.setText(str(f"Radius: {radius:.1f}"))            
-            self.currentPosition = (x, y)
+            self.puckRadiusLabel.setText(str(f"Radius: {radius:.1f}"))
             velocity = (x - self.lastPosition[0], y - self.lastPosition[1])
             self.puckVecLabel.setText(f"Vec: {velocity[0]:.1f}, {velocity[1]:.1f}")
 
             speed = math.sqrt( (velocity[0] * velocity[0] + velocity[1] * velocity[1]) )
             self.puckSpeedLabel.setText(f"Speed: {speed:.1f}")
 
-            line = Line(self.lastPosition, self.currentPosition)
+            avgPositionX = sum(pos[0] for pos in self.puckPositions) / len(self.puckPositions)
+            avgPositionY = sum(pos[1] for pos in self.puckPositions) / len(self.puckPositions)
+
+            #line = Line(self.lastPosition, self.currentPosition)
+            line = Line((avgPositionX, avgPositionY), self.currentPosition)
             try:
                 if line.get_m() is not None:
                     finalPoint = (int(line.get_x(0)), int(0))
@@ -470,13 +482,14 @@ class MainWindow(QMainWindow):
             
 
             if self.frameCounter > 5 and x != 0 and y != 0 and abs(speed) > self.speedThresholdSlider.value():
-                moveY, moveX = self.mapCoordinates(x, y, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT, TABLE_MAX_Y, TABLE_MAX_X)
+                moveY, moveX = self.mapCoordinates(finalPoint[0], finalPoint[1], CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT, TABLE_MAX_Y, TABLE_MAX_X)
                 cameraX, cameraY = self.mapCoordinates(moveY, moveX, TABLE_MAX_Y, TABLE_MAX_X, CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT)
 
-                cv2.circle(frame, (int(cameraX), int(cameraY)), 10, (0, 255, 255), 2)
+                #cv2.circle(frame, (int(cameraX), int(cameraY)), 10, (0, 255, 255), 2)
 
                 # We only have half the field to work with so half the y.
-                moveY = 500
+                #moveY = 500
+                #print(f"Move to X:{moveX}, Y:{moveY}")
                 #self.sendMoveValues(int(moveX), int(moveY))
 
                 #self.logTextbox.append(f"Moving based on image to X={int(moveX)}, Y={moveY}...")
