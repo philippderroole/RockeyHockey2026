@@ -13,12 +13,7 @@ void setup() {
   pinMode(END_PIN_Y, INPUT_PULLUP);
   stepperx.setPinsInverted(false, false, true);
   steppery.setPinsInverted(false, false, true);
-  stepperx.setMaxSpeed(MAX_SPEED);
-  stepperx.setAcceleration(MAX_ACCEL);
-  stepperx.setSpeed(MIN_SPEED);
-  steppery.setMaxSpeed(MAX_SPEED);
-  steppery.setAcceleration(MAX_ACCEL);
-  steppery.setSpeed(MIN_SPEED);
+ SetStepperSettings();
   stepperx.setEnablePin(ENABLE_PIN);
   steppery.setEnablePin(ENABLE_PIN);
   Serial.begin(115200);
@@ -37,44 +32,73 @@ void disable_steppers() {
     st_enabled = false;
   }
 }
-
+void SetStepperSettings(){
+    stepperx.setMaxSpeed(MAX_SPEED);
+  stepperx.setAcceleration(MAX_ACCEL);
+  stepperx.setSpeed(MIN_SPEED);
+  steppery.setMaxSpeed(MAX_SPEED);
+  steppery.setAcceleration(MAX_ACCEL);
+  steppery.setSpeed(MIN_SPEED);
+}
 void loop() {
-    if (!st_enabled) {
-      enable_steppers();
-    }
-    if (stepperx.distanceToGo() != 0 && stepperx.targetPosition() <= MAX_X &&  stepperx.targetPosition()>=0) {
-      stepperx.run();
-    }
-    if (steppery.distanceToGo() != 0 && steppery.targetPosition() <= MAX_Y &&  steppery.targetPosition()>=0) {
-      steppery.run();
-    }
-  
+  if (!st_enabled) {
+    enable_steppers();
+  }
+  if (stepperx.distanceToGo() != 0 && stepperx.targetPosition() <= MAX_X && stepperx.targetPosition() >= 0) {
+    stepperx.run();
+  }
+  if (steppery.distanceToGo() != 0 && steppery.targetPosition() <= MAX_Y && steppery.targetPosition() >= 0) {
+    steppery.run();
+  }
+
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim();
-    if(strcmp(command.c_str(), "MAXIMA") == 0){
-      Serial.println(String(MAX_X)+","+String(MAX_Y));
-    }else if(strcmp(command.c_str(), "POSITION") == 0) {
+    if (strcmp(command.c_str(), "MAXIMA") == 0) {
+      Serial.println(String(MAX_X) + "," + String(MAX_Y));
+    } else if (strcmp(command.c_str(), "POSITION") == 0) {
       Serial.println(String(stepperx.currentPosition()) + "," + String(steppery.currentPosition()));
-    } else if (strcmp(command.c_str(), "CALIBRATE") == 0){
+    } else if (strcmp(command.c_str(), "CALIBRATE") == 0) {
       movement_x = 0;
       movement_y = 0;
       calibrate_x();
       calibrate_y();
       Serial.println("OK");
-    }else if(strcmp(command.c_str(), "STATUS") == 0) {
-      if(stepperx.isRunning()||steppery.isRunning())
-      Serial.println("BUSY");
+    } else if (strcmp(command.c_str(), "STATUS") == 0) {
+      if (stepperx.isRunning() || steppery.isRunning())
+        Serial.println("BUSY");
       else
-      Serial.println("READY");
+        Serial.println("READY");
     } else {
+      int cur_x = stepperx.currentPosition();
+      int cur_y = steppery.currentPosition();
       int delimiterIndex = command.indexOf(',');
-      movement_x = command.substring(0, delimiterIndex).toInt();
-      movement_y = command.substring(delimiterIndex + 1).toInt();
+      movement_x = command.substring(0, delimiterIndex).toInt();   //new x pos
+      movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
+      if (stepperx.isRunning()) {
+        if (cur_x > movement_x && cur_x < stepperx.targetPosition()) {
+          stepperx.stop();
+          stepperx.runToPosition();
+        } else if (cur_x < movement_x && cur_x > stepperx.targetPosition()) {
+          stepperx.stop();
+          stepperx.runToPosition();
+          
+        }
+      }
+      if (steppery.isRunning()) {
+        if (cur_y > movement_y && cur_y < steppery.targetPosition()) {
+          steppery.stop();
+          steppery.runToPosition();
+        } else if (cur_y < movement_y && cur_y > steppery.targetPosition()) {
+          steppery.stop();
+          steppery.runToPosition();
+        }
+      }
+      
       Serial.println("OK");
+      SetStepperSettings();
       stepperx.moveTo(movement_x);
       steppery.moveTo(movement_y);
     }
-
   }
 }

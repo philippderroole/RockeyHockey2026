@@ -14,7 +14,7 @@ void calibrate_x() {
   stepperx.stop();
   stepperx.setCurrentPosition(0);
   stepperx.setMaxSpeed(MAX_SPEED);
-  stepperx.setSpeed(MAX_SPEED);
+  stepperx.setSpeed(MIN_SPEED);
   stepperx.setAcceleration(MAX_ACCEL);
 }
 void calibrate_y() {
@@ -29,12 +29,14 @@ void calibrate_y() {
   steppery.stop();
   steppery.setCurrentPosition(0);
   steppery.setMaxSpeed(MAX_SPEED);
-  steppery.setSpeed(MAX_SPEED);
+  steppery.setSpeed(MIN_SPEED);
   steppery.setAcceleration(MAX_ACCEL);
 }
 void calibrate(){
+  for(int i = 0; i<=2; i++) {
   calibrate_x();
   calibrate_y();
+}
   Serial.println("ready");
 }
 #endif
