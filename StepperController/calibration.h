@@ -33,7 +33,7 @@ void calibrate_y() {
   steppery.setAcceleration(MAX_ACCEL);
 }
 void calibrate(){
-  for(int i = 0; i<=2; i++) {
+  for(int i = 0; i<=3; i++) {
   calibrate_x();
   calibrate_y();
 }

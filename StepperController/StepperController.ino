@@ -17,6 +17,7 @@ void setup() {
   stepperx.setEnablePin(ENABLE_PIN);
   steppery.setEnablePin(ENABLE_PIN);
   Serial.begin(115200);
+  calibrate();
 }
 void enable_steppers() {
   if (!st_enabled) {
@@ -44,12 +45,7 @@ void loop() {
   if (!st_enabled) {
     enable_steppers();
   }
-  if (stepperx.distanceToGo() != 0 && stepperx.targetPosition() <= MAX_X && stepperx.targetPosition() >= 0) {
-    stepperx.run();
-  }
-  if (steppery.distanceToGo() != 0 && steppery.targetPosition() <= MAX_Y && steppery.targetPosition() >= 0) {
-    steppery.run();
-  }
+ 
 
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
@@ -70,35 +66,18 @@ void loop() {
       else
         Serial.println("READY");
     } else {
-      int cur_x = stepperx.currentPosition();
-      int cur_y = steppery.currentPosition();
       int delimiterIndex = command.indexOf(',');
       movement_x = command.substring(0, delimiterIndex).toInt();   //new x pos
       movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
-      if (stepperx.isRunning()) {
-        if (cur_x > movement_x && cur_x < stepperx.targetPosition()) {
-          stepperx.stop();
-          stepperx.runToPosition();
-        } else if (cur_x < movement_x && cur_x > stepperx.targetPosition()) {
-          stepperx.stop();
-          stepperx.runToPosition();
-          
-        }
-      }
-      if (steppery.isRunning()) {
-        if (cur_y > movement_y && cur_y < steppery.targetPosition()) {
-          steppery.stop();
-          steppery.runToPosition();
-        } else if (cur_y < movement_y && cur_y > steppery.targetPosition()) {
-          steppery.stop();
-          steppery.runToPosition();
-        }
-      }
-      
-      Serial.println("OK");
+      if(movement_x >=0 && movement_x<=MAX_X && movement_y >=0 && movement_y <= MAX_Y){
       SetStepperSettings();
       stepperx.moveTo(movement_x);
       steppery.moveTo(movement_y);
+      stepperx.runToPosition();
+      steppery.runToPosition();
+      }
+      Serial.println("OK");
+    }
     }
   }
-}
+
