@@ -331,8 +331,12 @@ class MainWindow(QMainWindow):
         self.moveWorker = MoveWorker(stepperController=self.stepperController)
         self.moveWorker.start()
 
-        self.tableCordnerCoords = []
-        self.cornersApplied = False
+        self.tableCordnerCoords = [(TABLE_CORNER_TOP_LEFT_X, TABLE_CORNER_TOP_LEFT_Y),
+                                   (TABLE_CORNER_TOP_RIGHT_X, TABLE_CORNER_TOP_RIGHT_Y),
+                                   (TABLE_CORNER_BOTTOM_RIGHT_X, TABLE_CORNER_BOTTOM_RIGHT_Y),
+                                   (TABLE_CORNER_BOTTOM_LEFT_X, TABLE_CORNER_BOTTOM_LEFT_Y)]
+
+        self.cornersApplied = True
         self.originalCorners = np.float32(
             [
                 [0, 0],
@@ -403,8 +407,10 @@ class MainWindow(QMainWindow):
         self.tableCordnerCoords = []
 
     def getImageClickPos(self, event):
-        x = event.pos().x()
-        y = event.pos().y()
+        # The Camera image is double the size of the debug window image.
+        x = event.pos().x() * 2
+        y = event.pos().y() * 2
+        print(f"Clicked x:{x}, y:{y}")
         # 1 is left click, 2 is right click
         mouseButton = event.button()
         if mouseButton == 1 and len(self.tableCordnerCoords) < 4:
