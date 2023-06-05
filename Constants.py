@@ -2,7 +2,7 @@
 
 # Commented out values are for green puck.
 # Current values are for blue paper puck.
-CAMERA_LOWER_HUE = 30
+CAMERA_LOWER_HUE = 40
 CAMERA_LOWER_SATURATION = 49
 CAMERA_LOWER_VALUE = 40
 CAMERA_UPPER_HUE = 69
