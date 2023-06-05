@@ -10,6 +10,8 @@ import cv2
 import math
 import numpy as np
 import qdarkstyle
+import time
+from datetime import datetime
 from collections import deque
 from shapely.geometry import LineString, Point
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker
@@ -315,6 +317,9 @@ class MainWindow(QMainWindow):
 
         self.botActivated = False
 
+        self.currentTime = datetime.now()
+        self.lastTime = datetime.now()
+
 
     def exitApp(self):
         self.timer.stop()
@@ -386,6 +391,12 @@ class MainWindow(QMainWindow):
     def updateImages(self):
         #ret, frame = self.cap.read()
         ret, frame = self.camera.get_frame()
+
+        # self.currentTime = datetime.now()
+        # diff = self.currentTime - self.lastTime
+        # self.logTextbox.append(f"TimeDiff: {(diff.microseconds / 1000):.0f}")
+        # self.lastTime = self.currentTime
+
         if ret:
             # Rotate the camera frame so we have it in "portrait mode" and the robot is on top.
             frame = cv2.rotate(frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
@@ -426,8 +437,8 @@ class MainWindow(QMainWindow):
             self.puckRadiusLabel.setText(str(f"Radius: {radius:.1f}"))
             
 
-            avgPositionX = sum(pos[0] for pos in self.puckPositions) / len(self.puckPositions)
-            avgPositionY = sum(pos[1] for pos in self.puckPositions) / len(self.puckPositions)
+            avgPositionX = int(sum(pos[0] for pos in self.puckPositions) / len(self.puckPositions))
+            avgPositionY = int(sum(pos[1] for pos in self.puckPositions) / len(self.puckPositions))
 
             velocity = (x - avgPositionX, y - avgPositionY)
             self.puckVecLabel.setText(f"Vec: {velocity[0]:.1f}, {velocity[1]:.1f}")
@@ -440,43 +451,68 @@ class MainWindow(QMainWindow):
             goingBack = puckPos[1] > avgPositionY
 
             if speed > self.speedThresholdSlider.value() and not goingBack:
-                line = Line((avgPositionX, avgPositionY), self.currentPosition)
-                try:
-                    if line.get_m() is not None:
-                        # if line.get_angle() >= 0: # left edge
-                        #     collisionPoint = (int(0), int(line.get_y(0)))
-                        # else: # right edge
-                        #     collisionPoint = (int(CAMERA_FRAME_HEIGHT), int(line.get_y(CAMERA_FRAME_HEIGHT)))
+                collisionPoint, intersectX, intersectY = self.getPositions((avgPositionX, avgPositionY), puckPos, 100)
+                if collisionPoint != None and intersectX != None and intersectY != None:
+                    finalPoint = (intersectX, intersectY)
 
-                        # reflectionLine = Line(collisionPoint, None, (1 / line.get_m()))
-                        # reflectionPoint = (int(CAMERA_FRAME_HEIGHT - reflectionLine.get_x(0)), int(0))
-                        # cv2.circle(frame, reflectionPoint, 5, (100, 0, 255), -1)
-                        # cv2.line(frame, puckPos, collisionPoint, (255, 255, 255), thickness=1, lineType=4)
-                        # cv2.line(frame, collisionPoint, reflectionPoint, (255, 255, 255), thickness=1, lineType=4)
-                        # cv2.circle(frame, collisionPoint, 5, (0, 100, 255), -1)
+                    cv2.circle(frame, collisionPoint, 5, (100, 0, 255), -1)
+                    cv2.circle(frame, (int(intersectX), int(intersectY)), 5, (100, 0, 255), -1)
+                    cv2.line(frame, puckPos, collisionPoint, (255, 255, 255), thickness=1, lineType=4)
+                    cv2.line(frame, collisionPoint, (int(intersectX), int(intersectY)), (255, 255, 255), thickness=1, lineType=4)
 
-                        finalPoint = (int(line.get_x(50)), 50)
-                        cv2.circle(frame, finalPoint, 5, (100,0,255), -1)
-                        cv2.line(frame, puckPos, finalPoint, (255,255,255), thickness=1, lineType=4)
+                    #Puck movement.
+                    if self.frameCounter > 2 and x != 0 and y != 0:
+                        #self.logTextbox.append(f"Final Point: X={finalPoint[0]}, Y={finalPoint[1]}")
+
+                        if finalPoint[0] > 20 and finalPoint[0] < CAMERA_FRAME_HEIGHT - 20:
+                            moveX, moveY = self.mapCoordinates(finalPoint[0], finalPoint[1], CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH, TABLE_MAX_X, TABLE_MAX_Y)
+                            timestamp = datetime.now()
+                            formattedTimestamp = timestamp.strftime("%H:%M:%S.%f")[:-3]
+                            #self.logTextbox.append(f"{formattedTimestamp}: Move To: X={moveX}, Y={moveY}")
+                            moveY = 0
+                            # X is inverted
+                            moveX = TABLE_MAX_X - moveX
+                            if self.botActivated:
+                                self.positionsSent += 1
+                                print(f"Sending {self.positionsSent}")
+                                self.sendMoveValues(int(moveX), int(moveY))
+
+                        self.frameCounter = 0
+                # line = Line((avgPositionX, avgPositionY), self.currentPosition)
+                # try:
+                #     if line.get_m() is not None:
+                #         # if line.get_angle() >= 0: # left edge
+                #         #     collisionPoint = (int(0), int(line.get_y(0)))
+                #         # else: # right edge
+                #         #     collisionPoint = (int(CAMERA_FRAME_HEIGHT), int(line.get_y(CAMERA_FRAME_HEIGHT)))
+
+                #         # reflectionLine = Line(collisionPoint, None, (1 / line.get_m()))
+                #         # reflectionPoint = (int(CAMERA_FRAME_HEIGHT - reflectionLine.get_x(0)), int(0))
+                #         # cv2.circle(frame, reflectionPoint, 5, (100, 0, 255), -1)
+                #         # cv2.line(frame, puckPos, collisionPoint, (255, 255, 255), thickness=1, lineType=4)
+                #         # cv2.line(frame, collisionPoint, reflectionPoint, (255, 255, 255), thickness=1, lineType=4)
+                #         # cv2.circle(frame, collisionPoint, 5, (0, 100, 255), -1)
+
+                #         finalPoint = (int(line.get_x(50)), 50)
+                #         cv2.circle(frame, finalPoint, 5, (100,0,255), -1)
+                #         cv2.line(frame, puckPos, finalPoint, (255,255,255), thickness=1, lineType=4)
                         
-                        # Puck movement.
-                        if self.frameCounter > 2 and x != 0 and y != 0:
-                            #self.logTextbox.append(f"Final Point: X={finalPoint[0]}, Y={finalPoint[1]}")
+                #         # Puck movement.
+                #         if self.frameCounter > 2 and x != 0 and y != 0:
+                #             #self.logTextbox.append(f"Final Point: X={finalPoint[0]}, Y={finalPoint[1]}")
 
-                            if finalPoint[0] > 20 and finalPoint[0] < CAMERA_FRAME_HEIGHT - 20:
-                                moveX, moveY = self.mapCoordinates(finalPoint[0], finalPoint[1], CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH, TABLE_MAX_X, TABLE_MAX_Y)
-                                #self.logTextbox.append(f"Move To: X={moveX}, Y={moveY}")
-                                moveY = 0
-                                # X is inverted
-                                moveX = TABLE_MAX_X - moveX
-                                if self.botActivated:
-                                    self.positionsSent += 1
-                                    print(f"Sending {self.positionsSent}")
-                                    self.sendMoveValues(int(moveX), int(moveY))
+                #             if finalPoint[0] > 20 and finalPoint[0] < CAMERA_FRAME_HEIGHT - 20:
+                #                 moveX, moveY = self.mapCoordinates(finalPoint[0], finalPoint[1], CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH, TABLE_MAX_X, TABLE_MAX_Y)
+                #                 #self.logTextbox.append(f"Move To: X={moveX}, Y={moveY}")
+                #                 moveY = 0
+                #                 # X is inverted
+                #                 moveX = TABLE_MAX_X - moveX
+                #                 if self.botActivated:
+                #                     self.positionsSent += 1
+                #                     print(f"Sending {self.positionsSent}")
+                #                     self.sendMoveValues(int(moveX), int(moveY))
 
-                            self.frameCounter = 0
-                except:
-                    pass
+                #             self.frameCounter = 0
             
             if len(self.puckPositions) > MAX_PUCK_POSITION_BUFFER:
                 self.puckPositions.popleft()
@@ -526,6 +562,31 @@ class MainWindow(QMainWindow):
         x = det(d, xdiff) / div
         y = det(d, ydiff) / div
         return True, x, y
+    
+    # Returns collisionPoint, intersectsX, intersectsY
+    def getPositions(self, prevPuckPos, currPuckPos, defenseY):
+        line = Line(prevPuckPos, currPuckPos)
+        if line.get_m() is not None:
+            if line.get_angle() >= 0:  # left edge
+                collision_point = (int(0), int(line.get_y(0)))
+            else:  # right edge
+                collision_point = (int(CAMERA_FRAME_HEIGHT), int(line.get_y(CAMERA_FRAME_WIDTH)))
+
+            # Collides behind the robot -> so no collision at the wall.
+            collidesWithWall = False if collision_point[1] < 0 else True
+
+            yref = collision_point[1] - (currPuckPos[1] - collision_point[1])
+            xref = currPuckPos[0]
+            reflection_point = (xref, yref)
+
+            if collidesWithWall:
+                intersects, intersectsX, intersectsY = self.line_intersection((collision_point, reflection_point), ((0,defenseY), (CAMERA_FRAME_HEIGHT, defenseY)))
+            else:
+                intersects, intersectsX, intersectsY = self.line_intersection((currPuckPos, collision_point), ((0,defenseY), (CAMERA_FRAME_HEIGHT, defenseY)))
+            #cv2.circle(frame, (int(intersectsX), int(intersectsY)), 10, (255, 255, 255), -1) #pink
+            return collision_point, intersectsX, intersectsY
+        else:
+            return None, None, None
 
     def updateImageFromFrame(self, image, frame):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
