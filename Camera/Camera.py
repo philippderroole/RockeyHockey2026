@@ -1,5 +1,4 @@
 import os
-
 import cv2
 from threading import Thread
 import time
@@ -12,7 +11,7 @@ class Camera:
         self.fps = fps
         self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
-        self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('X', 'V', 'I', 'D'))
+        self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
         self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
         self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
         self.stream.set(cv2.CAP_PROP_FPS, fps)
@@ -40,8 +39,9 @@ class Camera:
             if not self.grabbed:
                 self.stop()
             else:
-                (self.grabbed, self.frame) = self.stream.read()
-                self.frame = cv2.rotate(self.frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
+                (self.grabbed, frame) = self.stream.read()
+                frame = cv2.rotate(frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
+                self.frame = cv2.flip(frame, 1)  # Flip horizontally
                 self.new_frame = True
             elapsed_time = time.time() - start_time
             time.sleep(max(0, frame_time - elapsed_time))
