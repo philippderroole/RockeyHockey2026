@@ -493,9 +493,6 @@ class MainWindow(QMainWindow):
             self.currentFrameTimestamp = datetime.now()
 
             frame = self.camera.get_current_frame()
-            # Rotate the camera frame so we have it in "portrait mode" and the robot is on top.
-            frame = cv2.rotate(frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
-
             if self.cornersApplied:
                 # If the corners are set then fit the image.
                 # Corners have to be inputted counter clockwise.

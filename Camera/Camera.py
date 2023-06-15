@@ -41,6 +41,7 @@ class Camera:
                 self.stop()
             else:
                 (self.grabbed, self.frame) = self.stream.read()
+                self.frame = cv2.rotate(self.frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
                 self.new_frame = True
             elapsed_time = time.time() - start_time
             time.sleep(max(0, frame_time - elapsed_time))
