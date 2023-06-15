@@ -740,6 +740,7 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    cv2.ocl.setUseOpenCL(True)
     app = QApplication(sys.argv)
     app.setStyleSheet(qdarkstyle.load_stylesheet())
     splash = QSplashScreen(QPixmap("splash.png"))
