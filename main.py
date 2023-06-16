@@ -4,17 +4,17 @@
 # #controller = StepperController("COM4", 115200)
 # camera = Camera(1, 60)
 # userInterface = UserInterface(None, camera)
-
-import sys
-import cv2
 import math
+import sys
+from collections import deque
+from datetime import datetime
+from threading import Thread
+
+import cv2
 import numpy as np
 import qdarkstyle
-import time
-from datetime import datetime
-from collections import deque
-from shapely.geometry import LineString, Point
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker
+import self as self
+from PyQt5.QtCore import Qt, QTimer, QThread, QMutex
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -27,15 +27,14 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QWidget,
-    QSizePolicy,
     QSlider,
 )
 
-from Constants import *
 from Camera import Camera
-from StepperController import StepperController
-from Processing.ProcessFrame import filterFrameHSV, detectPuck, markPuckInFrame, markRobotRectangle
+from Constants import *
 from Processing.Line import Line
+from Processing.ProcessFrame import filterFrameHSV, detectPuck, markPuckInFrame, markRobotRectangle
+from StepperController import StepperController
 
 
 class MoveWorker(QThread):
@@ -313,9 +312,10 @@ class MainWindow(QMainWindow):
         self.hboxMain.addLayout(self.vboxRight)
 
         # Create a timer to continuously update the camera image
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.updateImages)
-        self.timer.start(1)
+
+       # self.timer = QTimer(self)
+        #self.timer.timeout.connect(self.updateImages)
+        #self.timer.start(100)
 
         # Camera used for image.
         self.camera = Camera(
@@ -326,6 +326,9 @@ class MainWindow(QMainWindow):
             CAMERA_BUFFERSIZE,
             CAMERA_FRAMERATE,
         ).start()
+        thread = Thread(target=self.abc)
+        thread.start()
+        print("started")
         self.stepperController = None
         # Stepper Controller
         try:
@@ -399,6 +402,7 @@ class MainWindow(QMainWindow):
         # Let the window close.
         event.accept()
         self.exitApp()
+
 
     def exitApp(self):
         self.timer.stop()
@@ -509,7 +513,9 @@ class MainWindow(QMainWindow):
                 + STEPPER_COM_PORT
                 + "."
             )
-
+    def abc(self):
+        while True:
+            self.updateImages()
     def updateImages(self):
         # lastTime = self.testTime
         # self.testTime = datetime.now()
@@ -539,20 +545,14 @@ class MainWindow(QMainWindow):
                 )
 
                 # Calculate transformation matrix.
-                matrix = cv2.getPerspectiveTransform(
-                    selectedCorners, self.originalCorners
-                )
+                matrix = cv2.getPerspectiveTransform(selectedCorners, self.originalCorners)
                 # Warp the image.
-                frame = cv2.warpPerspective(
-                    frame, matrix, (CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH)
-                )
+                frame = cv2.warpPerspective(frame, matrix, (CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH))
 
             if not self.cornersApplied:
                 # Draw the corners if they are set.
                 for corner in self.tableCordnerCoords:
-                    cv2.circle(
-                        frame, (corner[0], corner[1]), 5, (255, 255, 255), 2)
-
+                    cv2.circle(frame, (corner[0], corner[1]), 5, (255, 255, 255), 2)
             self.frameCounter = self.frameCounter + 1
             lowerBoundary = np.array(
                 [
@@ -568,6 +568,7 @@ class MainWindow(QMainWindow):
                     self.upperValueSlider.value(),
                 ]
             )
+
             filteredFrame = filterFrameHSV(frame, lowerBoundary, upperBoundary)
 
             # Detect the puck and update UI values.
@@ -816,13 +817,17 @@ class MainWindow(QMainWindow):
         image.setPixmap(pixmap)
 
 
+
+
+
+
 if __name__ == "__main__":
     cv2.ocl.setUseOpenCL(True)
     app = QApplication(sys.argv)
     app.setStyleSheet(qdarkstyle.load_stylesheet())
-    splash = QSplashScreen(QPixmap("splash.png"))
-    splash.show()
+    #splash = QSplashScreen(QPixmap("splash.png"))
+    #splash.show()
     main_window = MainWindow()
-    splash.close()
+    #splash.close()
     main_window.show()
     sys.exit(app.exec_())
