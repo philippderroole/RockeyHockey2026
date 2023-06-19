@@ -37,34 +37,6 @@ from Processing.ProcessFrame import filterFrameHSV, detectPuck, markPuckInFrame,
 from StepperController import StepperController
 
 
-class MoveWorker(QThread):
-    def __init__(self, stepperController, parent=None):
-        super().__init__(parent)
-        self.mutex = QMutex()
-        self.stepperController = stepperController
-        self.x = None
-        self.y = None
-
-    def run(self):
-        while True:
-            # Wait for x and y to be set by the main thread
-            # with QMutexLocker(self.mutex):
-            while self.x is None or self.y is None:
-                # self.mutex.unlock()
-                self.msleep(1)
-                # self.mutex.lock()
-            x, y = self.x, self.y
-            self.x = None
-            self.y = None
-            # print(f"Moving X={x}, Y={y}")
-            if self.stepperController != None:
-                self.stepperController.move_to_position(int(x), int(y))
-
-    def set_values(self, x, y):
-        # with QMutexLocker(self.mutex):
-        self.x = x
-        self.y = y
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -332,18 +304,15 @@ class MainWindow(QMainWindow):
         self.stepperController = None
         # Stepper Controller
         try:
-            self.stepperController = StepperController(
-                STEPPER_COM_PORT, STEPPER_BAUDRATE
-            )
-            self.stepperController.connect()
+            thread = StepperController(STEPPER_COM_PORT, STEPPER_BAUDRATE)
+            thread.start()
         except Exception:
             self.logTextbox.append(
                 "ERROR: No Arduino found on " + STEPPER_COM_PORT + "."
             )
             self.stepperController = None
 
-        self.moveWorker = MoveWorker(stepperController=self.stepperController)
-        self.moveWorker.start()
+
 
         self.tableCordnerCoords = [(TABLE_CORNER_TOP_LEFT_X, TABLE_CORNER_TOP_LEFT_Y),
                                    (TABLE_CORNER_TOP_RIGHT_X,
@@ -471,7 +440,7 @@ class MainWindow(QMainWindow):
             self.sendMoveValues(int(moveX), int(moveY))
 
     def sendMoveValues(self, x, y):
-        self.moveWorker.set_values(x, y)
+        self.stepperController.enqueue_position(x,y)
 
     def calibrate(self):
         # Add your calibration code here

@@ -1,12 +1,28 @@
 import serial
 import time
+from queue import Queue
+from threading import Thread
 
 
-class StepperController:
+class StepperController(Thread):
     def __init__(self, port, baudrate):
+        super().__init__()
         self.port = port
         self.baudrate = baudrate
         self.connection = None
+        self.position_queue = Queue()
+
+    def run(self):
+        self.connect()
+        while True:
+            if not self.position_queue.empty():
+                x, y = self.position_queue.get()
+                self.move_to_position(x, y)
+            else:
+                # No position in the queue, do something else or wait
+                time.sleep(1)
+                continue
+        self.disconnect()
 
     def connect(self):
         self.connection = serial.Serial(self.port, self.baudrate, timeout=1)
@@ -24,22 +40,8 @@ class StepperController:
         response = self.connection.readline().decode().strip()
         return response
 
-    def get_status(self):
-        self.connection.write(b'STATUS\n')
-        response = self.connection.readline().decode().strip()
-        return response
-
-    def get_position(self):
-        self.connection.write(b'POSITION\n')
-        response = self.connection.readline().decode().strip()
-        x, y = response.split(',')
-        return int(x), int(y)
-
-    def get_maxima(self):
-        self.connection.write(b'MAXIMA\n')
-        response = self.connection.readline().decode().strip()
-        x, y = response.split(',')
-        return int(x), int(y)
+    def enqueue_position(self, x, y):
+        self.position_queue.put((x, y))
 
     def disconnect(self):
         self.connection.close()
