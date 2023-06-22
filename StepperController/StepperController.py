@@ -4,25 +4,13 @@ from queue import Queue
 from threading import Thread
 
 
-class StepperController(Thread):
+class StepperController():
     def __init__(self, port, baudrate):
         super().__init__()
         self.port = port
         self.baudrate = baudrate
         self.connection = None
         self.position_queue = Queue()
-
-    def run(self):
-        self.connect()
-        while True:
-            if not self.position_queue.empty():
-                x, y = self.position_queue.get()
-                self.move_to_position(x, y)
-            else:
-                # No position in the queue, do something else or wait
-                time.sleep(1)
-                continue
-        self.disconnect()
 
     def connect(self):
         self.connection = serial.Serial(self.port, self.baudrate, timeout=1)
@@ -35,13 +23,26 @@ class StepperController(Thread):
         response = self.connection.readline().decode().strip()
         return response
 
+    def set_offset(self, x, y):
+        if x >= 0:
+            x_offset = "+"
+        else:
+            x_offset = "-"
+        x_offset += str(x) + '\n'
+        if y >= 0:
+            y_offset = "+"
+        else:
+            y_offset = "-"
+        y_offset += str(y) + '\n'
+        self.connection.write(b'OFFSETY'+y_offset.encode())
+        self.connection.readline()
+        self.connection.write(b'OFFSETX'+x_offset.encode())
+        self.connection.readline()
+
     def calibrate(self):
         self.connection.write(b'CALIBRATE\n')
         response = self.connection.readline().decode().strip()
         return response
-
-    def enqueue_position(self, x, y):
-        self.position_queue.put((x, y))
 
     def disconnect(self):
         self.connection.close()

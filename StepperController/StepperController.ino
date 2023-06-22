@@ -13,7 +13,7 @@ void setup() {
   pinMode(END_PIN_Y, INPUT_PULLUP);
   stepperx.setPinsInverted(false, false, true);
   steppery.setPinsInverted(false, false, true);
- SetStepperSettings();
+  SetStepperSettings();
   stepperx.setEnablePin(ENABLE_PIN);
   steppery.setEnablePin(ENABLE_PIN);
   Serial.begin(115200);
@@ -35,8 +35,8 @@ void disable_steppers() {
     st_enabled = false;
   }
 }
-void SetStepperSettings(){
-    stepperx.setMaxSpeed(MAX_SPEED);
+void SetStepperSettings() {
+  stepperx.setMaxSpeed(MAX_SPEED);
   stepperx.setAcceleration(MAX_ACCEL);
   stepperx.setSpeed(MIN_SPEED);
   steppery.setMaxSpeed(MAX_SPEED);
@@ -47,7 +47,7 @@ void loop() {
   if (!st_enabled) {
     enable_steppers();
   }
- 
+
 
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
@@ -67,21 +67,48 @@ void loop() {
         Serial.println("BUSY");
       else
         Serial.println("READY");
+    } else if (command.startsWith("OFFSETX")) {
+      int offsetIndex = command.indexOf('+');
+      if (offsetIndex == -1) {
+        offsetIndex = command.indexOf('-');
+      }
+      int offset = command.substring(offsetIndex + 1).toInt();
+      if (offsetIndex > -1 && offsetIndex < command.length()) {
+        char sign = command.charAt(offsetIndex);
+        if (sign == '-') {
+          offset = -offset;
+        }
+      }
+      stepperx.setCurrentPosition((long)offset);
+      Serial.println("OK");
+    } else if (command.startsWith("OFFSETY")) {
+      int offsetIndex = command.indexOf('+');
+      if (offsetIndex == -1) {
+        offsetIndex = command.indexOf('-');
+      }
+      int offset = command.substring(offsetIndex + 1).toInt();
+      if (offsetIndex > -1 && offsetIndex < command.length()) {
+        char sign = command.charAt(offsetIndex);
+        if (sign == '-') {
+          offset = -offset;
+        }
+      }
+      steppery.setCurrentPosition((long)offset);
+      Serial.println("OK");
     } else {
       int delimiterIndex = command.indexOf(',');
       movement_x = command.substring(0, delimiterIndex).toInt();   //new x pos
       movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
-      if(movement_x >=0 && movement_x<=MAX_X && movement_y >=0 && movement_y <= MAX_Y){
-      SetStepperSettings();
-      movement_x = map(movement_x,0,MAX_X,20,MAX_X-20);//avoid crash
-      movement_y = map(movement_y,0,MAX_Y,20,MAX_Y-20);
-      stepperx.moveTo(movement_x);
-      steppery.moveTo(movement_y);
-      stepperx.runToPosition();
-      steppery.runToPosition();
+      if (movement_x >= 0 && movement_x <= MAX_X && movement_y >= 0 && movement_y <= MAX_Y) {
+        SetStepperSettings();
+        movement_x = map(movement_x, 0, MAX_X, 20, MAX_X - 20);  //avoid crash
+        movement_y = map(movement_y, 0, MAX_Y, 20, MAX_Y - 20);
+        stepperx.moveTo(movement_x);
+        steppery.moveTo(movement_y);
+        stepperx.runToPosition();
+        steppery.runToPosition();
       }
       Serial.println("OK");
     }
-    }
   }
-
+}
