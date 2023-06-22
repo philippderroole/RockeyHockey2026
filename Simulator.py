@@ -68,7 +68,7 @@ while True:
             collision_point = (int(HOCKEY_TABLE_WIDTH), int(line.get_y(HOCKEY_TABLE_WIDTH)))
         if collision_point[1] > robot_pos[1]:  # reflection is disabled if point is behind robot
             if line.get_m() is not None:
-                reflection_line = Line(collision_point, None, (1 / line.get_m()))
+                reflection_line = Line(collision_point, None, (-1 / line.get_m()))
                 reflection_point = (int(HOCKEY_TABLE_WIDTH - reflection_line.get_x(robot_pos[0])), int(robot_pos[1]))
                 cv2.circle(frame, reflection_point, HOCKEY_PUCK_RADIUS, (100, 0, 255), -1)
                 cv2.line(frame, puck_pos, collision_point, (255, 255, 255), thickness=1, lineType=4)
