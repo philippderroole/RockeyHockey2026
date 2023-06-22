@@ -1,0 +1,36 @@
+QMainWindow {
+    background-color: #252525;
+}
+
+QPushButton {
+    border-radius: 20px;
+    background-color: #202020;
+    color: #FFFFFF;
+    border: 1px solid #555555;
+    padding: 5px 10px;
+}
+
+QLabel {
+    color: #FFFFFF;
+}
+
+QCheckBox {
+    color: #FFFFFF;
+}
+
+QTextEdit {
+    color: #FFFFFF;
+    background-color: #202020;
+}
+
+QSlider::groove:horizontal {
+    background-color: #202020;
+    height: 4px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #FFFFFF;
+    width: 10px;
+    margin: -3px 0;
+    border-radius: 5px;
+}

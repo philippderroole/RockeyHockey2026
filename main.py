@@ -15,8 +15,8 @@ from datetime import datetime
 from collections import deque
 from queue import Queue
 from shapely.geometry import LineString, Point
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QMutex, QMutexLocker, QFile, QIODevice, QTextStream
+from PyQt5.QtGui import QImage, QPixmap, QIcon, QFont
 from PyQt5.QtWidgets import (
     QApplication,
     QSplashScreen,
@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Rocky Hockey 2023")
+        self.setWindowIcon(QIcon('RockyHockey2023Logo.png'))
 
         # Create a label to display the camera image.
         self.cameraImageLabel = QLabel(self)
@@ -197,18 +198,25 @@ class MainWindow(QMainWindow):
         self.upperValueHbox = QHBoxLayout()
 
         self.lowerHueLabelText = QLabel(text="Lower Hue: ")
-        self.lowerSaturationLabelText = QLabel(text="Lower Saturation: ")
-        self.lowerValueLabelText = QLabel(text="Lower Value: ")
+        self.lowerSaturationLabelText = QLabel(text="Lower Sat: ")
+        self.lowerValueLabelText = QLabel(text="Lower Val: ")
         self.upperHueLabelText = QLabel(text="Upper Hue: ")
-        self.upperSaturationLabelText = QLabel(text="Upper Saturation: ")
-        self.upperValueLabelText = QLabel(text="Upper Value: ")
+        self.upperSaturationLabelText = QLabel(text="Upper Sat: ")
+        self.upperValueLabelText = QLabel(text="Upper Val: ")
 
-        self.lowerHueLabelText.setFixedWidth(150)
-        self.lowerSaturationLabelText.setFixedWidth(150)
-        self.lowerValueLabelText.setFixedWidth(150)
-        self.upperHueLabelText.setFixedWidth(150)
-        self.upperSaturationLabelText.setFixedWidth(150)
-        self.upperValueLabelText.setFixedWidth(150)
+        self.lowerHueLabelText.setFixedWidth(100)
+        self.lowerSaturationLabelText.setFixedWidth(100)
+        self.lowerValueLabelText.setFixedWidth(100)
+        self.upperHueLabelText.setFixedWidth(100)
+        self.upperSaturationLabelText.setFixedWidth(100)
+        self.upperValueLabelText.setFixedWidth(100)
+
+        self.lowerHueLabel.setFixedWidth(30)
+        self.lowerSaturationLabel.setFixedWidth(30)
+        self.lowerValueLabel.setFixedWidth(30)
+        self.upperHueLabel.setFixedWidth(30)
+        self.upperSaturationLabel.setFixedWidth(30)
+        self.upperValueLabel.setFixedWidth(30)
 
         self.lowerHueHbox.addWidget(self.lowerHueLabelText)
         self.lowerHueHbox.addWidget(self.lowerHueLabel)
@@ -266,6 +274,15 @@ class MainWindow(QMainWindow):
         self.puckValuesHbox.addWidget(self.puckVecLabel)
         self.puckValuesHbox.addWidget(self.puckSpeedLabel)
 
+        self.robotValuesHBox = QHBoxLayout()
+        self.robotXLabel = QLabel(text="X: 0")
+        self.robotYLabel = QLabel(text="Y: 0")
+        self.robotRadiusLabel = QLabel(text="Radius: 0")
+        self.robotValuesHBox.addWidget(QLabel(text="Robot Values: "))
+        self.robotValuesHBox.addWidget(self.robotXLabel)
+        self.robotValuesHBox.addWidget(self.robotYLabel)
+        self.robotValuesHBox.addWidget(self.robotRadiusLabel)
+
         # Corner setting.
         self.cornersHBox = QHBoxLayout()
         self.cornersApplyButton = QPushButton("Apply Corners", self)
@@ -276,30 +293,30 @@ class MainWindow(QMainWindow):
         self.cornersHBox.addWidget(self.cornersResetButton)
 
         self.botSettingsHBox = QHBoxLayout()
-        self.botSettingsHBox.addWidget(QLabel(text="Bot Settings: "))
-        self.botSettingsHBox.addWidget(QLabel(text="SpeedThreshold: "))
-        self.speedThresholdSlider = QSlider(Qt.Horizontal)
-        self.botSettingsHBox.addWidget(self.speedThresholdSlider)
-        self.speedThresholdSlider.setMinimum(0)
-        self.speedThresholdSlider.setMaximum(200)
+        # self.botSettingsHBox.addWidget(QLabel(text="Bot Settings: "))
+        # self.botSettingsHBox.addWidget(QLabel(text="SpeedThreshold: "))
+        # self.speedThresholdSlider = QSlider(Qt.Horizontal)
+        # self.botSettingsHBox.addWidget(self.speedThresholdSlider)
+        # self.speedThresholdSlider.setMinimum(0)
+        # self.speedThresholdSlider.setMaximum(200)
 
-        self.speedThresholdSlider.setValue(SPEED_THRESHOLD)
-        self.speedThresholdLabel = QLabel(
-            str(self.speedThresholdSlider.value()))
-        self.botSettingsHBox.addWidget(self.speedThresholdLabel)
-        self.speedThresholdSlider.valueChanged.connect(
-            lambda value: self.speedThresholdLabel.setText(str(value))
-        )
+        # self.speedThresholdSlider.setValue(SPEED_THRESHOLD)
+        # self.speedThresholdLabel = QLabel(
+        #     str(self.speedThresholdSlider.value()))
+        # self.botSettingsHBox.addWidget(self.speedThresholdLabel)
+        # self.speedThresholdSlider.valueChanged.connect(
+        #     lambda value: self.speedThresholdLabel.setText(str(value))
+        # )
 
         self.activateBotCheckBox = QCheckBox("Activate Bot")
         self.botSettingsHBox.addWidget(self.activateBotCheckBox)
         self.activateBotCheckBox.clicked.connect(self.setBotState)
         self.activateBotCheckBox.setCheckState(Qt.CheckState.Unchecked)
 
-        self.showDebugImagesCheckBox = QCheckBox("Show Debug Images")
-        self.botSettingsHBox.addWidget(self.showDebugImagesCheckBox)
-        self.showDebugImagesCheckBox.clicked.connect(self.setShowDebugImages)
-        self.showDebugImagesCheckBox.setCheckState(Qt.CheckState.Checked)
+        # self.showDebugImagesCheckBox = QCheckBox("Show Debug Images")
+        # self.botSettingsHBox.addWidget(self.showDebugImagesCheckBox)
+        # self.showDebugImagesCheckBox.clicked.connect(self.setShowDebugImages)
+        # self.showDebugImagesCheckBox.setCheckState(Qt.CheckState.Checked)
 
         self.frameTimeLabel = QLabel("Frame Time: 0ms")
         self.botSettingsHBox.addWidget(self.frameTimeLabel)
@@ -307,9 +324,10 @@ class MainWindow(QMainWindow):
         # Create the left vertical box.
         self.vboxLeft = QVBoxLayout()
         self.vboxLeft.addLayout(self.controlHorizontalBox)
-        self.vboxLeft.addWidget(QLabel(text="Adjust filters"))
+        #self.vboxLeft.addWidget(QLabel(text="Adjust filters"))
         self.vboxLeft.addLayout(self.filterVbox)
         self.vboxLeft.addLayout(self.puckValuesHbox)
+        self.vboxLeft.addLayout(self.robotValuesHBox)
         self.vboxLeft.addLayout(self.cornersHBox)
         self.vboxLeft.addLayout(self.botSettingsHBox)
         self.vboxLeft.addWidget(self.logTextbox)
@@ -413,6 +431,8 @@ class MainWindow(QMainWindow):
         self.puckCollides = False
         self.savedPoint = (0, 0)
 
+        self.lastMovePosition = (0,0)
+
         self.wentBackToGoal = False
         self.attacked = False
 
@@ -420,6 +440,8 @@ class MainWindow(QMainWindow):
 
         self.currentFrameTimestamp = datetime.now()
         self.lastFrameTimestamp = datetime.now()
+
+
 
     def closeEvent(self, event):
         # Let the window close.
@@ -498,9 +520,15 @@ class MainWindow(QMainWindow):
         x += offset
         y -= 50
 
-        if self.botActivated:
-            # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
-            self.moveWorker.set_values(x, y)
+        if abs(x - self.lastMovePosition[0]) < 50 and abs(y - self.lastMovePosition[1]) < 50:
+            return
+        
+        self.lastMovePosition = (x, y)
+
+        #if self.botActivated:
+        self.positionsSent += 1
+        print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
+        self.moveWorker.set_values(x, y)
 
     def calibrate(self):
         # Add your calibration code here
@@ -508,6 +536,7 @@ class MainWindow(QMainWindow):
             self.logTextbox.append("Calibrating...")
             self.stepperController.calibrate()
             self.isAtZero = True
+            self.sendMoveValues((TABLE_MAX_X / 2), 900)
         else:
             self.logTextbox.append(
                 "ERROR: Cannot calibrate. No Arduino found on " + STEPPER_COM_PORT + "."
@@ -553,6 +582,7 @@ class MainWindow(QMainWindow):
             self.currentFrameTimestamp = datetime.now()
 
             frame = self.camera.get_current_frame()
+            #frame = cv2.imread("Screenshot_Table.png")
 
             if self.cornersApplied:
                 # If the corners are set then fit the image.
@@ -600,19 +630,53 @@ class MainWindow(QMainWindow):
                     self.upperValueSlider.value(),
                 ]
             )
-            filteredFrame = filterFrameHSV(frame, lowerBoundary, upperBoundary)
+
+            # TODO: Make robot detection better.
+            robotLowerBoundary = np.array([
+                CAMERA_ROBOT_LOWER_HUE, CAMERA_ROBOT_LOWER_SATURATION, CAMERA_ROBOT_LOWER_VALUE,
+            ])
+            robotUpperBoundary = np.array([
+                CAMERA_ROBOT_UPPER_HUE, CAMERA_ROBOT_UPPER_SATURATION, CAMERA_ROBOT_UPPER_VALUE,
+            ])
+
+            # TODO: It seems we do not need to filter the frame to get the positions.
+            filteredFrame = filterFrameHSV(frame, lowerBoundary, upperBoundary, robotLowerBoundary, robotUpperBoundary)
 
             # Detect the puck and update UI values.
             (x, y), radius = detectPuck(
-                filteredFrame, lowerBoundary, upperBoundary)
-            if self.showDebugImages:
-                frame = markPuckInFrame(frame, x, y, radius)
-                frame = markRobotRectangle(frame)
+                frame, lowerBoundary, upperBoundary)
+            
+            
+            (robotX, robotY), robotRadius = detectPuck(
+                frame, robotLowerBoundary, robotUpperBoundary
+            )
+            # Robot detection is not that stable.
+            # If we find something with a very small or very large radius then set the position invalid.
+            if robotRadius < 10 or robotRadius > 50:
+                robotX = -1
+                robotY = -1
+                robotRadius = -1
+
+            #print(f"Robot: {robotX:.0f},{robotY:.0f}")
+
+
+
+            frame = markPuckInFrame(frame, x, y, radius)
+            
+            # Mark robot
+            if robotX != -1 and robotY != -1 and robotRadius != -1:
+                frame = markPuckInFrame(frame, robotX, robotY, robotRadius)
+            
+            frame = markRobotRectangle(frame)
             self.currentPosition = (x, y)
 
             self.puckXLabel.setText(str(f"X: {x:.0f}"))
             self.puckYLabel.setText(str(f"Y: {y:.0f}"))
             self.puckRadiusLabel.setText(str(f"Radius: {radius:.0f}"))
+
+            self.robotXLabel.setText(str(f"X: {robotX:.0f}"))
+            self.robotYLabel.setText(str(f"Y: {robotY:.0f}"))
+            self.robotRadiusLabel.setText(str(f"Radius: {robotRadius:.0f}"))
 
             self.isPuckGoingToRobot = self.currentPosition[1] < self.lastPosition[1] and (
                 self.lastPosition[1] - self.currentPosition[1]) > 2
@@ -622,8 +686,8 @@ class MainWindow(QMainWindow):
 
             # Check if the puck is going in the direction of the robot.
             if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
-                if not self.predictionMade or self.puckIsGoingLeft != self.puckWasGoingLeft:
-                    print(f"Predicting {self.positionsSent}")
+                if self.predictionMade == False:
+                    #print(f"Predicting {self.positionsSent}")
                     self.puckCollides = False
                     self.predictionLine = Line(
                         self.lastPosition, self.currentPosition)
@@ -664,12 +728,12 @@ class MainWindow(QMainWindow):
                             # self.reflectionPoint = (
                             #     int(CAMERA_FRAME_HEIGHT - self.reflectionLine.get_x(0)), int(0))
 
-                            self.positionsSent += 1
+                            
                             self.predictionMade = True
                             self.wentBackToGoal = False
                             self.attacked = False
 
-                            if 20 < self.predictedPoint[0] < CAMERA_FRAME_HEIGHT - 20:
+                            if 50 < self.predictedPoint[0] < CAMERA_FRAME_HEIGHT - 50:
                                 moveX, moveY = self.mapCoordinates(
                                     self.predictedPoint[0],
                                     self.predictedPoint[1],
@@ -682,28 +746,29 @@ class MainWindow(QMainWindow):
                                 moveX = TABLE_MAX_X - moveX
                                 # moveY += 200
 
-                                self.logTextbox.append(
-                                    f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
 
-                                self.positionsSent += 1
-                                self.sendMoveValues(int(moveX), int(moveY))
+                                if self.botActivated:
+                                    self.logTextbox.append(
+                                        f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
+                                    self.positionsSent += 1
+                                    self.sendMoveValues(int(moveX), int(moveY))
                     except:
                         pass
             else:
-                if self.attacked == False:
-                    self.attacked = True
-                    # Attack then move back.
-                    moveX, moveY = self.mapCoordinates(
-                        self.currentPosition[0],
-                        self.currentPosition[1],
-                        CAMERA_FRAME_HEIGHT,
-                        CAMERA_FRAME_ROBOT_MAX_Y,
-                        TABLE_MAX_X,
-                        TABLE_MAX_Y,
-                    )
-                    # moveY *= 2
-                    moveX = TABLE_MAX_X - moveX
-                    self.sendMoveValues(int(moveX), int(moveY))
+                if True:
+                    # self.attacked = True
+                    # # Attack then move back.
+                    # moveX, moveY = self.mapCoordinates(
+                    #     self.currentPosition[0],
+                    #     self.currentPosition[1],
+                    #     CAMERA_FRAME_HEIGHT,
+                    #     CAMERA_FRAME_ROBOT_MAX_Y,
+                    #     TABLE_MAX_X,
+                    #     TABLE_MAX_Y,
+                    # )
+                    # # moveY *= 2
+                    # moveX = TABLE_MAX_X - moveX
+                    # self.sendMoveValues(int(moveX), int(moveY))
 
 
                     self.predictionMade = False
@@ -717,7 +782,8 @@ class MainWindow(QMainWindow):
                             TABLE_MAX_X,
                             TABLE_MAX_Y,
                         )
-                        self.sendMoveValues(int(moveX), int(moveY))
+                        if self.botActivated:
+                            self.sendMoveValues(int(moveX), int(moveY))
 
             self.wasPuckGoingToRobot = self.isPuckGoingToRobot
             self.puckWasGoingLeft = self.puckIsGoingLeft
@@ -967,10 +1033,19 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     cv2.ocl.setUseOpenCL(True)
     app = QApplication(sys.argv)
-    app.setStyleSheet(qdarkstyle.load_stylesheet())
+    #app.setStyleSheet(qdarkstyle.load_stylesheet())
     splash = QSplashScreen(QPixmap("splash.png"))
     splash.show()
     main_window = MainWindow()
     splash.close()
+
+    # Set style with stylesheet.
+    stream = QFile("style.qss")
+    stream.open(QIODevice.ReadOnly)
+    main_window.setStyleSheet(QTextStream(stream).readAll())
+
+    font = QFont("Courier New")
+    app.setFont(font)
+
     main_window.show()
     sys.exit(app.exec_())

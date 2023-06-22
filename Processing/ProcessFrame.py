@@ -3,10 +3,13 @@ import math
 import numpy as np
 from Constants import *
 
-def filterFrameHSV(frame, lowerBoundary, upperBoundary):
+def filterFrameHSV(frame, puckLowerBoundary, puckUpperBoundary, robotLowerBoundary, robotUpperBoundary):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
-    filteredFrame = cv2.bitwise_and(frame, frame, mask=mask)
+    maskPuck = cv2.inRange(hsv, puckLowerBoundary, puckUpperBoundary)
+    maskRobot = cv2.inRange(hsv, robotLowerBoundary, robotUpperBoundary)
+    filteredFramePuck = cv2.bitwise_and(frame, frame, mask=maskPuck)
+    filteredFrameRobot = cv2.bitwise_and(frame, frame, mask=maskRobot)
+    filteredFrame = cv2.bitwise_or(filteredFramePuck, filteredFrameRobot)
     return filteredFrame
 
 def detectPuck(filteredFrame, lowerBoundary, upperBoundary):
