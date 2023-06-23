@@ -30,7 +30,7 @@ void calibrate_y() {
   steppery.setCurrentPosition(0);
   steppery.setMaxSpeed(MAX_SPEED);
   steppery.setSpeed(MIN_SPEED);
-  steppery.setAcceleration(MAX_ACCEL);
+  steppery.setAcceleration(MAX_ACCEL_Y);
 }
 void calibrate(){
   for(int i = 0; i<=3; i++) {

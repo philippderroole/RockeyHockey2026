@@ -29,12 +29,12 @@ def detectPuck(filteredFrame, lowerBoundary, upperBoundary):
     (x, y), radius = cv2.minEnclosingCircle(cnt)
     return (x, y), radius
 
-def markPuckInFrame(frame, x, y, radius):
+def markInFrame(frame, x, y, radius, color):
     # Convert to int.
     center = (int(x), int(y))
     radius = int(radius)
     # Draw a circle around the puck in the unfiltered image.
-    cv2.circle(frame, center, radius, (0,0,255), 2)
+    cv2.circle(frame, center, radius, color, 2)
     return frame
 
 def markRobotRectangle(frame):

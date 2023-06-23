@@ -40,7 +40,7 @@ void SetStepperSettings() {
   stepperx.setAcceleration(MAX_ACCEL);
   stepperx.setSpeed(MIN_SPEED);
   steppery.setMaxSpeed(MAX_SPEED);
-  steppery.setAcceleration(MAX_ACCEL);
+  steppery.setAcceleration(MAX_ACCEL_Y);
   steppery.setSpeed(MIN_SPEED);
 }
 void loop() {
