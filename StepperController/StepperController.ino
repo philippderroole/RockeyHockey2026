@@ -101,8 +101,6 @@ void loop() {
       movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
       if (movement_x >= 0 && movement_x <= MAX_X && movement_y >= 0 && movement_y <= MAX_Y) {
         SetStepperSettings();
-        movement_x = map(movement_x, 0, MAX_X, 20, MAX_X - 20);  //avoid crash
-        movement_y = map(movement_y, 0, MAX_Y, 20, MAX_Y - 20);
         stepperx.moveTo(movement_x);
         steppery.moveTo(movement_y);
         stepperx.runToPosition();
