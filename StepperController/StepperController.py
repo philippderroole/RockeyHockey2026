@@ -34,10 +34,12 @@ class StepperController():
         else:
             y_offset = "-"
         y_offset += str(y) + '\n'
-        self.connection.write(b'OFFSETY'+y_offset.encode())
-        self.connection.readline()
-        self.connection.write(b'OFFSETX'+x_offset.encode())
-        self.connection.readline()
+        if y != 0:
+            self.connection.write(b'OFFSETY'+y_offset.encode())
+            self.connection.readline()
+        if x != 0:
+            self.connection.write(b'OFFSETX'+x_offset.encode())
+            self.connection.readline()
 
     def calibrate(self):
         self.connection.write(b'CALIBRATE\n')

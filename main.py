@@ -52,7 +52,7 @@ class MoveWorker(QThread):
                 if type == MoveType.NORMAL:
                     self.stepperController.move_to_position(int(x), int(y))
                 elif type == MoveType.OFFSET:
-                    self.stepperController.set_offset(int(x), int(y))
+                    self.stepperController.set_offset(0, int(y))
                 elif type == MoveType.CALIBRATE:
                     self.stepperController.calibrate()
 
@@ -662,13 +662,13 @@ class MainWindow(QMainWindow):
                 selectedCorners = np.float32(
                     [
                         [self.croppedTableCoords[0][0],
-                            self.croppedTableCoords[0][1]],
+                         self.croppedTableCoords[0][1]],
                         [self.croppedTableCoords[1][0],
-                            self.croppedTableCoords[1][1]],
+                         self.croppedTableCoords[1][1]],
                         [self.croppedTableCoords[2][0],
-                            self.croppedTableCoords[2][1]],
+                         self.croppedTableCoords[2][1]],
                         [self.croppedTableCoords[3][0],
-                            self.croppedTableCoords[3][1]],
+                         self.croppedTableCoords[3][1]],
                     ]
                 )
 
@@ -747,11 +747,11 @@ class MainWindow(QMainWindow):
             self.currentPosition = (x, y)
             self.currentRobotPosition = (robotX, robotY)
 
-            self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0])**2 + (
-                self.currentPosition[1] - self.lastPosition[1])**2)
+            self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0]) ** 2 + (
+                    self.currentPosition[1] - self.lastPosition[1]) ** 2)
 
-            self.robotSpeed = math.sqrt((self.currentRobotPosition[0] - self.lastRobotPosition[0])**2 + (
-                self.currentRobotPosition[1] - self.lastRobotPosition[1])**2)
+            self.robotSpeed = math.sqrt((self.currentRobotPosition[0] - self.lastRobotPosition[0]) ** 2 + (
+                    self.currentRobotPosition[1] - self.lastRobotPosition[1]) ** 2)
 
             self.robotIsStopped = self.robotSpeed <= 1 or self.robotSpeed == -1
 
@@ -766,14 +766,14 @@ class MainWindow(QMainWindow):
             self.robotSpeedLabel.setText(str(f"Speed: {self.robotSpeed:.1f}"))
 
             self.isPuckGoingToRobot = self.currentPosition[1] < self.lastPosition[1] and (
-                self.lastPosition[1] - self.currentPosition[1]) > 1
+                    self.lastPosition[1] - self.currentPosition[1]) > 1
 
             self.puckIsGoingLeft = self.currentPosition[0] < self.lastPosition[0] and (
-                self.lastPosition[0] - self.currentPosition[0]) > 5
+                    self.lastPosition[0] - self.currentPosition[0]) > 5
 
             # Check if the puck is going in the direction of the robot.
             if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
-                if self.predictionMade == False:
+                if not self.predictionMade:
                     # if self.predictionMade == False:
                     # print(f"Predicting {self.positionsSent}")
                     self.puckCollides = False
@@ -790,7 +790,8 @@ class MainWindow(QMainWindow):
                                 self.puckCollides = True
                             else:  # right edge
                                 self.collisionPoint = (
-                                    CAMERA_FRAME_HEIGHT - (radius / 2), self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
+                                    CAMERA_FRAME_HEIGHT - (radius / 2),
+                                    self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
                                 self.puckCollides = True
 
                             # If puck collides with wall calculate the reflection point.
@@ -843,7 +844,7 @@ class MainWindow(QMainWindow):
             else:
                 if True:
                     self.predictionMade = False
-                    if self.wentBackToGoal == False:
+                    if not self.wentBackToGoal:
                         self.wentBackToGoal = True
                         moveX, moveY = self.mapCoordinates(
                             (CAMERA_FRAME_HEIGHT / 2),
@@ -856,29 +857,29 @@ class MainWindow(QMainWindow):
                         if self.botActivated:
                             self.sendMoveValues(int(moveX), int(moveY))
 
-            # Check if the robot is not moving, and if so then if it is in the correct place (did not lose any steps).
-            # if self.robotIsStopped != self.robotWasStopped and self.robotIsStopped:
-            #     # Check the current position and if it aligns with where the robot is.
-            #     # Map the coordinates of the last move back to camera coordinates.
-            #     robotHyperX, robotHyperY = self.mapCoordinates(
-            #         TABLE_MAX_X - self.lastMovePosition[0],
-            #         self.lastMovePosition[1],
-            #         TABLE_MAX_X,
-            #         TABLE_MAX_Y,
-            #         CAMERA_FRAME_HEIGHT,
-            #         CAMERA_FRAME_ROBOT_MAX_Y
-            #     )
-            #     print(
-            #         f"Hyper: {robotHyperX:.0f},{robotHyperY:.0f} | Real: {robotX:.0f},{robotY:.0f}")
+                # Check if the robot is not moving, and if so then if it is in the correct place (did not lose any steps).
+            if self.robotIsStopped != self.robotWasStopped and self.robotIsStopped:
+                # Check the current position and if it aligns with where the robot is.
+                # Map the coordinates of the last move back to camera coordinates.
+                robotHyperX, robotHyperY = self.mapCoordinates(
+                    TABLE_MAX_X - self.lastMovePosition[0],
+                    self.lastMovePosition[1],
+                    TABLE_MAX_X,
+                    TABLE_MAX_Y,
+                    CAMERA_FRAME_HEIGHT,
+                    CAMERA_FRAME_ROBOT_MAX_Y
+                )
+                print(
+                    f"Hyper: {robotHyperX:.0f},{robotHyperY:.0f} | Real: {robotX:.0f},{robotY:.0f}")
 
-            #     # Transform to table coord.
-            #     robotStepperX = TABLE_MAX_X - \
-            #         (robotX * (TABLE_MAX_X / CAMERA_FRAME_HEIGHT))
-            #     robotStepperY = robotY * (TABLE_MAX_Y / CAMERA_FRAME_WIDTH)
-            #     if robotX != -1 and robotY != -1:
-            #         print("CALIBRATION LOST. OFFSETTING...")
-            #         self.moveWorker.set_values(
-            #             MoveType.OFFSET, robotStepperX, robotStepperY)
+                #     # Transform to table coord.
+                robotStepperX = TABLE_MAX_X - \
+                                (robotX * (TABLE_MAX_X / CAMERA_FRAME_HEIGHT))
+                robotStepperY = robotY * (TABLE_MAX_Y / CAMERA_FRAME_WIDTH)
+                if robotX != -1 and robotY != -1:
+                    print("CALIBRATION LOST. OFFSETTING...")
+                    self.moveWorker.set_values(
+                        MoveType.OFFSET, robotStepperX, robotStepperY)
 
             self.wasPuckGoingToRobot = self.isPuckGoingToRobot
             self.puckWasGoingLeft = self.puckIsGoingLeft
@@ -897,7 +898,7 @@ class MainWindow(QMainWindow):
                                        int(self.savedPoint[1])), 5, (0, 0, 0), -1)
 
                     # Draw prediction line.
-                    if self.puckCollides == False:
+                    if not self.puckCollides:
                         cv2.line(
                             frame,
                             (int(self.currentPosition[0]),
@@ -952,7 +953,7 @@ class MainWindow(QMainWindow):
                 f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
 
     def mapCoordinates(
-        self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
+            self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
     ):
         xScale = maxWidthTo / maxWidthFrom
         yScale = maxHeightTo / maxHeightFrom
