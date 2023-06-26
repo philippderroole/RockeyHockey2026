@@ -46,12 +46,13 @@ class Camera:
             if not self.grabbed:
                 self.stop()
             else:
-                (self.grabbed, frame) = self.stream.read()
-                self.frame = cv2.rotate(
-                    frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
-                self.frame = cv2.flip(self.frame, 1)  # Flip horizontally
+                (self.grabbed, tmp_frame) = self.stream.read()
+                tmp_frame = cv2.rotate(
+                    tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
+                tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
                 # Flip again to mirror so the bot starts in the top right corner.
-                self.frame = cv2.flip(self.frame, 1)
+                tmp_frame = cv2.flip(tmp_frame, 1)
+                self.frame = tmp_frame
                 self.new_frame = True
             elapsed_time = time.time() - start_time
             time.sleep(max(0, frame_time - elapsed_time))
