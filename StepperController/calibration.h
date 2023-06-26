@@ -37,6 +37,6 @@ void calibrate(){
   calibrate_y();
   calibrate_x();
 }
-  Serial.println("ready");
+  Serial.println("OK");
 }
 #endif

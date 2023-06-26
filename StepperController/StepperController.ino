@@ -5,8 +5,6 @@
 AccelStepper stepperx(1, MOTOR_X_STEP_PIN, MOTOR_X_DIR_PIN);
 AccelStepper steppery(1, MOTOR_Y_STEP_PIN, MOTOR_Y_DIR_PIN);
 bool st_enabled = false;
-long movement_x = 0;
-long movement_y = 0;
 void setup() {
   pinMode(ENABLE_PIN, OUTPUT);
   pinMode(END_PIN_X, INPUT_PULLUP);
@@ -47,8 +45,6 @@ void loop() {
   if (!st_enabled) {
     enable_steppers();
   }
-
-
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim();
@@ -57,11 +53,7 @@ void loop() {
     } else if (strcmp(command.c_str(), "POSITION") == 0) {
       Serial.println(String(stepperx.currentPosition()) + "," + String(steppery.currentPosition()));
     } else if (strcmp(command.c_str(), "CALIBRATE") == 0) {
-      movement_y = 0;
-      calibrate_y();
-      movement_x = 0;
-      calibrate_x();
-      Serial.println("OK");
+      calibrate();
     } else if (strcmp(command.c_str(), "STATUS") == 0) {
       if (stepperx.isRunning() || steppery.isRunning())
         Serial.println("BUSY");
@@ -97,14 +89,12 @@ void loop() {
       Serial.println("OK");
     } else {
       int delimiterIndex = command.indexOf(',');
-      movement_x = command.substring(0, delimiterIndex).toInt();   //new x pos
-      movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
+      long movement_x = command.substring(0, delimiterIndex).toInt();   //new x pos
+      long movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
       if (movement_x >= 0 && movement_x <= MAX_X && movement_y >= 0 && movement_y <= MAX_Y) {
         SetStepperSettings();
-        stepperx.moveTo(movement_x);
-        steppery.moveTo(movement_y);
-        stepperx.runToPosition();
-        steppery.runToPosition();
+        stepperx.runToNewPosition(movement_x);
+        steppery.runToNewPosition(movement_y);
       }
       Serial.println("OK");
     }
