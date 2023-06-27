@@ -779,19 +779,6 @@ class MainWindow(QMainWindow):
                                 self.predictedPoint = (
                                     self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
 
-                            # print("==============================")
-                            # print(f"PredLine m={self.predictionLine.get_m()}")
-                            # print(f"ReflLine m={self.reflectionLine.get_m()}")
-                            # print(f"Last: {self.lastPosition}")
-                            # print(f"Curr: {self.currentPosition}")
-                            # print(f"Coll: {self.collisionPoint}")
-                            # print(f"Predicted: {self.predictedPoint}")
-
-                            # self.reflectionLine = Line(
-                            #     self.collisionPoint, None, (1 / self.predictionLine.get_m()))
-                            # self.reflectionPoint = (
-                            #     int(CAMERA_FRAME_HEIGHT - self.reflectionLine.get_x(0)), int(0))
-
                             self.predictionMade = True
                             self.wentBackToGoal = False
                             self.attacked = False
@@ -829,30 +816,6 @@ class MainWindow(QMainWindow):
                         )
                         if self.botActivated:
                             self.sendMoveValues(int(moveX), int(moveY))
-
-            # # Check if the robot is not moving, and if so then if it is in the correct place (did not lose any steps).
-            # if self.robotIsStopped != self.robotWasStopped and self.robotIsStopped:
-            #     # Check the current position and if it aligns with where the robot is.
-            #     # Map the coordinates of the last move back to camera coordinates.
-            #     robotHyperX, robotHyperY = self.mapCoordinates(
-            #         TABLE_MAX_X - self.lastMovePosition[0],
-            #         self.lastMovePosition[1],
-            #         TABLE_MAX_X,
-            #         TABLE_MAX_Y,
-            #         CAMERA_FRAME_HEIGHT,
-            #         CAMERA_FRAME_ROBOT_MAX_Y
-            #     )
-            #     print(
-            #         f"Hyper: {robotHyperX:.0f},{robotHyperY:.0f} | Real: {robotX:.0f},{robotY:.0f}")
-
-            #     #     # Transform to table coord.
-            #     robotStepperX = TABLE_MAX_X - \
-            #                     (robotX * (TABLE_MAX_X / CAMERA_FRAME_HEIGHT))
-            #     robotStepperY = robotY * (TABLE_MAX_Y / CAMERA_FRAME_WIDTH)
-            #     if robotX != -1 and robotY != -1:
-            #         print("CALIBRATION LOST. OFFSETTING...")
-            #         self.moveWorker.set_values(
-            #             MoveType.OFFSET, robotStepperX, robotStepperY)
 
             self.wasPuckGoingToRobot = self.isPuckGoingToRobot
             self.puckWasGoingLeft = self.puckIsGoingLeft

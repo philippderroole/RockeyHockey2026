@@ -55,8 +55,7 @@ class StepperController:
 
 class MoveType(Enum):
     NORMAL = 1
-    OFFSET = 2
-    CALIBRATE = 3
+    CALIBRATE = 2
 
 
 class MoveWorker(QThread):
@@ -71,8 +70,6 @@ class MoveWorker(QThread):
             if self.stepperController is not None:
                 if type == MoveType.NORMAL:
                     self.stepperController.move_to_position(int(x), int(y))
-                elif type == MoveType.OFFSET:
-                    self.stepperController.set_offset(int(x), int(y))
                 elif type == MoveType.CALIBRATE:
                     self.stepperController.calibrate()
 
