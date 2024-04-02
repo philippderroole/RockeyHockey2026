@@ -231,12 +231,12 @@ public class Gui
     }
 
     public void setPlayerScore(int score) {
-        this.playerScoreLabel.setText(score);
+        this.playerScoreLabel.setText(Integer.toString(score));
         this.playerScoreLabel.repaint();
     }
 
     public void setBotScore(int score) {
-        this.botScoreLabel.setText(score);
+        this.botScoreLabel.setText(Integer.toString(score));
         this.botScoreLabel.repaint();
     }
 
@@ -259,7 +259,7 @@ public class Gui
             this.resetPressed = true;
         } else if (sourceButton == this.muteButton) {
             this.muteButton.toggleIcon();
-            this.soundActive ^= 0x1;
+            this.soundActive = !soundActive;
             if (this.soundActive) {
                 Audio.getInstance().enableSound();
             } else {

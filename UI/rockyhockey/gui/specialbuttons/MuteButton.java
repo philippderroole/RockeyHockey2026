@@ -37,7 +37,7 @@ public class MuteButton
 
     public void toggleIcon() {
         if (this.iconNotNull) {
-            this.defaultIcon ^= 0x1;
+            this.defaultIcon = !defaultIcon;
             setIcon(this.defaultIcon ? unmutedIcon : mutedIcon);
             repaint();
         }
