@@ -716,7 +716,6 @@ class MainWindow(QMainWindow):
         fps = 1000 / frameTimeMs
         self.frameTimeLabel.setText(
             f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
-        
         return frame
 
 
@@ -773,7 +772,7 @@ class MainWindow(QMainWindow):
                 frame, robotLowerBoundary, robotUpperBoundary
             )
         
-        return x,y,radius, robotX, robotY, robotRadius
+        return x,y,radius,robotX,robotY,robotRadius
 
     def initializeCamera(self):
         self.currentFrameTimestamp = datetime.now()
