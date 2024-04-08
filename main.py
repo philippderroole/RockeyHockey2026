@@ -560,7 +560,7 @@ class MainWindow(QMainWindow):
         if self.camera.new_frame:
             frame = self.initializeCamera()
 
-            x, y, radius, robotRadius = self.defineBoundaries(frame)
+            x, y, radius, robotX, robotY, robotRadius = self.defineBoundaries(frame)
 
             # Robot detection is not that stable.
             # If we find something with a very small or very large radius then set the position invalid.
@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
                 frame, robotLowerBoundary, robotUpperBoundary
             )
         
-        return x,y,radius,robotRadius
+        return x,y,radius, robotX, robotY, robotRadius
 
     def initializeCamera(self):
         self.currentFrameTimestamp = datetime.now()
