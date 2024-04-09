@@ -94,7 +94,7 @@ public class Controller
                                 this.audio.playScoreSound(highestRun, scoreBot);
                             }
                         }
-                        timeRemaining = 600000000000L - System.nanoTime() - timeAtStart;
+                        timeRemaining = 600000000000L - (System.nanoTime() - timeAtStart);
                         Thread.sleep(2L);
                     }
                     this.audio.stopBackgroundSound();
