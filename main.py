@@ -624,8 +624,11 @@ class MainWindow(QMainWindow):
                                     self.predictedPoint = (
                                         self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
                                     break
+
                                 if(self.collisionPoint[1] > 0):
                                     break
+                                else:
+                                    self.predictionLine = self.reflectionLine
                             
                             self.predictionMade = True
                             self.wentBackToGoal = False
