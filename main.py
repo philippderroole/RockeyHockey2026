@@ -628,6 +628,7 @@ class MainWindow(QMainWindow):
                                 if(self.collisionPoint[1] > 0):
                                     break
                                 else:
+                                    frame = self.updatePostCalculationUi(frame)
                                     self.predictionLine = self.reflectionLine
                             
                             self.predictionMade = True
@@ -684,7 +685,7 @@ class MainWindow(QMainWindow):
             self.lastRobotPosition = self.currentRobotPosition
             self.robotWasStopped = self.robotIsStopped
 
-            frame = self.updatePostCalculationUi(frame)
+            # frame = self.updatePostCalculationUi(frame)
     
 
     def updatePostCalculationUi(self, frame):
