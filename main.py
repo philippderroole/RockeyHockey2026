@@ -1,3 +1,6 @@
+# 1.8m x 0.9 Tisch
+# 120cm über Tisch
+
 import sys
 import cv2
 import math
@@ -22,7 +25,7 @@ from PyQt5.QtWidgets import (
 from Constants import *
 from Camera import Camera
 from StepperController import *
-from Processing.ProcessFrame import detectPuck, markInFrame, markRobotRectangle
+from Processing.ProcessFrame import detectPuck, detectPuck_old, markInFrame, markRobotRectangle
 from Processing.Line import Line
 
 
@@ -35,7 +38,7 @@ class MainWindow(QMainWindow):
         # Create a timer to continuously update and process the camera image.
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update)
-        self.timer.start(1)
+        self.timer.start(1) # Every 1 ms
         # Camera used for image.
         self.camera = Camera(
             CAMERA_INDEX,
@@ -44,6 +47,7 @@ class MainWindow(QMainWindow):
             CAMERA_FOCUS,
             CAMERA_BUFFERSIZE,
             CAMERA_FRAMERATE,
+            CAMERA_STREAM_URL
         ).start()
         self.stepperController = None
         try:
@@ -616,12 +620,15 @@ class MainWindow(QMainWindow):
                 self.upperSaturationRobotSlider.value(),
                 self.upperValueRobotSlider.value(),
             ])
+
+            # TODO: This is eating performance
+            # Robot Detection eats more than puck detection.
             # Detect the puck and update UI values.
-            (x, y), radius = detectPuck(
-                frame, lowerBoundary, upperBoundary)
-            (robotX, robotY), robotRadius = detectPuck(
-                frame, robotLowerBoundary, robotUpperBoundary
+            ((x, y), radius), ((robotX, robotY), robotRadius) = detectPuck(
+                frame, [(lowerBoundary, upperBoundary), (robotLowerBoundary, robotUpperBoundary)]
             )
+            # (x, y), radius = detectPuck_old(frame, lowerBoundary, upperBoundary)
+            # (robotX, robotY), robotRadius = detectPuck_old(frame, robotLowerBoundary, robotUpperBoundary)
             # Robot detection is not that stable.
             # If we find something with a very small or very large radius then set the position invalid.
             if robotRadius < 10 or robotRadius > 50:
@@ -792,6 +799,7 @@ class MainWindow(QMainWindow):
             fps = 1000 / frameTimeMs
             self.frameTimeLabel.setText(
                 f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
+            print(f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
 
     def mapCoordinates(
             self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo

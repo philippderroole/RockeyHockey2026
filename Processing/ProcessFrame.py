@@ -13,8 +13,7 @@ def filterFrameHSV(frame, puckLowerBoundary, puckUpperBoundary, robotLowerBounda
     filteredFrame = cv2.bitwise_or(filteredFramePuck, filteredFrameRobot)
     return filteredFrame
 
-
-def detectPuck(filteredFrame, lowerBoundary, upperBoundary):
+def detectPuck_old(filteredFrame, lowerBoundary, upperBoundary):
     hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
     mask_blur = cv2.medianBlur(mask, 19)
@@ -24,6 +23,27 @@ def detectPuck(filteredFrame, lowerBoundary, upperBoundary):
     cnt = contours[0]
     (x, y), radius = cv2.minEnclosingCircle(cnt)
     return (x, y), radius
+
+
+def detectPuck(filteredFrame, boundaries):
+    # Resize and blur the image
+    # filteredFrame = cv2.resize(filteredFrame, (filteredFrame.shape[1] // 2, filteredFrame.shape[0] // 2))
+    # blurred = cv2.medianBlur(filteredFrame, 19)
+    hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
+
+    results = []
+    for lowerBoundary, upperBoundary in boundaries:
+        mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        if not contours:
+            results.append(((0, 0), 0))
+        else:
+            cnt = contours[0]
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            results.append(((x, y), radius))
+
+    return results
 
 
 def markInFrame(frame, x, y, radius, color):
