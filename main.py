@@ -600,32 +600,43 @@ class MainWindow(QMainWindow):
 
                     try:
                         if self.predictionLine.get_m() is not None:
-                            # Check if puck collides with a wall
-                            if self.predictionLine.get_angle() >= 0:  # left edge
-                                self.collisionPoint = (
-                                    0 + (radius / 2), self.predictionLine.get_y(0 + (radius / 2)))
-                                self.puckCollides = True
-                            else:  # right edge
-                                self.collisionPoint = (
-                                    CAMERA_FRAME_HEIGHT - (radius / 2),
-                                    self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
-                                self.puckCollides = True
-                            
-                            # If puck collides with wall calculate the reflection point
-                            if self.puckCollides and self.collisionPoint[1] > 0:
-                                self.reflectionLine = Line(
-                                    self.collisionPoint, None, (-1 * self.predictionLine.get_m() * 2.5))
-                                print(
-                                    f"Reflection line m={self.reflectionLine.get_m()}")
-                                self.predictedPoint = (self.reflectionLine.get_x(
-                                    DEFENSIVE_LINE), DEFENSIVE_LINE)
-                            else:
-                                self.predictedPoint = (
-                                    self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
-                            
-                            self.predictionMade = True
-                            self.wentBackToGoal = False
-                            self.attacked = False
+                            i = 0
+                            while i < 5:
+                                # Check if puck collides with a wall
+                                if self.predictionLine.get_angle() >= 0:  # left edge
+                                    self.collisionPoint = (
+                                        0 + (radius / 2), self.predictionLine.get_y(0 + (radius / 2)))
+                                    self.puckCollides = True
+                                else:  # right edge
+                                    self.collisionPoint = (
+                                        CAMERA_FRAME_HEIGHT - (radius / 2),
+                                        self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
+                                    self.puckCollides = True
+                                
+                                # If puck collides with wall calculate the reflection point
+                                if self.puckCollides and self.collisionPoint[1] > 0:
+                                    self.reflectionLine = Line(
+                                        self.collisionPoint, None, (-1 * self.predictionLine.get_m() * 2.5))
+                                    print(
+                                        f"Reflection line m={self.reflectionLine.get_m()}")
+                                    self.predictedPoint = (self.reflectionLine.get_x(
+                                        DEFENSIVE_LINE), DEFENSIVE_LINE)
+                                    self.predictionMade = True
+                                    self.wentBackToGoal = False
+                                    self.attacked = False
+                                else:
+                                    self.predictedPoint = (
+                                        self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
+                                    self.predictionMade = True
+                                    self.wentBackToGoal = False
+                                    self.attacked = False
+                                    break
+
+                                self.predictionLine = self.reflectionLine
+                                self.savedPoint = self.currentPosition
+                                frame = self.updatePostCalculationUi(frame)
+                                i += 1
+
                             
                             # Check if predicted puck position is valid 
                             if 50 < self.predictedPoint[0] < (CAMERA_FRAME_HEIGHT - 50):
@@ -678,6 +689,7 @@ class MainWindow(QMainWindow):
             self.robotWasStopped = self.robotIsStopped
 
             frame = self.updatePostCalculationUi(frame)
+            frame = self.updateFrameTime
     
 
     def updatePostCalculationUi(self, frame):
@@ -737,16 +749,16 @@ class MainWindow(QMainWindow):
         if self.showDebugImages:
             self.updateImageFromFrame(self.cameraImageLabel, frame)
         
-        # Calculate frame time and FPS
+        return frame
+    
+    def updateFrameTime(self):
+     # Calculate frame time and FPS
         frameTimeMs = (self.currentFrameTimestamp -
                        self.lastFrameTimestamp).microseconds / 1000
         self.lastFrameTimestamp = self.currentFrameTimestamp
         fps = 1000 / frameTimeMs
         self.frameTimeLabel.setText(
             f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
-        
-        return frame
-
 
     def updatePreCalculationUi(self, frame, x, y, radius, robotX, robotY, robotRadius):
         # Draw outlines of puck, robot and playfield in the camera image
