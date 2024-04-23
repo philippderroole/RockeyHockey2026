@@ -71,8 +71,13 @@ def detectPuck(filteredFrame, boundaries):
     hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
 
     results = []
-    for (lowerBoundary, upperBoundary, minRadius, maxRadius) in boundaries:
+    for i, (lowerBoundary, upperBoundary, minRadius, maxRadius) in enumerate(boundaries):
         mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
+        
+        # If the index is 1 (second boundary), only consider the upper half of the frame
+        # if i == 1:
+        #     mask[mask.shape[0]//2:, :] = 0
+        
         mask_blur = cv2.medianBlur(mask, 19)
         contours, hierarchy = cv2.findContours(mask_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
