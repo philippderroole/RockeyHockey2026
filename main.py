@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
 from Constants import *
 from Camera import Camera
 from StepperController import *
-from Processing.ProcessFrame import detectPuck, detectPuck_old, markInFrame, markRobotRectangle
+from Processing.ProcessFrame import processFrame
 from Processing.Line import Line
 
 
@@ -231,6 +231,9 @@ class MainWindow(QMainWindow):
         self.upperHueRobotSlider = QSlider(Qt.Horizontal)
         self.upperSaturationRobotSlider = QSlider(Qt.Horizontal)
         self.upperValueRobotSlider = QSlider(Qt.Horizontal)
+        self.lowerRobotRadiusSlider = QSlider(Qt.Horizontal)
+        self.upperRobotRadiusSlider = QSlider(Qt.Horizontal)
+
         self.lowerHueRobotSlider.setMinimum(0)
         self.lowerHueRobotSlider.setMaximum(255)
         self.lowerSaturationRobotSlider.setMinimum(0)
@@ -243,12 +246,20 @@ class MainWindow(QMainWindow):
         self.upperSaturationRobotSlider.setMaximum(255)
         self.upperValueRobotSlider.setMinimum(0)
         self.upperValueRobotSlider.setMaximum(255)
+        self.lowerRobotRadiusSlider.setMinimum(0)
+        self.lowerRobotRadiusSlider.setMaximum(255)
+        self.upperRobotRadiusSlider.setMinimum(0)
+        self.upperRobotRadiusSlider.setMaximum(255)
+
         self.lowerHueRobotSlider.setValue(CAMERA_ROBOT_LOWER_HUE)
         self.lowerSaturationRobotSlider.setValue(CAMERA_ROBOT_LOWER_SATURATION)
         self.lowerValueRobotSlider.setValue(CAMERA_ROBOT_LOWER_VALUE)
         self.upperHueRobotSlider.setValue(CAMERA_ROBOT_UPPER_HUE)
         self.upperSaturationRobotSlider.setValue(CAMERA_ROBOT_UPPER_SATURATION)
         self.upperValueRobotSlider.setValue(CAMERA_ROBOT_UPPER_VALUE)
+        self.lowerRobotRadiusSlider.setValue(CAMERA_ROBOT_MIN_RADIUS)
+        self.upperRobotRadiusSlider.setValue(CAMERA_ROBOT_MAX_RADIUS)
+
         self.lowerHueRobotLabel = QLabel(str(self.lowerHueRobotSlider.value()))
         self.lowerSaturationRobotLabel = QLabel(
             str(self.lowerSaturationRobotSlider.value()))
@@ -259,6 +270,10 @@ class MainWindow(QMainWindow):
             str(self.upperSaturationRobotSlider.value()))
         self.upperValueRobotLabel = QLabel(
             str(self.upperValueRobotSlider.value()))
+        self.lowerRobotRadiusLabel = QLabel(
+            str(self.lowerRobotRadiusSlider.value()))
+        self.upperRobotRadiusLabel = QLabel(
+            str(self.upperRobotRadiusSlider.value()))
 
         self.lowerHueRobotSlider.valueChanged.connect(
             lambda value: self.lowerHueRobotLabel.setText(str(value))
@@ -278,6 +293,12 @@ class MainWindow(QMainWindow):
         self.upperValueRobotSlider.valueChanged.connect(
             lambda value: self.upperValueRobotLabel.setText(str(value))
         )
+        self.lowerRobotRadiusSlider.valueChanged.connect(
+            lambda value: self.lowerRobotRadiusLabel.setText(str(value))
+        )
+        self.upperRobotRadiusSlider.valueChanged.connect(
+            lambda value: self.upperRobotRadiusLabel.setText(str(value))
+        )
 
         self.lowerHueRobotHbox = QHBoxLayout()
         self.lowerSaturationRobotHbox = QHBoxLayout()
@@ -285,6 +306,8 @@ class MainWindow(QMainWindow):
         self.upperHueRobotHbox = QHBoxLayout()
         self.upperSaturationRobotHbox = QHBoxLayout()
         self.upperValueRobotHbox = QHBoxLayout()
+        self.lowerRobotRadiusBox = QHBoxLayout()
+        self.upperRobotRadiusBox = QHBoxLayout()
 
         self.lowerHueRobotLabelText = QLabel(text="Lower Hue: ")
         self.lowerSaturationRobotLabelText = QLabel(text="Lower Sat: ")
@@ -292,6 +315,8 @@ class MainWindow(QMainWindow):
         self.upperHueRobotLabelText = QLabel(text="Upper Hue: ")
         self.upperSaturationRobotLabelText = QLabel(text="Upper Sat: ")
         self.upperValueRobotLabelText = QLabel(text="Upper Val: ")
+        self.lowerRobotRadiusLabelText = QLabel(text="Lower Radius: ")
+        self.upperRobotRadiusLabelText = QLabel(text="Upper Radius: ")
 
         self.lowerHueRobotLabelText.setFixedWidth(100)
         self.lowerSaturationRobotLabelText.setFixedWidth(100)
@@ -299,6 +324,8 @@ class MainWindow(QMainWindow):
         self.upperHueRobotLabelText.setFixedWidth(100)
         self.upperSaturationRobotLabelText.setFixedWidth(100)
         self.upperValueRobotLabelText.setFixedWidth(100)
+        self.lowerRobotRadiusLabelText.setFixedWidth(100)
+        self.upperRobotRadiusLabelText.setFixedWidth(100)
 
         self.lowerHueRobotLabel.setFixedWidth(30)
         self.lowerSaturationRobotLabel.setFixedWidth(30)
@@ -306,6 +333,8 @@ class MainWindow(QMainWindow):
         self.upperHueRobotLabel.setFixedWidth(30)
         self.upperSaturationRobotLabel.setFixedWidth(30)
         self.upperValueRobotLabel.setFixedWidth(30)
+        self.lowerRobotRadiusLabel.setFixedWidth(30)
+        self.upperRobotRadiusLabel.setFixedWidth(30)
 
         self.lowerHueRobotHbox.addWidget(self.lowerHueRobotLabelText)
         self.lowerHueRobotHbox.addWidget(self.lowerHueRobotLabel)
@@ -335,6 +364,14 @@ class MainWindow(QMainWindow):
         self.upperValueRobotHbox.addWidget(self.upperValueRobotLabel)
         self.upperValueRobotHbox.addWidget(self.upperValueRobotSlider)
 
+        self.lowerRobotRadiusBox.addWidget(self.lowerRobotRadiusLabelText)
+        self.lowerRobotRadiusBox.addWidget(self.lowerRobotRadiusLabel)
+        self.lowerRobotRadiusBox.addWidget(self.lowerRobotRadiusSlider)
+
+        self.upperRobotRadiusBox.addWidget(self.upperRobotRadiusLabelText)
+        self.upperRobotRadiusBox.addWidget(self.upperRobotRadiusLabel)
+        self.upperRobotRadiusBox.addWidget(self.upperRobotRadiusSlider)
+
         self.filterRobotVbox = QVBoxLayout()
         self.filterRobotVbox.addLayout(self.lowerHueRobotHbox)
         self.filterRobotVbox.addLayout(self.lowerSaturationRobotHbox)
@@ -342,6 +379,8 @@ class MainWindow(QMainWindow):
         self.filterRobotVbox.addLayout(self.upperHueRobotHbox)
         self.filterRobotVbox.addLayout(self.upperSaturationRobotHbox)
         self.filterRobotVbox.addLayout(self.upperValueRobotHbox)
+        self.filterRobotVbox.addLayout(self.lowerRobotRadiusBox)
+        self.filterRobotVbox.addLayout(self.upperRobotRadiusBox)
 
     def setupPuckFilterUI(self):
         # Create the sliders for adjusting the filters.
@@ -352,6 +391,8 @@ class MainWindow(QMainWindow):
         self.upperHueSlider = QSlider(Qt.Horizontal)
         self.upperSaturationSlider = QSlider(Qt.Horizontal)
         self.upperValueSlider = QSlider(Qt.Horizontal)
+        self.lowerPuckRadiusSlider = QSlider(Qt.Horizontal)
+        self.upperPuckRadiusSlider = QSlider(Qt.Horizontal)
         self.lowerHueSlider.setMinimum(0)
         self.lowerHueSlider.setMaximum(255)
         self.lowerSaturationSlider.setMinimum(0)
@@ -364,12 +405,18 @@ class MainWindow(QMainWindow):
         self.upperSaturationSlider.setMaximum(255)
         self.upperValueSlider.setMinimum(0)
         self.upperValueSlider.setMaximum(255)
+        self.lowerPuckRadiusSlider.setMinimum(0)
+        self.lowerPuckRadiusSlider.setMaximum(100)
+        self.upperPuckRadiusSlider.setMinimum(0)
+        self.upperPuckRadiusSlider.setMaximum(100)
         self.lowerHueSlider.setValue(CAMERA_LOWER_HUE)
         self.lowerSaturationSlider.setValue(CAMERA_LOWER_SATURATION)
         self.lowerValueSlider.setValue(CAMERA_LOWER_VALUE)
         self.upperHueSlider.setValue(CAMERA_UPPER_HUE)
         self.upperSaturationSlider.setValue(CAMERA_UPPER_SATURATION)
         self.upperValueSlider.setValue(CAMERA_UPPER_VALUE)
+        self.lowerPuckRadiusSlider.setValue(CAMERA_PUCK_MIN_RADIUS)
+        self.upperPuckRadiusSlider.setValue(CAMERA_PUCK_MAX_RADIUS)
         self.lowerHueLabel = QLabel(str(self.lowerHueSlider.value()))
         self.lowerSaturationLabel = QLabel(
             str(self.lowerSaturationSlider.value()))
@@ -378,6 +425,11 @@ class MainWindow(QMainWindow):
         self.upperSaturationLabel = QLabel(
             str(self.upperSaturationSlider.value()))
         self.upperValueLabel = QLabel(str(self.upperValueSlider.value()))
+        self.lowerPuckRadiusLabel = QLabel(
+            str(self.lowerPuckRadiusSlider.value()))
+        self.upperPuckRadiusLabel = QLabel(
+            str(self.upperPuckRadiusSlider.value()))
+
         self.lowerHueSlider.valueChanged.connect(
             lambda value: self.lowerHueLabel.setText(str(value))
         )
@@ -396,30 +448,47 @@ class MainWindow(QMainWindow):
         self.upperValueSlider.valueChanged.connect(
             lambda value: self.upperValueLabel.setText(str(value))
         )
+        self.lowerPuckRadiusSlider.valueChanged.connect(
+            lambda value: self.lowerPuckRadiusLabel.setText(str(value))
+        )
+        self.upperPuckRadiusSlider.valueChanged.connect(
+            lambda value: self.upperPuckRadiusLabel.setText(str(value))
+        )
         self.lowerHueHbox = QHBoxLayout()
         self.lowerSaturationHbox = QHBoxLayout()
         self.lowerValueHbox = QHBoxLayout()
         self.upperHueHbox = QHBoxLayout()
         self.upperSaturationHbox = QHBoxLayout()
         self.upperValueHbox = QHBoxLayout()
+        self.lowerPuckRadiusBox = QHBoxLayout()
+        self.upperPuckRadiusBox = QHBoxLayout()
         self.lowerHueLabelText = QLabel(text="Lower Hue: ")
         self.lowerSaturationLabelText = QLabel(text="Lower Sat: ")
         self.lowerValueLabelText = QLabel(text="Lower Val: ")
         self.upperHueLabelText = QLabel(text="Upper Hue: ")
         self.upperSaturationLabelText = QLabel(text="Upper Sat: ")
         self.upperValueLabelText = QLabel(text="Upper Val: ")
+        self.lowerPuckRadiusLabelText = QLabel(text="Lower Radius: ")
+        self.upperPuckRadiusLabelText = QLabel(text="Upper Radius: ")
+
         self.lowerHueLabelText.setFixedWidth(100)
         self.lowerSaturationLabelText.setFixedWidth(100)
         self.lowerValueLabelText.setFixedWidth(100)
         self.upperHueLabelText.setFixedWidth(100)
         self.upperSaturationLabelText.setFixedWidth(100)
         self.upperValueLabelText.setFixedWidth(100)
+        self.lowerPuckRadiusLabelText.setFixedWidth(100)
+        self.upperPuckRadiusLabelText.setFixedWidth(100)
+
         self.lowerHueLabel.setFixedWidth(30)
         self.lowerSaturationLabel.setFixedWidth(30)
         self.lowerValueLabel.setFixedWidth(30)
         self.upperHueLabel.setFixedWidth(30)
         self.upperSaturationLabel.setFixedWidth(30)
         self.upperValueLabel.setFixedWidth(30)
+        self.lowerPuckRadiusLabel.setFixedWidth(30)
+        self.upperPuckRadiusLabel.setFixedWidth(30)
+
         self.lowerHueHbox.addWidget(self.lowerHueLabelText)
         self.lowerHueHbox.addWidget(self.lowerHueLabel)
         self.lowerHueHbox.addWidget(self.lowerHueSlider)
@@ -438,6 +507,12 @@ class MainWindow(QMainWindow):
         self.upperValueHbox.addWidget(self.upperValueLabelText)
         self.upperValueHbox.addWidget(self.upperValueLabel)
         self.upperValueHbox.addWidget(self.upperValueSlider)
+        self.lowerPuckRadiusBox.addWidget(self.lowerPuckRadiusLabelText)
+        self.lowerPuckRadiusBox.addWidget(self.lowerPuckRadiusLabel)
+        self.lowerPuckRadiusBox.addWidget(self.lowerPuckRadiusSlider)
+        self.upperPuckRadiusBox.addWidget(self.upperPuckRadiusLabelText)
+        self.upperPuckRadiusBox.addWidget(self.upperPuckRadiusLabel)
+        self.upperPuckRadiusBox.addWidget(self.upperPuckRadiusSlider)
         self.filterVbox = QVBoxLayout()
         self.filterVbox.addLayout(self.lowerHueHbox)
         self.filterVbox.addLayout(self.lowerSaturationHbox)
@@ -445,6 +520,8 @@ class MainWindow(QMainWindow):
         self.filterVbox.addLayout(self.upperHueHbox)
         self.filterVbox.addLayout(self.upperSaturationHbox)
         self.filterVbox.addLayout(self.upperValueHbox)
+        self.filterVbox.addLayout(self.lowerPuckRadiusBox)
+        self.filterVbox.addLayout(self.upperPuckRadiusBox)
 
     def closeEvent(self, event):
         # Let the window close.
@@ -465,7 +542,7 @@ class MainWindow(QMainWindow):
     def applyCorners(self):
         if len(self.croppedTableCoords) == 4:
             self.logTextbox.append(
-                "Applied corners. Fitting image. If the image does not look right then reset the corners. Start at the top left and then go counter clock wise."
+                "Applied corners. Fitting image. If the image does not look right then reset the corners. Start at the top left and then go clock wise."
             )
             self.cornersApplied = True
         else:
@@ -595,54 +672,9 @@ class MainWindow(QMainWindow):
                         frame, (corner[0], corner[1]), 5, (255, 255, 255), 2)
 
             self.frameCounter = self.frameCounter + 1
-            lowerBoundary = np.array(
-                [
-                    self.lowerHueSlider.value(),
-                    self.lowerSaturationSlider.value(),
-                    self.lowerValueSlider.value(),
-                ]
-            )
-            upperBoundary = np.array(
-                [
-                    self.upperHueSlider.value(),
-                    self.upperSaturationSlider.value(),
-                    self.upperValueSlider.value(),
-                ]
-            )
-            # TODO: Make robot detection better.
-            robotLowerBoundary = np.array([
-                self.lowerHueRobotSlider.value(),
-                self.lowerSaturationRobotSlider.value(),
-                self.lowerValueRobotSlider.value(),
-            ])
-            robotUpperBoundary = np.array([
-                self.upperHueRobotSlider.value(),
-                self.upperSaturationRobotSlider.value(),
-                self.upperValueRobotSlider.value(),
-            ])
 
-            # TODO: This is eating performance
-            # Robot Detection eats more than puck detection.
-            # Detect the puck and update UI values.
-            ((x, y), radius), ((robotX, robotY), robotRadius) = detectPuck(
-                frame, [(lowerBoundary, upperBoundary), (robotLowerBoundary, robotUpperBoundary)]
-            )
-            # (x, y), radius = detectPuck_old(frame, lowerBoundary, upperBoundary)
-            # (robotX, robotY), robotRadius = detectPuck_old(frame, robotLowerBoundary, robotUpperBoundary)
-            # Robot detection is not that stable.
-            # If we find something with a very small or very large radius then set the position invalid.
-            if robotRadius < 10 or robotRadius > 50:
-                robotX = -1
-                robotY = -1
-                robotRadius = -1
-                self.robotSpeed = -1
-            # print(f"Robot: {robotX:.0f},{robotY:.0f}")
-            frame = markInFrame(frame, x, y, radius, FRAME_PUCK_OUTLINE_COLOR)
-            # Mark robot
-            if robotX != -1 and robotY != -1 and robotRadius != -1:
-                frame = markInFrame(frame, robotX, robotY,
-                                    robotRadius, FRAME_ROBOT_OUTLINE_COLOR)
-            frame = markRobotRectangle(frame)
+            x, y, radius, robotX, robotY, robotRadius = processFrame(frame, self)
+
             self.currentPosition = (x, y)
             self.currentRobotPosition = (robotX, robotY)
             self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0]) ** 2 + (

@@ -15,8 +15,9 @@ class Camera:
             # self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
             self.stream = cv2.VideoCapture(camera_stream_url)
         else:
-            # self.stream = cv2.VideoCapture(camera_index)
-            self.stream = cv2.VideoCapture(camera_stream_url)
+            self.stream = cv2.VideoCapture(camera_index)
+            # self.stream = cv2.VideoCapture(camera_stream_url)
+            
         self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
         self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
         self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
