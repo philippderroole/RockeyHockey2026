@@ -593,7 +593,7 @@ class MainWindow(QMainWindow):
             if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
 
                 #check if new prediciton is needed (because reflection has taken place)
-                if(len(self.predictedPoints) >= 1 and self.lastPosition[1] < self.collisionPoints[0][1] and self.collisionPoints[0][1] > 0):
+                if(len(self.predictedPoints) >= 1 and self.lastPosition[1] < self.collisionPoints[0][1]):
                     self.predictionMade = False
 
                 if not self.predictionMade:
@@ -624,6 +624,10 @@ class MainWindow(QMainWindow):
                                         self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
                                     self.puckCollides = True
                                 
+                                #save things for UI #1
+                                self.savedPoints.append(self.savedPoint)
+                                self.collisionPoints.append(self.collisionPoint)
+
                                 # If puck collides with wall calculate the reflection point
                                 if self.puckCollides and self.collisionPoint[1] > 0:
                                     self.reflectionLine = Line(
@@ -642,10 +646,8 @@ class MainWindow(QMainWindow):
                                     self.wentBackToGoal = False
                                     self.attacked = False
                                     break
-                               #save thigns for ui;
-                                self.savedPoints.append(self.savedPoint)
+                               #save thigns for ui #2 reflection only
                                 self.predictedPoints.append(self.predictedPoint)
-                                self.collisionPoints.append(self.collisionPoint)
 
                                 self.predictionLine = self.reflectionLine
                                 self.savedPoint = self.currentPosition
@@ -753,16 +755,16 @@ class MainWindow(QMainWindow):
                         lineType=4,
                     )
 
+            # Draw prediction line before collision
+            cv2.line(frame,
+                     (int(self.savedPoints[0][0]), int(
+                         self.savedPoints[0][1])),
+                     (int(self.collisionPoints[0][0]), int(
+                         self.collisionPoints[0][1])),
+                     (255, 0, 0), thickness=2, lineType=4)
             # Executed if the puck collides with a wall
             if self.puckCollides:
-                if len(self.savedPoints) > 0:
-                    # Draw prediction line before collision
-                    cv2.line(frame,
-                             (int(self.savedPoints[0][0]), int(
-                                 self.savedPoints[0][1])),
-                             (int(self.collisionPoints[0][0]), int(
-                                 self.collisionPoints[0][1])),
-                             (255, 0, 0), thickness=2, lineType=4)
+                if len(self.collisionPoints) > 0:
                     for i in range(len(self.predictedPoints)):
                         # Draw collision point
                         cv2.circle(frame, (int(self.collisionPoints[i][0]), int(self.collisionPoints[i][1])),
