@@ -591,6 +591,11 @@ class MainWindow(QMainWindow):
             
             # Check if puck is currently moving to the robot and if it also moved towards the robot during the last update
             if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
+
+                #check if new prediciton is needed (because reflection has taken place)
+                if(self.lastPosition[1] < self.predictedPoints[0][1]):
+                    self.predictionMade = false
+
                 if not self.predictionMade:
                     self.puckCollides = False
 
