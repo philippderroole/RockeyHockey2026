@@ -27,6 +27,10 @@ CAMERA_FRAMERATE = 60.0
 CAMERA_FOCUS = 1
 CAMERA_BUFFERSIZE = 2
 
+# The frequency at which the robot detection is done.
+# The camera can be used to detect the robot every x frames.
+CAMERA_ROBOT_DETECTION_FREQUENCY = 1
+
 STEPPER_COM_PORT = "COM3"
 STEPPER_BAUDRATE = 115200
 
