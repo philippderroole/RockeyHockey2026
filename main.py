@@ -687,6 +687,7 @@ class MainWindow(QMainWindow):
                                             TABLE_MAX_Y,
                                         )
                                         moveX = TABLE_MAX_X - moveX
+                                        self.sendMoveValues(moveX, moveY)
 
                     except:
                         pass
