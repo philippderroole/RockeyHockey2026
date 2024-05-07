@@ -4,31 +4,38 @@ import time
 import platform
 import numpy as np
 
+from picamera2 import Picamera2
+
 
 class Camera:
     def __init__(
             self, camera_index, frame_width, frame_height, focus, buffer_size, fps, camera_stream_url
     ):
         self.fps = fps
+
+        self.picam2 = Picamera2()
+        self.picam2.configure(self.picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (frame_width, frame_height)}))
+        self.picam2.set_controls({"FrameRate": fps})
+        self.picam2.start()
         # Check if we are running on windows because then we need the CAP_DSHOW flag.
-        if platform.system() == "Windows":
-            # self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
-            self.stream = cv2.VideoCapture(camera_stream_url)
-        else:
-            self.stream = cv2.VideoCapture(camera_index)
-            # self.stream = cv2.VideoCapture(camera_stream_url)
+        # if platform.system() == "Windows":
+        #     # self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        #     self.stream = cv2.VideoCapture(camera_stream_url)
+        # else:
+        #     self.stream = cv2.VideoCapture(camera_index)
+        #     # self.stream = cv2.VideoCapture(camera_stream_url)
             
-        self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
-        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
-        self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
-        self.stream.set(cv2.CAP_PROP_FPS, fps)
-        print("Initial FPS: ", self.stream.get(cv2.CAP_PROP_FPS))
-        self.stream.set(cv2.CAP_PROP_FOCUS, focus)
-        self.stream.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
-        (self.grabbed, self.frame) = self.stream.read()
-        self.stopped = False
-        self.new_frame = False
+        # self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
+        # self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
+        # self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+        # self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
+        # self.stream.set(cv2.CAP_PROP_FPS, fps)
+        # print("Initial FPS: ", self.stream.get(cv2.CAP_PROP_FPS))
+        # self.stream.set(cv2.CAP_PROP_FOCUS, focus)
+        # self.stream.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
+        # (self.grabbed, self.frame) = self.stream.read()
+        # self.stopped = False
+        # self.new_frame = False
 
     def start(self):
         Thread(target=self.get_next_frame, args=()).start()
@@ -46,7 +53,9 @@ class Camera:
             if not self.grabbed:
                 self.stop()
             else:
-                (self.grabbed, tmp_frame) = self.stream.read()
+                # (self.grabbed, tmp_frame) = self.stream.read()
+                tmp_frame = self.picam2.capture_array()
+                self.grabbed = True
                 tmp_frame = cv2.rotate(
                     tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
                 tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
