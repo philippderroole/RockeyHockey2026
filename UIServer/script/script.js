@@ -10,8 +10,10 @@ setInterval(() => {
 
         if (gpio5.value > gpio6.value && difference > 2) {
             godlikeAudio.play();
+            playGIF('bot');
         } else if (gpio5.value < gpio6.value && difference > 2) {
             unstoppableAudio.play();
+            playGIF('prof');
         }
     }))
 }, 500);
@@ -32,7 +34,7 @@ function stopGame() {
 function startTimer(duration) {
     var timer = duration;
     var minutes, seconds;
-    var intervalId; // Store the interval ID
+    var intervalId;
 
     intervalId = setInterval(function () {
         minutes = parseInt(timer / 60, 10);
@@ -51,4 +53,21 @@ function startTimer(duration) {
             clearInterval(intervalId);
         }
     }, 1000);
-}
+};
+
+function playGIF(player) {
+    const gifElement = document.getElementById('score-gif');
+    const scoreboard = document.getElementById('scoreboard');
+
+    if (player === 'prof') {
+        gifElement.src = 'resources/gifs/pulp.gif';
+    } else if (player === 'bot') {
+        gifElement.src = 'resources/gifs/losingteeth.gif';
+    }
+
+    scoreboard.style.display = 'block';
+
+    setTimeout(() => {
+        scoreboard.style.display = 'none';
+    }, 3000);
+};

@@ -18,12 +18,26 @@
             height: 100%;
             object-fit: fill;
         }
-
         #countdown {
             position: fixed;
             top: 10%;
             left: 50%;
             transform: translateX(-50%);
+        }
+        #scoreboard {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Hintergrundfarbe mit Transparenz */
+            display: none; /* Standardmäßig ausgeblendet */
+        }
+        #score-gif {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
@@ -37,6 +51,10 @@
 
     <!-- <img id="background" src="resources/background-hd720-png.apng"></img> -->
     <video id="background" src="resources/background-hd720-h264.mp4" loop autoplay muted></video>
+
+    <div id="scoreboard">
+        <img id="score-gif" src="" alt="Tor-GIF">
+    </div>
 
     <input disabled id="gpio5" style="position: fixed; top: 10%; left: 5%;">
     <input disabled id="gpio6" style="position: fixed; top: 10%; right: 5%;">
