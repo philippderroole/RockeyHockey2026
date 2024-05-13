@@ -676,6 +676,27 @@ class MainWindow(QMainWindow):
                                     TABLE_MAX_Y,
                                 )
                                 moveX = TABLE_MAX_X - moveX
+                                
+                                if self.puckCollides:
+                                    negKehrwert = 1/(-1*self.predictionLine.get_m) 
+                                    robotX = self.currentRobotPosition[0]
+                                    robotY = self.currentRobotPosition[1]
+                                    yAchsenab = robotY - negKehrwert * robotX
+                                    
+                                    xZiel = (yAchsenab - robotX) / (self.predictionLine.get_m - negKehrwert)
+                                    yZiel = self.predictionLine.get_m * xZiel + robotX
+                                                   
+                                    # Überprüfen ob xZiel, yZiel gültig
+                                                                        
+                                    moveX, moveY = self.mapCoordinates(
+                                        xZiel,
+                                        yZiel,
+                                        CAMERA_FRAME_HEIGHT,
+                                        CAMERA_FRAME_ROBOT_MAX_Y,
+                                        TABLE_MAX_X,
+                                        TABLE_MAX_Y,
+                                    )
+                                    moveX = TABLE_MAX_X - moveX
 
                                 # If bot is activated move to the calculated position
                                 if self.botActivated:
@@ -683,40 +704,6 @@ class MainWindow(QMainWindow):
                                         f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
                                     self.positionsSent += 1
                                     self.sendMoveValues(moveX, moveY)
-                                    
-                                    self.send
-                                    # attacking strat is starting here
-                                    # for the left side: check if robot is too far right to attack
-                                    if (self.currentRobotPosition[0] > self.predictedPoint[0]):
-                                        self.positionsSent += 1
-                                        moveX, moveY = self.mapCoordinates(
-                                            self.predictedPoint[0],
-                                            self.predictedPoint[1],
-                                            CAMERA_FRAME_HEIGHT,
-                                            CAMERA_FRAME_ROBOT_MAX_Y,
-                                            TABLE_MAX_X,
-                                            TABLE_MAX_Y,
-                                        )
-                                        moveX = TABLE_MAX_X - moveX
-                                        self.sendMoveValues(moveX, moveY)
-                                    else:
-                                        if(self.collisionPoints[0][1] >= 0):
-                                            self.preTargetPointX = (abs(self.predictedPoint[0] - self.currentRobotPosition[0]) * self.predictedPoint[0]) / (math.sqrt(self.predictedPoint[0]**2 + self.collisionPoints[0][1]**2))
-
-                                            self.targetPoint[0] = self.preTargetPointX * math.sin(self.predictionLine.get_angle())
-                                            self.targetPoint[1] = self.predictionLine.get_y(self.targetPoint[0])
-
-                                            self.positionsSent += 1
-                                            moveX, moveY = self.mapCoordinates(
-                                                self.targetPoint[0],
-                                                self.targetPoint[1],
-                                                CAMERA_FRAME_HEIGHT,
-                                                CAMERA_FRAME_ROBOT_MAX_Y,
-                                                TABLE_MAX_X,
-                                                TABLE_MAX_Y,
-                                            )
-                                            moveX = TABLE_MAX_X - moveX
-                                            self.sendMoveValues(moveX, moveY)
                     except:
                         pass
             
