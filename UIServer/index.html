@@ -18,6 +18,7 @@
             height: 100%;
             object-fit: fill;
         }
+
         #countdown {
             position: fixed;
             top: 10%;
@@ -55,13 +56,14 @@
     <div id="scoreboard">
         <img id="score-gif" src="" alt="Tor-GIF">
     </div>
-
     <input disabled id="gpio5" style="position: fixed; top: 10%; left: 5%;">
     <input disabled id="gpio6" style="position: fixed; top: 10%; right: 5%;">
     <input disabled id="countdown">
 
     <button onclick="startGame()" type="button" class="btn btn-light" style="position: fixed; bottom: 10%; left: 5%">Start</button>
     <button onclick="stopGame()" type="button" class="btn btn-light" style="position: fixed; bottom: 10%; right: 5%">Stop</button>
+    
+    <button onclick="animation()" type="button" class="btn btn-light" style="position: fixed; bottom: 10%; left: 50%; transform: translate(-50%, 0)">LED Animation</button>
 </body>
 
 </html>
