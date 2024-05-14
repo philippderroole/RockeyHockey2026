@@ -52,25 +52,10 @@ def processFrame(frame, sliders):
         filteredFrame=frame, 
         boundaries=[(lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius), (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius)], 
         resizeFrame=resizeFrame,
-        useBlur=True,
-        useUMat=True,
+        useBlur=False,
+        useUMat=False,
         detectRobot=lastRobotDetection == 0
     )
-
-    # FIXME: Threading is making it worse
-    # with ThreadPoolExecutor(max_workers=1) as executor:
-    #     # Submit the detectPuckCustomizeable function to the executor
-    #     future = executor.submit(detectPuckCustomizeable, frame, 
-    #         [(lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius), 
-    #         (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius)], 
-    #         resizeFrame,
-    #         True,
-    #         True,
-    #         lastRobotDetection == 0
-    #     )
-
-    #     # Wait for the function to finish and get the result
-    #     ((x, y), radius), ((robotX, robotY), robotRadius) = future.result()
 
     # If the robot is detected, save the data.
     if robotX != -1 and robotY != -1 and robotRadius != -1:
