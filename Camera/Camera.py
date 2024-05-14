@@ -13,12 +13,12 @@ class Camera:
         self.fps = fps
         self.url = camera_stream_url
         # Check if we are running on windows because then we need the CAP_DSHOW flag.
-        # if platform.system() == "Windows":
-        #     # self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
-        #     self.stream = cv2.VideoCapture(camera_stream_url)
-        # else:
-        #     # self.stream = cv2.VideoCapture(camera_index)
-        #     self.stream = cv2.VideoCapture(camera_stream_url)
+        if platform.system() == "Windows":
+            # self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+            self.stream = cv2.VideoCapture(camera_stream_url)
+        else:
+            self.stream = cv2.VideoCapture(camera_index)
+            # self.stream = cv2.VideoCapture(camera_stream_url)
             
         # self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
         # # self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
@@ -34,8 +34,8 @@ class Camera:
         self.new_frame = False
 
     def start(self):
-        # Thread(target=self.get_next_frame, args=()).start()
-        Thread(target=self.fetch_image_from_url, args=()).start()
+        Thread(target=self.get_next_frame, args=()).start()
+        # Thread(target=self.fetch_image_from_url, args=()).start()
         return self
 
     def get_current_frame(self):
@@ -59,7 +59,7 @@ class Camera:
                 self.frame = tmp_frame
                 self.new_frame = True
             elapsed_time = time.time() - start_time
-            time.sleep(10)
+            time.sleep(max(0, frame_time - elapsed_time))
 
     def fetch_image_from_url(self):
         while not self.stopped:

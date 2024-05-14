@@ -10,6 +10,8 @@ def processFrame(frame, sliders):
     global lastRobotData
     global lastRobotDetection
 
+    return 0, 0, 0, 0, 0, 0
+
     lowerBoundary = np.array(
         [
             sliders.lowerHueSlider.value(),
