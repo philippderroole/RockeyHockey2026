@@ -18,3 +18,4 @@ toml==0.10.2
 pyserial==3.5
 PyQt5
 qdarkstyle
+requests
