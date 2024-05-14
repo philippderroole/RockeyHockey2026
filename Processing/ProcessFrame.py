@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from Constants import *
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
 lastRobotData = ((0, 0), 0)
 lastRobotDetection = 0
@@ -48,23 +48,20 @@ def processFrame(frame, sliders):
     # TODO: This is eating performance
     # Robot Detection eats more than puck detection.
     # Detect the puck and update UI values.
-    detect_thread = threading.Thread(target=detectPuckCustomizeable, args=(
-        frame, 
-        [(lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius), (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius)], 
-        resizeFrame,
-        True,
-        True,
-        lastRobotDetection == 0
-    ))
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        # Submit the detectPuckCustomizeable function to the executor
+        future = executor.submit(detectPuckCustomizeable, frame, 
+            [(lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius), 
+            (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius)], 
+            resizeFrame,
+            True,
+            True,
+            lastRobotDetection == 0
+        )
 
-    # Start the thread
-    detect_thread.start()
+        # Wait for the function to finish and get the result
+        ((x, y), radius), ((robotX, robotY), robotRadius) = future.result()
 
-    # Wait for the thread to finish
-    detect_thread.join()
-
-    # Get the results
-    ((x, y), radius), ((robotX, robotY), robotRadius) = detect_thread.result
 
     # If the robot is detected, save the data.
     if robotX != -1 and robotY != -1 and robotRadius != -1:
