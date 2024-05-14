@@ -6,7 +6,7 @@ camera = None
 currentFrameTimestamp = datetime.now()
 lastFrameTimestamp = datetime.now()
 
-camera = cv2.VideoCapture("http://192.168.178.81:8080/video")
+camera = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_DSHOW)
 print(camera)
 print(camera.getBackendName())
 print(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
