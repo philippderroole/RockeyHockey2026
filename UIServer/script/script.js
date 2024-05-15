@@ -1,12 +1,21 @@
-var gameStopped = true;
 const gameTime = 600; // 10 Mins
+let gameStopped = true;
+let scoreGpio5 = 0;
+let scoreGpio6 = 0;
 
 setInterval(() => {
     fetch("state").then((res) => res.json().then((json) => {
-        gpio5.value = json.gpio5; //bot?
-        gpio6.value = json.gpio6; //prof?
+        if (json.gpio5 === "1") {
+            scoreGpio5++;
+        }
+        if (json.gpio6 === "1") {
+            scoreGpio6++;
+        }
+
+        gpio5.value = scoreGpio5; //bot?
+        gpio6.value = scoreGpio6; //prof?
         
-        var difference = Math.abs(gpio5.value - gpio6.value);
+        let difference = Math.abs(gpio5.value - gpio6.value);
 
         if (gpio5.value > gpio6.value && difference > 2) {
             godlikeAudio.play();
@@ -19,6 +28,7 @@ setInterval(() => {
 }, 500);
 
 function startGame() {
+    scoreGpio5 = scoreGpio6 = 0;
     startAudio.play();
     backgroundAudio.play();
     gameStopped = false;
@@ -32,9 +42,9 @@ function stopGame() {
 };
 
 function startTimer(duration) {
-    var timer = duration;
-    var minutes, seconds;
-    var intervalId;
+    let timer = duration;
+    let minutes, seconds;
+    let intervalId;
 
     intervalId = setInterval(function () {
         minutes = parseInt(timer / 60, 10);
