@@ -7,11 +7,35 @@
     object-fit: fill;
 }
 
+#btnStart {
+    position: fixed;
+    bottom: 10%;
+    left: 5%
+}
+
+#btnStop {
+    position: fixed;
+    bottom: 10%;
+    right: 5%
+}
+
 #countdown {
     position: fixed;
     top: 10%;
     left: 50%;
     transform: translateX(-50%);
+}
+
+#gpio5 {
+    position: fixed;
+    top: 10%;
+    left: 5%;
+}
+
+#gpio6 {
+    position: fixed;
+    top: 10%;
+    right: 5%;
 }
 
 #scoreboard {

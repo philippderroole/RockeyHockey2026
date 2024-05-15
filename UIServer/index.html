@@ -5,16 +5,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIRockyHockey</title>
 
+    <!-- Styles -->
     <link href="style/bootstrap.min.css" rel="stylesheet">
     <link href="style/styles.css" rel="stylesheet">
 
+    <!-- Script -->
     <script src="script/script.js" defer></script>
-    <title>UIRockyHockey</title>
 </head>
 
 <body class="pb-2">
     <div>
+        <!-- Audios -->
         <audio id="backgroundAudio" src="resources/sounds/backgroundsound.wav" loop autoplay></audio>
         <audio id="startAudio" src="resources/sounds/prepare.wav"></audio>
         <audio id="godlikeAudio" src="resources/sounds/godlike.wav"></audio>
@@ -22,23 +25,25 @@
     </div>
 
     <div>
+        <!-- Videos -->
         <!-- <img id="background" src="resources/videos/background-hd720-png.apng"></img> -->
         <video id="background" src="resources/videos/background-hd720-h264.mp4" loop autoplay muted></video>
     </div>
 
     <div id="scoreboard">
+        <!-- GIF placeholder -->
         <img id="score-gif" src="" alt="Tor-GIF">
     </div>
 
     <div>
-        <input disabled id="gpio5" style="position: fixed; top: 10%; left: 5%;">
-        <input disabled id="gpio6" style="position: fixed; top: 10%; right: 5%;">
+        <!-- Scoreboard and timer -->
+        <input disabled id="gpio5">
+        <input disabled id="gpio6">
         <input disabled id="countdown">
 
-        <button onclick="startGame()" type="button" class="btn btn-light"
-            style="position: fixed; bottom: 10%; left: 5%">Start</button>
-        <button onclick="stopGame()" type="button" class="btn btn-light"
-            style="position: fixed; bottom: 10%; right: 5%">Stop</button>
+        <!-- Game controls -->
+        <button id="btnStart" onclick="startGame()" type="button" class="btn btn-light">Start</button>
+        <button id="btnStop" onclick="stopGame()" type="button" class="btn btn-light">Stop</button>
     </div>
 </body>
 
