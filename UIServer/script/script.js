@@ -81,3 +81,7 @@ function playGIF(player) {
         scoreboard.style.display = 'none';
     }, 3000);
 };
+
+function animation() {
+    fetch("animation");
+};
