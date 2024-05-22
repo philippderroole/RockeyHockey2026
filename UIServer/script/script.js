@@ -31,8 +31,8 @@ setInterval(() => {
             }
         }
 
-        playerScoreField.value = playerScore;
-        botScoreField.value = botScore;
+        playerScoreField.value = json.playerScore;
+        botScoreField.value = json.botScore;
     }))
 }, 500);
 
