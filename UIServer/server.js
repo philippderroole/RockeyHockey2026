@@ -59,10 +59,10 @@ app.get('/animation', (req, res) => {
 });
 
 /// Set scores to 0.
-app.get('/resetScores', (req, res) => playerScore = botScore = 0);
+app.get('/resetScores', (req, res) => { playerScore = botScore = 0; res.send("scores reset.") });
 /// Start counting scores.
-app.get('/start', (req, res) => { rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); });
+app.get('/start', (req, res) => { rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); res.send("started."); });
 /// Stop counting scores.
-app.get('/stop' , (req, res) => { rpio.poll(botGoalPin, null);         rpio.poll(playerGoalPin, null); });
+app.get('/stop' , (req, res) => { rpio.poll(botGoalPin, null);         rpio.poll(playerGoalPin, null);         res.send("stopped.");});
 
 app.listen(PORT, () => console.log("Server listening on port", PORT));

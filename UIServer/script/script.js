@@ -43,9 +43,9 @@ function setScores(playerScore, botScore)
     botScoreField.value = botScore;
 }
 
-function startGame() {
-    fetch("resetScores");
-    fetch("start");
+async function startGame() {
+    await fetch("resetScores");
+    await fetch("start");
     setScores(0, 0);
     startAudio.play();
     backgroundAudio.play();
@@ -53,8 +53,8 @@ function startGame() {
     startTimer(gameTime);
 };
 
-function stopGame() {
-    fetch("stop");
+async function stopGame() {
+    await fetch("stop");
     backgroundAudio.pause();
     backgroundAudio.currentTime = 0;
     gameStopped = true;
