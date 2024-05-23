@@ -90,11 +90,7 @@ function playGIF(gifName) {
         gifElement.src = 'resources/gifs/dominance.gif';
     }
 
-    if (gameStopped) {
-      clearInterval(intervalId);
-    }
-  }, 1000);
-}
+    scoreboard.style.display = 'block';
 
     setTimeout(() => {
         scoreboard.style.display = 'none';
