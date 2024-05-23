@@ -1,11 +1,21 @@
-var gameStopped = true;
 const gameTime = 600; // 10 Mins
+let gameStopped = true;
+let scoreGpio5 = 0;
+let scoreGpio6 = 0;
 
 setInterval(() => {
-  fetch("state").then((res) =>
-    res.json().then((json) => {
-      gpio5.value += json.gpio5; //bot?
-      gpio6.value += json.gpio6; //prof?
+    fetch("state").then((res) => res.json().then((json) => {
+        if (json.gpio5 === "1") {
+            scoreGpio5++;
+        }
+        if (json.gpio6 === "1") {
+            scoreGpio6++;
+        }
+
+        gpio5.value = scoreGpio5; //bot?
+        gpio6.value = scoreGpio6; //prof?
+
+        let difference = Math.abs(gpio5.value - gpio6.value);
 
       var difference = Math.abs(gpio5.value - gpio6.value);
 
@@ -21,12 +31,13 @@ setInterval(() => {
 }, 500);
 
 function startGame() {
-  document.getElementById("name-input").readOnly = true;
-  startAudio.play();
-  backgroundAudio.play();
-  gameStopped = false;
-  startTimer(gameTime);
-}
+  document.getElementById('name-input').readOnly = true;
+    scoreGpio5 = scoreGpio6 = 0;
+    startAudio.play();
+    backgroundAudio.play();
+    gameStopped = false;
+    startTimer(gameTime);
+};
 
 function stopGame() {
   document.getElementById("name-input").readOnly = false;
@@ -36,9 +47,9 @@ function stopGame() {
 }
 
 function startTimer(duration) {
-  var timer = duration;
-  var minutes, seconds;
-  var intervalId;
+    let timer = duration;
+    let minutes, seconds;
+    let intervalId;
 
   intervalId = setInterval(function () {
     minutes = parseInt(timer / 60, 10);
@@ -59,19 +70,11 @@ function startTimer(duration) {
   }, 1000);
 }
 
-function playGIF(player) {
-  const gifElement = document.getElementById("score-gif");
-  const scoreboard = document.getElementById("scoreboard");
+    setTimeout(() => {
+        scoreboard.style.display = 'none';
+    }, 3000);
+};
 
-  if (player === "prof") {
-    gifElement.src = "resources/gifs/pulp.gif";
-  } else if (player === "bot") {
-    gifElement.src = "resources/gifs/losingteeth.gif";
-  }
-
-  scoreboard.style.display = "block";
-
-  setTimeout(() => {
-    scoreboard.style.display = "none";
-  }, 3000);
-}
+function animation() {
+    fetch("animation");
+};
