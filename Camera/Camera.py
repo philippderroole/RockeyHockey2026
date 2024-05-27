@@ -3,25 +3,34 @@ from threading import Thread
 import time
 import platform
 import numpy as np
-
+import requests
+from io import BytesIO
 
 class Camera:
     def __init__(
-            self, camera_index, frame_width, frame_height, focus, buffer_size, fps
+            self, camera_index, frame_width, frame_height, focus, buffer_size, fps, camera_stream_url
     ):
         self.fps = fps
+        self.url = camera_stream_url
         # Check if we are running on windows because then we need the CAP_DSHOW flag.
         if platform.system() == "Windows":
             self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+            # self.stream = cv2.VideoCapture(camera_stream_url)
         else:
-            self.stream = cv2.VideoCapture(camera_index)
-        self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
-        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
-        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
-        self.stream.set(cv2.CAP_PROP_FPS, fps)
-        self.stream.set(cv2.CAP_PROP_FOCUS, focus)
-        self.stream.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
-        (self.grabbed, self.frame) = self.stream.read()
+            # self.stream = cv2.VideoCapture(camera_index)
+            self.stream = cv2.VideoCapture(camera_stream_url)
+            
+        # This would be important if we directly pull from the camera instead of a stream.
+        # self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
+        # # self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
+        # self.stream.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+        # # self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
+        # self.stream.set(cv2.CAP_PROP_FPS, fps)
+        # print("Initial FPS: ", self.stream.get(cv2.CAP_PROP_FPS))
+        # self.stream.set(cv2.CAP_PROP_FOCUS, focus)
+        # self.stream.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
+        # (self.grabbed, self.frame) = self.stream.read()
+        self.grabbed = True
         self.stopped = False
         self.new_frame = False
 
