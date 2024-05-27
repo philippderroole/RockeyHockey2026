@@ -581,9 +581,12 @@ class MainWindow(QMainWindow):
             # Calculate robot and puck speed
             self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0]) ** 2 + (
                     self.currentPosition[1] - self.lastPosition[1]) ** 2)
+            self.puckSpeed = self.puckSpeed / (self.currentFrameTimestamp - self.lastFrameTimestamp).seconds
+            self.puckSpeed *= 1000
             self.robotSpeed = math.sqrt((self.currentRobotPosition[0] - self.lastRobotPosition[0]) ** 2 + (
                     self.currentRobotPosition[1] - self.lastRobotPosition[1]) ** 2)
             self.robotIsStopped = self.robotSpeed <= 1 or self.robotSpeed == -1
+            self.robotSpeed = self.puckSpeed / (self.currentFrameTimestamp - self.lastFrameTimestamp).seconds
 
             frame = self.updatePreCalculationUi(frame, x, y, radius, robotX, robotY, robotRadius)
 
@@ -644,13 +647,17 @@ class MainWindow(QMainWindow):
                                     print(
                                         f"Reflection line m={self.reflectionLine.get_m()}")
                                     self.predictedPoint = (self.reflectionLine.get_x(
-                                        DEFENSIVE_LINE), DEFENSIVE_LINE)
+                                        DEFENSIVE_LINE), DEFENSIVE_LINE )
                                     self.predictionMade = True
                                     self.wentBackToGoal = False
                                     self.attacked = False
                                 else:
-                                    self.predictedPoint = (
-                                        self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
+                                    if ( 100 < self.predictionLine.get_x(DEFENSIVE_LINE + 100) < 230):
+                                        self.predictedPoint = (
+                                            self.predictionLine.get_x(DEFENSIVE_LINE + 100), DEFENSIVE_LINE + 100)
+                                    else:
+                                        self.predictedPoint = (
+                                            self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
                                     self.predictionMade = True
                                     self.wentBackToGoal = False
                                     self.attacked = False
@@ -667,6 +674,7 @@ class MainWindow(QMainWindow):
                             # Check if predicted puck position is valid 
                             if 50 < self.predictedPoint[0] < (CAMERA_FRAME_HEIGHT - 50):
                                 # Calculate robot movement to the predicted puck position
+                               
                                 moveX, moveY = self.mapCoordinates(
                                     self.predictedPoint[0],
                                     self.predictedPoint[1],
@@ -676,27 +684,8 @@ class MainWindow(QMainWindow):
                                     TABLE_MAX_Y,
                                 )
                                 moveX = TABLE_MAX_X - moveX
+                               
                                 
-                                if True:
-                                    negKehrwert = 1/(-1*self.predictionLine.get_m()) 
-                                    robotXtwo = self.currentRobotPosition[0]
-                                    robotYtwo = self.currentRobotPosition[1]
-                                    yAchsenab = robotYtwo - negKehrwert * robotXtwo
-                                    
-                                    xZiel = abs((yAchsenab - robotXtwo) / (self.predictionLine.get_m() - negKehrwert))
-                                    yZiel = abs(self.predictionLine.get_m() * xZiel + robotXtwo)
-                                    # Überprüfen ob xZiel, yZiel gültig
-                                                                        
-                                    moveX, moveY = self.mapCoordinates(
-                                        xZiel,
-                                        yZiel,
-                                        CAMERA_FRAME_HEIGHT,
-                                        CAMERA_FRAME_ROBOT_MAX_Y,
-                                        TABLE_MAX_X,
-                                        TABLE_MAX_Y,
-                                    )
-                                    moveX = TABLE_MAX_X - moveX
-
                                 # If bot is activated move to the calculated position
                                 if self.botActivated:
                                     self.logTextbox.append(
@@ -904,9 +893,9 @@ class MainWindow(QMainWindow):
     def mapCoordinates(
             self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
     ):
-        xScale = maxWidthTo / maxWidthFrom
-        yScale = maxHeightTo / maxHeightFrom
-        x = x * xScale
+        xScale = maxWidthTo / maxWidthFrom  # 1885 / 360
+        yScale = maxHeightTo / maxHeightFrom # 1820 / 270
+        x = x * xScale  # x * 
         y = y * yScale
         return x, y
 
