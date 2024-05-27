@@ -664,38 +664,56 @@ class MainWindow(QMainWindow):
                                 i += 1
 
                             
-                            # Check if predicted puck position is valid 
+                                 # Check if predicted puck position is valid 
                             if 50 < self.predictedPoint[0] < (CAMERA_FRAME_HEIGHT - 50):
                                 # Calculate robot movement to the predicted puck position
-                                moveX, moveY = self.mapCoordinates(
-                                    self.predictedPoint[0],
-                                    self.predictedPoint[1],
-                                    CAMERA_FRAME_HEIGHT,
-                                    CAMERA_FRAME_ROBOT_MAX_Y,
-                                    TABLE_MAX_X,
-                                    TABLE_MAX_Y,
-                                )
-                                moveX = TABLE_MAX_X - moveX
-                                
-                                if True:
-                                    negKehrwert = 1/(-1*self.predictionLine.get_m()) 
-                                    robotXtwo = self.currentRobotPosition[0]
-                                    robotYtwo = self.currentRobotPosition[1]
-                                    yAchsenab = robotYtwo - negKehrwert * robotXtwo
-                                    
-                                    xZiel = abs((yAchsenab - robotXtwo) / (self.predictionLine.get_m() - negKehrwert))
-                                    yZiel = abs(self.predictionLine.get_m() * xZiel + robotXtwo)
-                                    # Überprüfen ob xZiel, yZiel gültig
-                                                                        
+                                if (self.predictionLine.get_angle() >= 0) and (self.currentRobotPosition[0]<self.predictedPoint[0]): 
+                                    wert = self.predictionLine.get_m()+(1/self.predictionLine.get_m())
+                                    robotX = self.currentRobotPosition[0]
+                                    robotY = self.currentRobotPosition[1]
+                                    Xachse = (robotY * self.predictedPoint[0] + (1/self.predictionLine.get_m())*robotX)*wert
+                                    Yachse = self.predictionLine.get_y()
                                     moveX, moveY = self.mapCoordinates(
-                                        xZiel,
-                                        yZiel,
+                                        Xachse,
+                                        Yachse,
                                         CAMERA_FRAME_HEIGHT,
                                         CAMERA_FRAME_ROBOT_MAX_Y,
                                         TABLE_MAX_X,
                                         TABLE_MAX_Y,
                                     )
                                     moveX = TABLE_MAX_X - moveX
+                                else:
+
+                                    moveX, moveY = self.mapCoordinates(
+                                       self.predictedPoint[0],
+                                       self.predictedPoint[1],
+                                       CAMERA_FRAME_HEIGHT,
+                                       CAMERA_FRAME_ROBOT_MAX_Y,
+                                       TABLE_MAX_X,
+                                       TABLE_MAX_Y,
+                                          )
+                                    moveX = TABLE_MAX_X - moveX
+                                   
+                                # if self.puckCollides:
+                                #     negKehrwert = 1/(-1*self.predictionLine.get_m()) 
+                                #     robotX = self.currentRobotPosition[0]
+                                #     robotY = self.currentRobotPosition[1]
+                                #     yAchsenab = robotY - negKehrwert * robotX
+                                    
+                                #     xZiel = (yAchsenab - robotX) / (self.predictionLine.get_m() - negKehrwert)
+                                #     yZiel = self.predictionLine.get_m() * xZiel + robotX
+                                                   
+                                    # Überprüfen ob xZiel, yZiel gültig
+                                                                        
+                                    # moveX, moveY = self.mapCoordinates(
+                                    #     xZiel,
+                                    #     yZiel,
+                                    #     CAMERA_FRAME_HEIGHT,
+                                    #     CAMERA_FRAME_ROBOT_MAX_Y,
+                                    #     TABLE_MAX_X,
+                                    #     TABLE_MAX_Y,
+                                    # )
+                                    # moveX = TABLE_MAX_X - moveX
 
                                 # If bot is activated move to the calculated position
                                 if self.botActivated:
