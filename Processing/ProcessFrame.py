@@ -45,9 +45,8 @@ def processFrame(frame, sliders):
     if CAMERA_FRAME_HEIGHT > 700 or CAMERA_FRAME_WIDTH > 1200:
         resizeFrame = True
 
-    # TODO: This is eating performance
-    # Robot Detection eats more than puck detection.
-    # Detect the puck and update UI values.
+
+    # TODO: Maybe remove Robot tracking (make sure robot position is known by Arduino)
     ((x, y), radius), ((robotX, robotY), robotRadius) = detectPuckCustomizeable(
         filteredFrame=frame, 
         boundaries=[(lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius), (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius)], 
@@ -83,18 +82,6 @@ def processFrame(frame, sliders):
 
     return x, y, radius, robotX, robotY, robotRadius
 
-
-def detectPuck_old(filteredFrame, lowerBoundary, upperBoundary):
-    hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
-    mask_blur = cv2.medianBlur(mask, 19)
-    contours, hierarchy = cv2.findContours(mask_blur, 1, 2)
-    if not contours:
-        return ((0, 0), 0)
-    cnt = contours[0]
-    (x, y), radius = cv2.minEnclosingCircle(cnt)
-    return (x, y), radius
-
 def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlur=True, useUMat=False, detectRobot=True):
     if resizeFrame:
         filteredFrame = cv2.resize(filteredFrame, (filteredFrame.shape[1] // 2, filteredFrame.shape[0] // 2))
@@ -117,7 +104,6 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
                 print("Skipping Robot Detection")
                 results.append(((-1, -1), -1))
                 continue
-            print("Detecting Robot")
             # Only consider the upper half of the frame
             # This is not possible when uMat is used
             if not useUMat:
@@ -140,35 +126,6 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
             results.append(((-1, -1), -1))
 
     return results
-
-
-def detectPuck(filteredFrame, boundaries, resizeFrame=False):
-    if resizeFrame:
-        filteredFrame = cv2.resize(filteredFrame, (filteredFrame.shape[1] // 2, filteredFrame.shape[0] // 2))
-
-    hsv = cv2.cvtColor(filteredFrame, cv2.COLOR_BGR2HSV)
-
-    results = []
-    for i, (lowerBoundary, upperBoundary, minRadius, maxRadius) in enumerate(boundaries):
-        mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
-        
-        # If the index is 1 (second boundary), only consider the upper half of the frame
-        # if i == 1:
-        #     mask[mask.shape[0]//2:, :] = 0
-
-        mask_blur = cv2.medianBlur(mask, 19)
-        contours, hierarchy = cv2.findContours(mask_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        for cnt in contours:
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
-            if minRadius <= radius <= maxRadius:
-                results.append(((x, y), radius))
-                break
-        else:
-            results.append(((-1, -1), -1))
-
-    return results
-
 
 def markInFrame(frame, x, y, radius, color):
     # Convert to int.
