@@ -506,9 +506,7 @@ class MainWindow(QMainWindow):
 
     def sendMoveValues(self, x, y):
         # Do scaling.
-        offset = (x - (TABLE_MAX_X / 2)) / 9
-        x += offset
-        y -= 50
+        # y -= 50
 
         if abs(x - self.lastMovePosition[0]) < 50 and abs(y - self.lastMovePosition[1]) < 50:
             return
@@ -649,9 +647,10 @@ class MainWindow(QMainWindow):
                                     self.wentBackToGoal = False
                                     self.attacked = False
                                 else:
-                                    if ( 100 < self.predictionLine.get_x(DEFENSIVE_LINE + 100) < 230):
+                                    # check if puck is arriving in specific area
+                                    if ( GORIGHT_MAX < self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX) < GOLEFT_MAX):
                                         self.predictedPoint = (
-                                            self.predictionLine.get_x(DEFENSIVE_LINE + 100), DEFENSIVE_LINE + 100)
+                                            self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX), DEFENSIVE_LINE + GOFORWARD_MAX)
                                     else:
                                         self.predictedPoint = (
                                             self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
@@ -688,7 +687,7 @@ class MainWindow(QMainWindow):
                                     self.logTextbox.append(
                                         f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
                                     self.positionsSent += 1
-                                    self.sendMoveValues(moveX, moveY)
+                                    self.sendMoveValues(int(moveX), int(moveY))
                     except:
                         pass
             
@@ -700,6 +699,43 @@ class MainWindow(QMainWindow):
                 if not self.wentBackToGoal:
                     self.wentBackToGoal = True
 
+                    # Calculate robot movements to goal
+                    moveX, moveY = self.mapCoordinates(
+                        (CAMERA_FRAME_HEIGHT / 2),
+                        DEFENSIVE_LINE,
+                        CAMERA_FRAME_HEIGHT,
+                        CAMERA_FRAME_ROBOT_MAX_Y,
+                        TABLE_MAX_X,
+                        TABLE_MAX_Y,
+                    )
+
+                    # If bot is activated move to the calculated position
+                    if self.botActivated:
+                        self.sendMoveValues(int(moveX), int(moveY))
+            # check if Puck is staying in own half
+            print(f'{self.puckSpeed}')
+            print(f'"Y: "{self.currentPosition[1]}')
+            print(f'"X: "{self.currentPosition[0]}')
+
+
+            if(self.puckSpeed < 5 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 185 and 40 < self.currentPosition[0] < 300):
+                moveX, moveY = self.mapCoordinates(
+                    self.currentPosition[0],
+                    self.currentPosition[1],
+                    CAMERA_FRAME_HEIGHT,
+                    CAMERA_FRAME_ROBOT_MAX_Y,
+                    TABLE_MAX_X,
+                    TABLE_MAX_Y,
+                )
+                moveX = TABLE_MAX_X - moveX
+                                
+                if self.botActivated:
+                    self.logTextbox.append(
+                        f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
+                    self.positionsSent += 1
+                    self.sendMoveValues(int(moveX), int(moveY))
+
+                
                     # Calculate robot movements to goal
                     moveX, moveY = self.mapCoordinates(
                         (CAMERA_FRAME_HEIGHT / 2),
