@@ -2,6 +2,7 @@ import sys
 import cv2
 import math
 import numpy as np
+import time
 from datetime import datetime
 from collections import deque
 from PyQt5.QtCore import Qt, QTimer, QFile, QIODevice, QTextStream
@@ -28,6 +29,7 @@ from Processing.Line import Line
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        self.skippedPositions = 0
         super().__init__()
         self.setWindowTitle("Rocky Hockey 2023")
         self.setWindowIcon(QIcon('RockyHockey2023Logo.png'))
@@ -516,7 +518,8 @@ class MainWindow(QMainWindow):
         # if self.botActivated:
         self.positionsSent += 1
         # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
-        self.moveWorker.set_values(MoveType.NORMAL, x, y)
+        response = self.stepperController.move_to_position(x, y)
+        print(response)
 
     def calibrate(self):
         # Add your calibration code here
@@ -712,16 +715,17 @@ class MainWindow(QMainWindow):
                     # If bot is activated move to the calculated position
                     if self.botActivated:
                         self.sendMoveValues(int(moveX), int(moveY))
+            
             # check if Puck is staying in own half
-            print(f'{self.puckSpeed}')
-            print(f'"Y: "{self.currentPosition[1]}')
-            print(f'"X: "{self.currentPosition[0]}')
-
-
             if(self.puckSpeed < 5 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 185 and 40 < self.currentPosition[0] < 300):
+                offsetX = 0
+                if(self.currentPosition[0] < 100):
+                    offsetX = -10
+                if(self.currentPosition[0] > 200):
+                    offsetX = 10
                 moveX, moveY = self.mapCoordinates(
-                    self.currentPosition[0],
-                    self.currentPosition[1],
+                    self.currentPosition[0] + offsetX,
+                    self.currentPosition[1] + 10,
                     CAMERA_FRAME_HEIGHT,
                     CAMERA_FRAME_ROBOT_MAX_Y,
                     TABLE_MAX_X,
@@ -734,21 +738,22 @@ class MainWindow(QMainWindow):
                         f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
                     self.positionsSent += 1
                     self.sendMoveValues(int(moveX), int(moveY))
+                    
 
-                
-                    # Calculate robot movements to goal
-                    moveX, moveY = self.mapCoordinates(
-                        (CAMERA_FRAME_HEIGHT / 2),
-                        DEFENSIVE_LINE,
-                        CAMERA_FRAME_HEIGHT,
-                        CAMERA_FRAME_ROBOT_MAX_Y,
-                        TABLE_MAX_X,
-                        TABLE_MAX_Y,
-                    )
+                    if(self.currentRobotPosition == self.currentPosition):
+                        # Calculate robot movements to goal
+                        moveX, moveY = self.mapCoordinates(
+                            (CAMERA_FRAME_HEIGHT / 2),
+                            DEFENSIVE_LINE,
+                            CAMERA_FRAME_HEIGHT,
+                            CAMERA_FRAME_ROBOT_MAX_Y,
+                            TABLE_MAX_X,
+                            TABLE_MAX_Y,
+                        )
 
-                    # If bot is activated move to the calculated position
-                    if self.botActivated:
-                        self.sendMoveValues(int(moveX), int(moveY))
+                        # If bot is activated move to the calculated position
+                        if self.botActivated:
+                            self.sendMoveValues(int(moveX), int(moveY))
 
             self.wasPuckGoingToRobot = self.isPuckGoingToRobot
             self.puckWasGoingLeft = self.puckIsGoingLeft
