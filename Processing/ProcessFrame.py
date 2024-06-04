@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from Constants import *
-from concurrent.futures import ThreadPoolExecutor
 
 lastRobotData = ((0, 0), 0)
 lastRobotDetection = 0
