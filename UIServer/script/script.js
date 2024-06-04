@@ -8,6 +8,7 @@ setInterval(() => {
         const playerLead      = json.playerScore - json.botScore;
 
         if (playerIncrement > 0) {
+            animation("blue");
             if (playerLead == 2) {
                 playGIF('losingteeth');
                 goalAudio.src = 'resources/sounds/godlike.wav';
@@ -18,8 +19,8 @@ setInterval(() => {
                 goalAudio.play();
             }
         }
-        if (botIncrement > 0)
-        {
+        if (botIncrement > 0) {
+            animation("red");
             if (playerLead == -2) {
                 playGIF('pulp');
                 goalAudio.src = 'resources/sounds/unstoppable.wav';
@@ -97,6 +98,6 @@ function playGIF(gifName) {
     }, 3000);
 };
 
-function animation() {
-    fetch("animation");
+function animation(color) {
+    fetch("animation/" + color);
 };

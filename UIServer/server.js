@@ -39,21 +39,41 @@ app.get('/state', (req, res) => {
     res.json({"playerScore": playerScore, "botScore": botScore});
 });
 
-let counter = 0;
 let animationInterval;
 
-app.get('/animation', (req, res) => {
+app.get('/animation/:color', (req, res) => {
     clearInterval(animationInterval);
-    counter = 0;
+    
+    const numLeds = 224;
+    const RED  = [100, 0,   0];
+    const BLUE = [0,   0, 100];
+    const OFF  = [0,   0,   0];
+    
+    let color;
+    if (req.params.color === "red")
+        color = RED;
+    else if (req.params.color === "blue")
+        color = BLUE;
+    else
+        color = OFF;
+
+    let leds = [];
+    leds = Array(numLeds).fill(OFF)
+    for (let i = 0; i < 10; i++)
+        leds = leds.concat([color,color,color,color,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF])
+    leds = leds.concat(Array(numLeds).fill(OFF))
+    
     animationInterval = setInterval(() => {
-        if (counter == 200) {
-            counter = 0;
+        let frame = leds.slice(0,numLeds).reverse();
+        if (frame.length < numLeds) {
             clearInterval(animationInterval);
-        } else {
-            ledDriver.stdin.write("0,0,0;".repeat(counter) + "0,0,255\n");
-            counter++;
         }
-    }, 15);
+        else {
+            ledDriver.stdin.write(frame.join(";") + "\n");
+            leds.shift();
+            leds.shift();
+        }
+    }, 10);
     
     res.json({"animation": "ok"});
 });
