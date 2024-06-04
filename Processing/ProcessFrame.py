@@ -100,7 +100,7 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
         # i == 1 -> Robot Detection
         if i == 1:
             if not detectRobot:
-                print("Skipping Robot Detection")
+                # print("Skipping Robot Detection")
                 results.append(((-1, -1), -1))
                 continue
             # Only consider the upper half of the frame
