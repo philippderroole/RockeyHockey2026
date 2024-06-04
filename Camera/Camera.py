@@ -50,14 +50,17 @@ class Camera:
             if not self.grabbed:
                 self.stop()
             else:
-                (self.grabbed, tmp_frame) = self.stream.read()
-                tmp_frame = cv2.rotate(
-                    tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
-                tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
-                # Flip again to mirror so the bot starts in the top right corner.
-                tmp_frame = cv2.flip(tmp_frame, 1)
-                self.frame = tmp_frame
-                self.new_frame = True
+                try:
+                    (self.grabbed, tmp_frame) = self.stream.read()
+                    tmp_frame = cv2.rotate(
+                        tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
+                    tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
+                    # Flip again to mirror so the bot starts in the top right corner.
+                    tmp_frame = cv2.flip(tmp_frame, 1)
+                    self.frame = tmp_frame
+                    self.new_frame = True
+                except Exception as e:
+                    print("Error reading frame:", e)
             elapsed_time = time.time() - start_time
             time.sleep(max(0, frame_time - elapsed_time))
 
