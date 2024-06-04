@@ -590,6 +590,7 @@ class MainWindow(QMainWindow):
     def sendMoveValues(self, x, y):
         # Do scaling.
         # y -= 50
+        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}")
 
         if abs(x - self.lastMovePosition[0]) < 50 and abs(y - self.lastMovePosition[1]) < 50:
             return
@@ -644,208 +645,207 @@ class MainWindow(QMainWindow):
                 + "."
             )
     def update(self):
+        print("update...", self.camera.new_frame)
+
+        if self.camera.stopped:
+            self.camera.start()
+
         # Check if new camera image is available
         if self.camera.new_frame:
             frame = self.initializeCamera()
 
-            if frame == None:
-                return;
+            if frame is not None:
+                x, y, radius, robotX, robotY, robotRadius = self.defineBoundaries(frame)
 
-            x, y, radius, robotX, robotY, robotRadius = self.defineBoundaries(frame)
+                # TODO: Robot detection is not that stable
+                # Check detected robot radius (if robot was not recognised correctly set invalid values)
+                if robotRadius < 10 or robotRadius > 50:
+                    robotX = -1
+                    robotY = -1
+                    robotRadius = -1
+                    self.robotSpeed = -1
 
-            # TODO: Robot detection is not that stable
-            # Check detected robot radius (if robot was not recognised correctly set invalid values)
-            if robotRadius < 10 or robotRadius > 50:
-                robotX = -1
-                robotY = -1
-                robotRadius = -1
-                self.robotSpeed = -1
+                self.currentPosition = (x, y)
+                self.currentRobotPosition = (robotX, robotY)
 
-            self.currentPosition = (x, y)
-            self.currentRobotPosition = (robotX, robotY)
+                # Calculate robot and puck speed
+                self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0]) ** 2 + (
+                        self.currentPosition[1] - self.lastPosition[1]) ** 2)
+                self.robotSpeed = math.sqrt((self.currentRobotPosition[0] - self.lastRobotPosition[0]) ** 2 + (
+                        self.currentRobotPosition[1] - self.lastRobotPosition[1]) ** 2)
+                self.robotIsStopped = self.robotSpeed <= 1 or self.robotSpeed == -1
+                
+                frame = self.updatePreCalculationUi(frame, x, y, radius, robotX, robotY, robotRadius)
 
-            # Calculate robot and puck speed
-            self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0]) ** 2 + (
-                    self.currentPosition[1] - self.lastPosition[1]) ** 2)
-            self.robotSpeed = math.sqrt((self.currentRobotPosition[0] - self.lastRobotPosition[0]) ** 2 + (
-                    self.currentRobotPosition[1] - self.lastRobotPosition[1]) ** 2)
-            self.robotIsStopped = self.robotSpeed <= 1 or self.robotSpeed == -1
-            
-            frame = self.updatePreCalculationUi(frame, x, y, radius, robotX, robotY, robotRadius)
+                self.isPuckGoingToRobot = self.currentPosition[1] < self.lastPosition[1] and (
+                        self.lastPosition[1] - self.currentPosition[1]) > 1
+                self.puckIsGoingLeft = self.currentPosition[0] < self.lastPosition[0] and (
+                        self.lastPosition[0] - self.currentPosition[0]) > 5
+                
+                # Check if puck is currently moving to the robot and if it also moved towards the robot during the last update
+                if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
 
-            self.isPuckGoingToRobot = self.currentPosition[1] < self.lastPosition[1] and (
-                    self.lastPosition[1] - self.currentPosition[1]) > 1
-            self.puckIsGoingLeft = self.currentPosition[0] < self.lastPosition[0] and (
-                    self.lastPosition[0] - self.currentPosition[0]) > 5
-            
-            # Check if puck is currently moving to the robot and if it also moved towards the robot during the last update
-            if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
+                    #check if new prediciton is needed (because reflection has taken place)
+                    if(len(self.predictedPoints) >= 1 and self.lastPosition[1] < self.collisionPoints[0][1]):
+                        self.predictionMade = False
 
-                #check if new prediciton is needed (because reflection has taken place)
-                if(len(self.predictedPoints) >= 1 and self.lastPosition[1] < self.collisionPoints[0][1]):
+                    if not self.predictionMade:
+                        self.puckCollides = False
+
+                    #das passt sicher nicht  :)
+                        if len(self.collisionPoints) >= 1:
+                            self.lastCollisionPoint = self.collisionPoints[0]
+                        else:
+                            self.lastCollisionPoint = self.currentPosition
+                        #reset saved points
+                        self.savedPoints = []
+                        self.predictedPoints = []
+                        self.collisionPoints = []
+
+
+                        # Draw line between current and last puck position
+                        self.predictionLine = Line(self.lastPosition, self.currentPosition)
+
+                        self.savedPoint = self.currentPosition
+
+                        try:
+                            if self.predictionLine.get_m() is not None:
+                                i = 0
+                                while i < 5:
+                                    # Check if puck collides with a wall
+                                    if self.predictionLine.get_angle() >= 0:  # left edge
+                                        self.collisionPoint = (
+                                            0 + (radius / 2), self.predictionLine.get_y(0 + (radius / 2)))
+                                        self.puckCollides = True
+                                    else:  # right edge
+                                        self.collisionPoint = (
+                                            CAMERA_FRAME_HEIGHT - (radius / 2),
+                                            self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
+                                        self.puckCollides = True
+                                    
+                                    #save things for UI #1
+                                    self.savedPoints.append(self.savedPoint)
+                                    self.collisionPoints.append(self.collisionPoint)
+
+                                    # If puck collides with wall calculate the reflection point
+                                    if self.puckCollides and self.collisionPoint[1] > 0:
+                                        self.reflectionLine = Line(
+                                            self.collisionPoint, None, (-1 * self.predictionLine.get_m() * 2.5))
+                                        print(
+                                            f"Reflection line m={self.reflectionLine.get_m()}")
+                                        self.predictedPoint = (self.reflectionLine.get_x(
+                                            DEFENSIVE_LINE), DEFENSIVE_LINE )
+                                        self.predictionMade = True
+                                        self.wentBackToGoal = False
+                                        self.attacked = False
+                                    else:
+                                        # check if puck is arriving in specific area
+                                        if ( GORIGHT_MAX < self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX) < GOLEFT_MAX):
+                                            self.predictedPoint = (
+                                                self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX), DEFENSIVE_LINE + GOFORWARD_MAX)
+                                        else:
+                                            self.predictedPoint = (
+                                                self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
+                                        self.predictionMade = True
+                                        self.wentBackToGoal = False
+                                        self.attacked = False
+                                        break
+                                #save thigns for ui #2 reflection only
+                                    self.predictedPoints.append(self.predictedPoint)
+
+                                    self.predictionLine = self.reflectionLine
+                                    self.savedPoint = self.currentPosition
+                                    # frame = self.updatePostCalculationUi(frame)
+                                    i += 1
+
+                                
+                                # Check if predicted puck position is valid 
+                                if 50 < self.predictedPoint[0] < (CAMERA_FRAME_HEIGHT - 50):
+                                    # Calculate robot movement to the predicted puck position
+                                
+                                    moveX, moveY = self.mapCoordinates(
+                                        self.predictedPoint[0],
+                                        self.predictedPoint[1],
+                                        CAMERA_FRAME_HEIGHT,
+                                        CAMERA_FRAME_ROBOT_MAX_Y,
+                                        TABLE_MAX_X,
+                                        TABLE_MAX_Y,
+                                    )
+                                    moveX = TABLE_MAX_X - moveX
+                                
+                                    
+                                    # If bot is activated move to the calculated position
+                                    if self.botActivated:
+                                        self.positionsSent += 1
+                                        self.sendMoveValues(int(moveX), int(moveY))
+                        except:
+                            pass
+                
+                # Executed if the puck isn't moving to the robot or didn't move to the robot in the previous update 
+                else:
                     self.predictionMade = False
 
-                if not self.predictionMade:
-                    self.puckCollides = False
+                    # Executed if the robot isn't in the goal
+                    if not self.wentBackToGoal:
+                        self.wentBackToGoal = True
 
-                #das passt sicher nicht  :)
-                    if len(self.collisionPoints) >= 1:
-                        self.lastCollisionPoint = self.collisionPoints[0]
-                    else:
-                        self.lastCollisionPoint = self.currentPosition
-                    #reset saved points
-                    self.savedPoints = []
-                    self.predictedPoints = []
-                    self.collisionPoints = []
+                        # Calculate robot movements to goal
+                        moveX, moveY = self.mapCoordinates(
+                            (CAMERA_FRAME_HEIGHT / 2),
+                            DEFENSIVE_LINE,
+                            CAMERA_FRAME_HEIGHT,
+                            CAMERA_FRAME_ROBOT_MAX_Y,
+                            TABLE_MAX_X,
+                            TABLE_MAX_Y,
+                        )
 
-
-                    # Draw line between current and last puck position
-                    self.predictionLine = Line(self.lastPosition, self.currentPosition)
-
-                    self.savedPoint = self.currentPosition
-
-                    try:
-                        if self.predictionLine.get_m() is not None:
-                            i = 0
-                            while i < 5:
-                                # Check if puck collides with a wall
-                                if self.predictionLine.get_angle() >= 0:  # left edge
-                                    self.collisionPoint = (
-                                        0 + (radius / 2), self.predictionLine.get_y(0 + (radius / 2)))
-                                    self.puckCollides = True
-                                else:  # right edge
-                                    self.collisionPoint = (
-                                        CAMERA_FRAME_HEIGHT - (radius / 2),
-                                        self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
-                                    self.puckCollides = True
-                                
-                                #save things for UI #1
-                                self.savedPoints.append(self.savedPoint)
-                                self.collisionPoints.append(self.collisionPoint)
-
-                                # If puck collides with wall calculate the reflection point
-                                if self.puckCollides and self.collisionPoint[1] > 0:
-                                    self.reflectionLine = Line(
-                                        self.collisionPoint, None, (-1 * self.predictionLine.get_m() * 2.5))
-                                    print(
-                                        f"Reflection line m={self.reflectionLine.get_m()}")
-                                    self.predictedPoint = (self.reflectionLine.get_x(
-                                        DEFENSIVE_LINE), DEFENSIVE_LINE )
-                                    self.predictionMade = True
-                                    self.wentBackToGoal = False
-                                    self.attacked = False
-                                else:
-                                    # check if puck is arriving in specific area
-                                    if ( GORIGHT_MAX < self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX) < GOLEFT_MAX):
-                                        self.predictedPoint = (
-                                            self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX), DEFENSIVE_LINE + GOFORWARD_MAX)
-                                    else:
-                                        self.predictedPoint = (
-                                            self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
-                                    self.predictionMade = True
-                                    self.wentBackToGoal = False
-                                    self.attacked = False
-                                    break
-                               #save thigns for ui #2 reflection only
-                                self.predictedPoints.append(self.predictedPoint)
-
-                                self.predictionLine = self.reflectionLine
-                                self.savedPoint = self.currentPosition
-                                # frame = self.updatePostCalculationUi(frame)
-                                i += 1
-
-                            
-                            # Check if predicted puck position is valid 
-                            if 50 < self.predictedPoint[0] < (CAMERA_FRAME_HEIGHT - 50):
-                                # Calculate robot movement to the predicted puck position
-                               
-                                moveX, moveY = self.mapCoordinates(
-                                    self.predictedPoint[0],
-                                    self.predictedPoint[1],
-                                    CAMERA_FRAME_HEIGHT,
-                                    CAMERA_FRAME_ROBOT_MAX_Y,
-                                    TABLE_MAX_X,
-                                    TABLE_MAX_Y,
-                                )
-                                moveX = TABLE_MAX_X - moveX
-                               
-                                
-                                # If bot is activated move to the calculated position
-                                if self.botActivated:
-                                    self.logTextbox.append(
-                                        f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
-                                    self.positionsSent += 1
-                                    self.sendMoveValues(int(moveX), int(moveY))
-                    except:
-                        pass
-            
-            # Executed if the puck isn't moving to the robot or didn't move to the robot in the previous update 
-            else:
-                self.predictionMade = False
-
-                # Executed if the robot isn't in the goal
-                if not self.wentBackToGoal:
-                    self.wentBackToGoal = True
-
-                    # Calculate robot movements to goal
+                        # If bot is activated move to the calculated position
+                        if self.botActivated:
+                            self.sendMoveValues(int(moveX), int(moveY))
+                
+                # check if Puck is staying in own half
+                if(self.puckSpeed < 3 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 185 and 40 < self.currentPosition[0] < 300):
+                    offsetX = 0
+                    if(self.currentPosition[0] < 100):
+                        offsetX = -10
+                    if(self.currentPosition[0] > 200):
+                        offsetX = 10
                     moveX, moveY = self.mapCoordinates(
-                        (CAMERA_FRAME_HEIGHT / 2),
-                        DEFENSIVE_LINE,
+                        self.currentPosition[0] + offsetX,
+                        self.currentPosition[1] + 10,
                         CAMERA_FRAME_HEIGHT,
                         CAMERA_FRAME_ROBOT_MAX_Y,
                         TABLE_MAX_X,
                         TABLE_MAX_Y,
                     )
-
-                    # If bot is activated move to the calculated position
+                    moveX = TABLE_MAX_X - moveX
+                                    
                     if self.botActivated:
+                        self.positionsSent += 1
                         self.sendMoveValues(int(moveX), int(moveY))
-            
-            # check if Puck is staying in own half
-            if(self.puckSpeed < 5 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 185 and 40 < self.currentPosition[0] < 300):
-                offsetX = 0
-                if(self.currentPosition[0] < 100):
-                    offsetX = -10
-                if(self.currentPosition[0] > 200):
-                    offsetX = 10
-                moveX, moveY = self.mapCoordinates(
-                    self.currentPosition[0] + offsetX,
-                    self.currentPosition[1] + 10,
-                    CAMERA_FRAME_HEIGHT,
-                    CAMERA_FRAME_ROBOT_MAX_Y,
-                    TABLE_MAX_X,
-                    TABLE_MAX_Y,
-                )
-                moveX = TABLE_MAX_X - moveX
-                                
-                if self.botActivated:
-                    self.logTextbox.append(
-                        f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
-                    self.positionsSent += 1
-                    self.sendMoveValues(int(moveX), int(moveY))
-            
-                    # Calculate robot movements to goal
-                    moveX, moveY = self.mapCoordinates(
-                        (CAMERA_FRAME_HEIGHT / 2),
-                        DEFENSIVE_LINE,
-                        CAMERA_FRAME_HEIGHT,
-                        CAMERA_FRAME_ROBOT_MAX_Y,
-                        TABLE_MAX_X,
-                        TABLE_MAX_Y,
-                    )
+                
+                        # Calculate robot movements to goal
+                        moveX, moveY = self.mapCoordinates(
+                            (CAMERA_FRAME_HEIGHT / 2),
+                            DEFENSIVE_LINE,
+                            CAMERA_FRAME_HEIGHT,
+                            CAMERA_FRAME_ROBOT_MAX_Y,
+                            TABLE_MAX_X,
+                            TABLE_MAX_Y,
+                        )
 
-                    # If bot is activated move to the calculated position
-                    if self.botActivated:
-                        self.sendMoveValues(int(moveX), int(moveY))
+                        # If bot is activated move to the calculated position
+                        if self.botActivated:
+                            self.sendMoveValues(int(moveX), int(moveY))
 
-            self.wasPuckGoingToRobot = self.isPuckGoingToRobot
-            self.puckWasGoingLeft = self.puckIsGoingLeft
-            self.lastPosition = self.currentPosition
-            self.lastRobotPosition = self.currentRobotPosition
-            self.robotWasStopped = self.robotIsStopped
+                self.wasPuckGoingToRobot = self.isPuckGoingToRobot
+                self.puckWasGoingLeft = self.puckIsGoingLeft
+                self.lastPosition = self.currentPosition
+                self.lastRobotPosition = self.currentRobotPosition
+                self.robotWasStopped = self.robotIsStopped
 
-            frame = self.updatePostCalculationUi(frame)
-            frame = self.updateFrameTime
+                frame = self.updatePostCalculationUi(frame)
+                frame = self.updateFrameTime
     
 
     def updatePostCalculationUi(self, frame):
@@ -1002,6 +1002,7 @@ class MainWindow(QMainWindow):
             return frame
         except Exception as e:
             print("Couldn't process frame!")
+            self.camera.stop()
             return None
     
     def mapCoordinates(
