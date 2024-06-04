@@ -1,12 +1,13 @@
 import cv2
 from flask import Flask, Response
 from picamera2 import Picamera2
+import Constants
 
 app = Flask(__name__)
 
 picam2 = Picamera2()
-picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
-picam2.set_controls({"FrameRate": 120})
+picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (Constants.CAMERA_FRAME_WIDTH, Constants.CAMERA_FRAME_HEIGHT)}))
+picam2.set_controls({"FrameRate": Constants.CAMERA_FRAMERATE})
 picam2.start()
 
 def generate_frames():
