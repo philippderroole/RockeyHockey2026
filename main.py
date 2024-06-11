@@ -709,7 +709,7 @@ class MainWindow(QMainWindow):
 
                         try:
                             if self.predictionLine.get_m() is not None:
-                                i = 0
+                                loopCounter = 0
                                 while i < 5:
                                     # Check if puck collides with a wall
                                     if self.predictionLine.get_angle() >= 0:  # left edge
@@ -755,7 +755,7 @@ class MainWindow(QMainWindow):
                                     self.predictionLine = self.reflectionLine
                                     self.savedPoint = self.currentPosition
                                     # frame = self.updatePostCalculationUi(frame)
-                                    i += 1
+                                    loopCounter += 1
 
                                 
                                 # Check if predicted puck position is valid 
@@ -805,11 +805,11 @@ class MainWindow(QMainWindow):
                             self.sendMoveValues(int(moveX), int(moveY))
                 
                 # check if Puck is staying in own half
-                if(self.puckSpeed < 5 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 185 and 40 < self.currentPosition[0] < 300):
+                if(self.puckSpeed < 3 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 185 and 40 < self.currentPosition[0] < 360):
                     offsetX = 0
                     if(self.currentPosition[0] < 100):
                         offsetX = -10
-                    if(self.currentPosition[0] > 200):
+                    if(self.currentPosition[0] > 300):
                         offsetX = 10
                     moveX, moveY = self.mapCoordinates(
                         self.currentPosition[0] + offsetX,
@@ -822,24 +822,23 @@ class MainWindow(QMainWindow):
                     moveX = TABLE_MAX_X - moveX
                                     
                     if self.botActivated:
-                        self.logTextbox.append(
-                            f"Move To: X={moveX:.0f}, Y={moveY:.0f}")
                         self.positionsSent += 1
                         self.sendMoveValues(int(moveX), int(moveY))
-                
-                        # Calculate robot movements to goal
-                        moveX, moveY = self.mapCoordinates(
-                            (CAMERA_FRAME_HEIGHT / 2),
-                            DEFENSIVE_LINE,
-                            CAMERA_FRAME_HEIGHT,
-                            CAMERA_FRAME_ROBOT_MAX_Y,
-                            TABLE_MAX_X,
-                            TABLE_MAX_Y,
-                        )
 
-                        # If bot is activated move to the calculated position
-                        if self.botActivated:
-                            self.sendMoveValues(int(moveX), int(moveY))
+                    # time.sleep(0.2)
+                    # Calculate robot movements to goal
+                    moveX, moveY = self.mapCoordinates(
+                        (CAMERA_FRAME_HEIGHT / 2),
+                        DEFENSIVE_LINE,
+                        CAMERA_FRAME_HEIGHT,
+                        CAMERA_FRAME_ROBOT_MAX_Y,
+                        TABLE_MAX_X,
+                        TABLE_MAX_Y,
+                    )
+
+                    # If bot is activated move to the calculated position
+                    if self.botActivated:
+                        self.sendMoveValues(int(moveX), int(moveY))
 
                 self.wasPuckGoingToRobot = self.isPuckGoingToRobot
                 self.puckWasGoingLeft = self.puckIsGoingLeft
@@ -1011,9 +1010,10 @@ class MainWindow(QMainWindow):
     def mapCoordinates(
             self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
     ):
-        xScale = maxWidthTo / maxWidthFrom  # 1885 / 360
-        yScale = maxHeightTo / maxHeightFrom # 1820 / 270
-        x = x * xScale  # x * 
+        # Scale so it fits the other coordinate system
+        xScale = maxWidthTo / maxWidthFrom 
+        yScale = maxHeightTo / maxHeightFrom 
+        x = x * xScale
         y = y * yScale
         return x, y
 
