@@ -24,7 +24,7 @@ try:
             r, g, b = color.split(",")
             msg += colorToSpiData(int(r), int(g), int(b))
 
-        spi.xfer3(msg, 6000000)
-        time.sleep(0.01)
+        spi.xfer3(msg, 9000000)
+        # time.sleep(0.005)
 except EOFError:
     pass

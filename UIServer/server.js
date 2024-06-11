@@ -44,7 +44,7 @@ let animationInterval;
 app.get('/animation/:color', (req, res) => {
     clearInterval(animationInterval);
     
-    const numLeds = 224;
+    const numLeds = 215;
     const RED  = [100, 0,   0];
     const BLUE = [0,   0, 100];
     const OFF  = [0,   0,   0];
@@ -59,7 +59,7 @@ app.get('/animation/:color', (req, res) => {
 
     let leds = [];
     leds = Array(numLeds).fill(OFF)
-    for (let i = 0; i < 10; i++)
+    for (let i = 0; i < 18; i++)
         leds = leds.concat([color,color,color,color,OFF,OFF,OFF,OFF,OFF,OFF,OFF,OFF])
     leds = leds.concat(Array(numLeds).fill(OFF))
     
@@ -73,7 +73,7 @@ app.get('/animation/:color', (req, res) => {
             leds.shift();
             leds.shift();
         }
-    }, 10);
+    }, 22);
     
     res.json({"animation": "ok"});
 });
