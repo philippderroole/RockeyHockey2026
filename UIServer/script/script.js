@@ -9,6 +9,7 @@ function playGoalAnimation(gifName, soundName) {
 
     if (soundName) {
         goalAudio.src = soundName;
+        goalAudio.volume = 0.75;
         goalAudio.play();
     }
 }
@@ -56,6 +57,7 @@ async function startGame() {
     document.getElementById("start-button").style.display = "none";
     document.getElementById("stop-button").disabled = false;
 
+    startAudio.volume = 0.35;
     startAudio.play();
     backgroundAudio.play();
     gameStopped = false;
