@@ -9,6 +9,8 @@ const PORT = 4321;
 let playerScore = 0;
 let botScore    = 0;
 
+let gameRunning = false;
+
 const botGoalPin    = 5;
 const playerGoalPin = 6;
 
@@ -26,13 +28,21 @@ app.get("/", (req, res) => {
 });
 
 function onGoalSensor(pin) {
+    rpio.poll(botGoalPin, null);
+    rpio.poll(playerGoalPin, null);
     if (rpio.read(pin)) { // only give points when puck entered light barrier
         if (pin === playerGoalPin)
             botScore++;
         else if (pin == botGoalPin)
             playerScore++;
     }
-    rpio.msleep(50);
+    
+    setTimeout(() => {
+        if (gameRunning === true) {
+            rpio.poll(botGoalPin, onGoalSensor);
+            rpio.poll(playerGoalPin, onGoalSensor);
+        }
+    }, 1000);
 }
 
 app.get('/state', (req, res) => {
@@ -81,9 +91,9 @@ app.get('/animation/:color', (req, res) => {
 /// Set scores to 0.
 app.get('/resetScores', (req, res) => { playerScore = botScore = 0; res.send("scores reset.") });
 /// Start counting scores.
-app.get('/start', (req, res) => { rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); res.send("started."); });
+app.get('/start', (req, res) => { gameRunning = true; rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); res.send("started."); });
 /// Stop counting scores.
-app.get('/stop' , (req, res) => { rpio.poll(botGoalPin, null);         rpio.poll(playerGoalPin, null);         res.send("stopped.");});
+app.get('/stop' , (req, res) => { gameRunning = false; rpio.poll(botGoalPin, null);         rpio.poll(playerGoalPin, null);         res.send("stopped.");});
 
 /// Set scores to 0.
 app.get('/resetScores', (req, res) => { playerScore = botScore = 0; res.send("scores reset.") });
