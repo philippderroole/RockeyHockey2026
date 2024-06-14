@@ -72,25 +72,23 @@
     transform: translate(-50%, -50%);
 }
 
-
-#start-button {
+.start-stop-button {
     position: absolute;
     top: 292px;
     left: 408px;
     width: 100px;
-    background-color: green;
-    color: white;
+    height: 81px;
     z-index: 2;
+    color: white;
+}
+
+#start-button {
+    background-color: green;
 }
 
 #stop-button {
-    position: absolute;
-    top: 335px;
-    left: 408px;
-    width: 100px;
     background-color: red;
-    color: white;
-    z-index: 2;
+    display: none;
 }
 
 

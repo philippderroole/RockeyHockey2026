@@ -46,8 +46,15 @@ setInterval(() => {
 }, 500);
 
 async function startGame() {
+    document.getElementById("start-button").disabled = true;
+
     await fetch("resetScores");
     await fetch("start");
+
+    document.getElementById("stop-button").style.display = "block";
+    document.getElementById("start-button").style.display = "none";
+    document.getElementById("stop-button").disabled = false;
+
     startAudio.play();
     backgroundAudio.play();
     gameStopped = false;
@@ -55,7 +62,14 @@ async function startGame() {
 };
 
 async function stopGame() {
+    document.getElementById("stop-button").disabled = true;
+
     await fetch("stop");
+
+    document.getElementById("start-button").style.display = "block";
+    document.getElementById("stop-button").style.display = "none";
+    document.getElementById("start-button").disabled = false;
+
     backgroundAudio.pause();
     backgroundAudio.currentTime = 0;
     gameStopped = true;
