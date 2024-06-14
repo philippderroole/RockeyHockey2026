@@ -1,6 +1,18 @@
 const gameTime = 600; // 10 Mins
 let gameStopped = true;
 
+const scoreSoundFileNames = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].map((name) => "resources/sounds/" + name + ".wav");
+
+function playGoalAnimation(gifName, soundName) {
+    if (gifName)
+        playGIF(gifName);
+
+    if (soundName) {
+        goalAudio.src = soundName;
+        goalAudio.play();
+    }
+}
+
 setInterval(() => {
     fetch("state").then((res) => res.json().then((json) => {
         const playerIncrement = json.playerScore - scoreSpieler.value;
@@ -9,35 +21,24 @@ setInterval(() => {
 
         if (playerIncrement > 0) {
             animation("blue");
-            if (playerLead == 2) {
-                playGIF('losingteeth');
-                goalAudio.src = 'resources/sounds/godlike.wav';
-                goalAudio.play();
-            } else if (playerLead == 4) {
-                playGIF('dog');
-                goalAudio.src = 'resources/sounds/godlike.wav';
-                goalAudio.play();
-            } else if (playerLead > 5) {
-                playGIF('dominance');
-                goalAudio.src = 'resources/sounds/dominating.wav';
-                goalAudio.play();
-            }
+
+            playGoalAnimation(null, scoreSoundFileNames[json.playerScore]);
+
+            if (playerLead == 2)
+                setTimeout(() => playGoalAnimation('losingteeth', 'resources/sounds/godlike.wav'), 1200);
+            else if (playerLead == 4)
+                setTimeout(() => playGoalAnimation('dog', 'resources/sounds/godlike.wav'), 1200);
+            else if (playerLead > 5)
+                setTimeout(() => playGoalAnimation('dominance', 'resources/sounds/dominating.wav'), 1200);
         }
         if (botIncrement > 0) {
             animation("red");
-            if (playerLead == -2) {
-                playGIF('pulp');
-                goalAudio.src = 'resources/sounds/unstoppable.wav';
-                goalAudio.play();
-            } else if (playerLead == -4) {
-                playGIF('pengu');
-                goalAudio.src = 'resources/sounds/unstoppable.wav';
-                goalAudio.play();
-            } else if (playerLead < -5) {
-                playGIF('godzilla');
-                goalAudio.src = 'resources/sounds/rampage.wav';
-                goalAudio.play();
-            }
+            if (playerLead == -2)
+                playGoalAnimation('pulp', 'resources/sounds/unstoppable.wav');
+            else if (playerLead == -4)
+                playGoalAnimation('pengu', 'resources/sounds/unstoppable.wav');
+            else if (playerLead < -5)
+                playGoalAnimation('godzilla', 'resources/sounds/rampage.wav');
         }
 
         scoreSpieler.value = json.playerScore;
