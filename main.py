@@ -35,12 +35,12 @@ class MainWindow(QMainWindow):
         self.skippedPositions = 0
         super().__init__()
         self.setWindowTitle("Rocky Hockey 2023")
-        self.setWindowIcon(QIcon('RockyHockey2023Logo.png'))
+        self.setWindowIcon(QIcon("RockyHockey2023Logo.png"))
         self.setupUI()
         # Create a timer to continuously update and process the camera image.
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update)
-        self.timer.start(1) # Every 1 ms
+        self.timer.start(1)  # Every 1 ms
         # Camera used for image.
         self.camera = Camera(
             CAMERA_INDEX,
@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
             CAMERA_FOCUS,
             CAMERA_BUFFERSIZE,
             CAMERA_FRAMERATE,
-            CAMERA_STREAM_URL
+            CAMERA_STREAM_URL,
         ).start()
         self.stepperController = None
         try:
@@ -66,12 +66,12 @@ class MainWindow(QMainWindow):
         self.moveWorker = MoveWorker(self.stepperController)
         self.moveWorker.start()
         # Coordinates to crop the camera image to fit the table.
-        self.croppedTableCoords = [(TABLE_CORNER_TOP_LEFT_X, TABLE_CORNER_TOP_LEFT_Y),
-                                   (TABLE_CORNER_TOP_RIGHT_X,
-                                    TABLE_CORNER_TOP_RIGHT_Y),
-                                   (TABLE_CORNER_BOTTOM_RIGHT_X,
-                                    TABLE_CORNER_BOTTOM_RIGHT_Y),
-                                   (TABLE_CORNER_BOTTOM_LEFT_X, TABLE_CORNER_BOTTOM_LEFT_Y)]
+        self.croppedTableCoords = [
+            (TABLE_CORNER_TOP_LEFT_X, TABLE_CORNER_TOP_LEFT_Y),
+            (TABLE_CORNER_TOP_RIGHT_X, TABLE_CORNER_TOP_RIGHT_Y),
+            (TABLE_CORNER_BOTTOM_RIGHT_X, TABLE_CORNER_BOTTOM_RIGHT_Y),
+            (TABLE_CORNER_BOTTOM_LEFT_X, TABLE_CORNER_BOTTOM_LEFT_Y),
+        ]
         # Is the image already cropped?
         self.cornersApplied = True
         # Original corner coordinates when cropping is reset.
@@ -267,18 +267,16 @@ class MainWindow(QMainWindow):
 
         self.lowerHueRobotLabel = QLabel(str(self.lowerHueRobotSlider.value()))
         self.lowerSaturationRobotLabel = QLabel(
-            str(self.lowerSaturationRobotSlider.value()))
-        self.lowerValueRobotLabel = QLabel(
-            str(self.lowerValueRobotSlider.value()))
+            str(self.lowerSaturationRobotSlider.value())
+        )
+        self.lowerValueRobotLabel = QLabel(str(self.lowerValueRobotSlider.value()))
         self.upperHueRobotLabel = QLabel(str(self.upperHueRobotSlider.value()))
         self.upperSaturationRobotLabel = QLabel(
-            str(self.upperSaturationRobotSlider.value()))
-        self.upperValueRobotLabel = QLabel(
-            str(self.upperValueRobotSlider.value()))
-        self.lowerRobotRadiusLabel = QLabel(
-            str(self.lowerRobotRadiusSlider.value()))
-        self.upperRobotRadiusLabel = QLabel(
-            str(self.upperRobotRadiusSlider.value()))
+            str(self.upperSaturationRobotSlider.value())
+        )
+        self.upperValueRobotLabel = QLabel(str(self.upperValueRobotSlider.value()))
+        self.lowerRobotRadiusLabel = QLabel(str(self.lowerRobotRadiusSlider.value()))
+        self.upperRobotRadiusLabel = QLabel(str(self.upperRobotRadiusSlider.value()))
 
         self.lowerHueRobotSlider.valueChanged.connect(
             lambda value: self.lowerHueRobotLabel.setText(str(value))
@@ -345,11 +343,9 @@ class MainWindow(QMainWindow):
         self.lowerHueRobotHbox.addWidget(self.lowerHueRobotLabel)
         self.lowerHueRobotHbox.addWidget(self.lowerHueRobotSlider)
 
-        self.lowerSaturationRobotHbox.addWidget(
-            self.lowerSaturationRobotLabelText)
+        self.lowerSaturationRobotHbox.addWidget(self.lowerSaturationRobotLabelText)
         self.lowerSaturationRobotHbox.addWidget(self.lowerSaturationRobotLabel)
-        self.lowerSaturationRobotHbox.addWidget(
-            self.lowerSaturationRobotSlider)
+        self.lowerSaturationRobotHbox.addWidget(self.lowerSaturationRobotSlider)
 
         self.lowerValueRobotHbox.addWidget(self.lowerValueRobotLabelText)
         self.lowerValueRobotHbox.addWidget(self.lowerValueRobotLabel)
@@ -359,11 +355,9 @@ class MainWindow(QMainWindow):
         self.upperHueRobotHbox.addWidget(self.upperHueRobotLabel)
         self.upperHueRobotHbox.addWidget(self.upperHueRobotSlider)
 
-        self.upperSaturationRobotHbox.addWidget(
-            self.upperSaturationRobotLabelText)
+        self.upperSaturationRobotHbox.addWidget(self.upperSaturationRobotLabelText)
         self.upperSaturationRobotHbox.addWidget(self.upperSaturationRobotLabel)
-        self.upperSaturationRobotHbox.addWidget(
-            self.upperSaturationRobotSlider)
+        self.upperSaturationRobotHbox.addWidget(self.upperSaturationRobotSlider)
 
         self.upperValueRobotHbox.addWidget(self.upperValueRobotLabelText)
         self.upperValueRobotHbox.addWidget(self.upperValueRobotLabel)
@@ -423,17 +417,13 @@ class MainWindow(QMainWindow):
         self.lowerPuckRadiusSlider.setValue(CAMERA_PUCK_MIN_RADIUS)
         self.upperPuckRadiusSlider.setValue(CAMERA_PUCK_MAX_RADIUS)
         self.lowerHueLabel = QLabel(str(self.lowerHueSlider.value()))
-        self.lowerSaturationLabel = QLabel(
-            str(self.lowerSaturationSlider.value()))
+        self.lowerSaturationLabel = QLabel(str(self.lowerSaturationSlider.value()))
         self.lowerValueLabel = QLabel(str(self.lowerValueSlider.value()))
         self.upperHueLabel = QLabel(str(self.upperHueSlider.value()))
-        self.upperSaturationLabel = QLabel(
-            str(self.upperSaturationSlider.value()))
+        self.upperSaturationLabel = QLabel(str(self.upperSaturationSlider.value()))
         self.upperValueLabel = QLabel(str(self.upperValueSlider.value()))
-        self.lowerPuckRadiusLabel = QLabel(
-            str(self.lowerPuckRadiusSlider.value()))
-        self.upperPuckRadiusLabel = QLabel(
-            str(self.upperPuckRadiusSlider.value()))
+        self.lowerPuckRadiusLabel = QLabel(str(self.lowerPuckRadiusSlider.value()))
+        self.upperPuckRadiusLabel = QLabel(str(self.upperPuckRadiusSlider.value()))
 
         self.lowerHueSlider.valueChanged.connect(
             lambda value: self.lowerHueLabel.setText(str(value))
@@ -581,14 +571,18 @@ class MainWindow(QMainWindow):
             )
             moveX = TABLE_MAX_X - moveX
             self.logTextbox.append(
-                f"Clicked on {x},{y} in Image and moving to {int(moveX)},{int(moveY)}.")
+                f"Clicked on {x},{y} in Image and moving to {int(moveX)},{int(moveY)}."
+            )
             self.sendMoveValues(moveX, moveY)
 
-    def sendMoveValues(self, x, y):
+    def sendMoveValues(self, x, y, type):
         # Do scaling.
-        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}")
+        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
 
-        if abs(x - self.lastMovePosition[0]) < 50 and abs(y - self.lastMovePosition[1]) < 50:
+        if (
+            abs(x - self.lastMovePosition[0]) < 50
+            and abs(y - self.lastMovePosition[1]) < 50
+        ):
             return
 
         self.lastMovePosition = (x, y)
@@ -599,7 +593,7 @@ class MainWindow(QMainWindow):
         self.positionsSent += 1
         # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
         response = self.stepperController.move_to_position(x, y)
-        print(f'{x},{y}')
+        print(f"{x},{y}")
         print(response)
 
     def calibrate(self):
@@ -608,7 +602,7 @@ class MainWindow(QMainWindow):
             self.logTextbox.append("Calibrating...")
             self.moveWorker.set_values(MoveType.CALIBRATE, 0, 0)
             self.isAtZero = True
-            self.sendMoveValues((TABLE_MAX_X / 2), 200)
+            self.sendMoveValues((TABLE_MAX_X / 2), 200, "Calibration")
         else:
             self.logTextbox.append(
                 "ERROR: Cannot calibrate. No Arduino found on " + STEPPER_COM_PORT + "."
@@ -630,8 +624,7 @@ class MainWindow(QMainWindow):
             try:
                 x = int(self.xCoordTextBox.toPlainText())
                 y = int(self.yCoordTextBox.toPlainText())
-                self.logTextbox.append(
-                    "Moving to X=" + str(x) + ",Y=" + str(y))
+                self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
                 self.sendMoveValues(x, y)
             except ValueError:
                 self.logTextbox.append(
@@ -643,6 +636,7 @@ class MainWindow(QMainWindow):
                 + STEPPER_COM_PORT
                 + "."
             )
+
     def update(self):
         # Check if new camera image is available
 
@@ -666,39 +660,51 @@ class MainWindow(QMainWindow):
                 self.currentRobotPosition = (robotX, robotY)
 
                 # Calculate robot and puck speed
-                self.puckSpeed = math.sqrt((self.currentPosition[0] - self.lastPosition[0]) ** 2 + (
-                        self.currentPosition[1] - self.lastPosition[1]) ** 2)
-                
-                frame = self.updatePreCalculationUi(frame, x, y, radius, robotX, robotY, robotRadius)
+                self.puckSpeed = math.sqrt(
+                    (self.currentPosition[0] - self.lastPosition[0]) ** 2
+                    + (self.currentPosition[1] - self.lastPosition[1]) ** 2
+                )
 
-                self.isPuckGoingToRobot = self.currentPosition[1] < self.lastPosition[1] and (
-                        self.lastPosition[1] - self.currentPosition[1]) > 1
-                self.puckIsGoingLeft = self.currentPosition[0] < self.lastPosition[0] and (
-                        self.lastPosition[0] - self.currentPosition[0]) > 5
-                
+                frame = self.updatePreCalculationUi(
+                    frame, x, y, radius, robotX, robotY, robotRadius
+                )
+
+                self.isPuckGoingToRobot = (
+                    self.currentPosition[1] < self.lastPosition[1]
+                    and (self.lastPosition[1] - self.currentPosition[1]) > 1
+                )
+                self.puckIsGoingLeft = (
+                    self.currentPosition[0] < self.lastPosition[0]
+                    and (self.lastPosition[0] - self.currentPosition[0]) > 5
+                )
+
                 # Check if puck is currently moving to the robot and if it also moved towards the robot during the last update
                 if self.isPuckGoingToRobot and self.wasPuckGoingToRobot:
 
-                    #check if new prediciton is needed (because reflection has taken place)
-                    if(len(self.predictedPoints) >= 1 and self.lastPosition[1] < self.collisionPoints[0][1]):
+                    # check if new prediciton is needed (because reflection has taken place)
+                    if (
+                        len(self.predictedPoints) >= 1
+                        and self.lastPosition[1] < self.collisionPoints[0][1]
+                    ):
                         self.predictionMade = False
 
                     if not self.predictionMade:
                         self.puckCollides = False
 
-                    #das passt sicher nicht  :)
+                        # das passt sicher nicht  :)
                         if len(self.collisionPoints) >= 1:
                             self.lastCollisionPoint = self.collisionPoints[0]
                         else:
                             self.lastCollisionPoint = self.currentPosition
-                        #reset saved points
+                        # reset saved points
                         self.savedPoints = []
                         self.predictedPoints = []
                         self.collisionPoints = []
 
-
                         # Draw line between current and last puck position
-                        self.predictionLine = Line(self.lastPosition, self.currentPosition)
+                        self.predictionLine = Line(
+                            self.lastPosition, self.currentPosition
+                        )
 
                         self.savedPoint = self.currentPosition
 
@@ -707,44 +713,90 @@ class MainWindow(QMainWindow):
                                 loopCounter = 0
                                 while loopCounter < 5:
                                     # Check if puck collides with a wall
-                                    if self.predictionLine.get_angle() >= 0:  # left edge
+                                    if (
+                                        self.predictionLine.get_angle() >= 0
+                                    ):  # left edge
                                         self.collisionPoint = (
-                                            0 + (radius / 2), self.predictionLine.get_y(0 + (radius / 2)))
+                                            0 + (radius / 2),
+                                            self.predictionLine.get_y(0 + (radius / 2)),
+                                        )
                                         self.puckCollides = True
                                     else:  # right edge
                                         self.collisionPoint = (
                                             CAMERA_FRAME_HEIGHT - (radius / 2),
-                                            self.predictionLine.get_y(CAMERA_FRAME_HEIGHT - (radius / 2)))
+                                            self.predictionLine.get_y(
+                                                CAMERA_FRAME_HEIGHT - (radius / 2)
+                                            ),
+                                        )
                                         self.puckCollides = True
-                                    
-                                    #save things for UI #1
+
+                                    # save things for UI #1
                                     self.savedPoints.append(self.savedPoint)
                                     self.collisionPoints.append(self.collisionPoint)
 
                                     # If puck collides with wall calculate the reflection point
                                     if self.puckCollides and self.collisionPoint[1] > 0:
-                                        self.reflectionLine = Line(
-                                            self.collisionPoint, None, (-1 * self.predictionLine.get_m() * 2.5))
-                                        print(
-                                            f"Reflection line m={self.reflectionLine.get_m()}")
-                                        self.predictedPoint = (self.reflectionLine.get_x(
-                                            DEFENSIVE_LINE), DEFENSIVE_LINE )
+                                        if self.puckSpeed > 28:
+                                            self.reflectionLine = Line(
+                                                self.collisionPoint,
+                                                None,
+                                                (
+                                                    -1
+                                                    * self.predictionLine.get_m()
+                                                    * 2.5
+                                                ),
+                                            )
+                                            print(
+                                                f"Reflection line speed > 28 m={self.reflectionLine.get_m()}"
+                                            )
+                                        else:
+                                            self.reflectionLine = Line(
+                                                self.collisionPoint,
+                                                None,
+                                                (
+                                                    -1
+                                                    * self.predictionLine.get_m()
+                                                    * 1.7
+                                                ),  # original value 2.5
+                                            )
+                                            print(
+                                                f"Reflection line m={self.reflectionLine.get_m()}"
+                                            )
+                                        self.predictedPoint = (
+                                            self.reflectionLine.get_x(DEFENSIVE_LINE),
+                                            DEFENSIVE_LINE,
+                                        )
                                         self.predictionMade = True
                                         self.wentBackToGoal = False
                                         self.attacked = False
                                     else:
                                         # check if puck is arriving in specific area
-                                        if ( GORIGHT_MAX < self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX) < GOLEFT_MAX):
+                                        if (
+                                            GORIGHT_MAX
+                                            < self.predictionLine.get_x(
+                                                DEFENSIVE_LINE + GOFORWARD_MAX
+                                            )
+                                            < GOLEFT_MAX
+                                            and self.puckSpeed < 6
+                                        ):
                                             self.predictedPoint = (
-                                                self.predictionLine.get_x(DEFENSIVE_LINE + GOFORWARD_MAX), DEFENSIVE_LINE + GOFORWARD_MAX)
+                                                self.predictionLine.get_x(
+                                                    DEFENSIVE_LINE + GOFORWARD_MAX
+                                                ),
+                                                DEFENSIVE_LINE + GOFORWARD_MAX,
+                                            )
                                         else:
                                             self.predictedPoint = (
-                                                self.predictionLine.get_x(DEFENSIVE_LINE), DEFENSIVE_LINE)
+                                                self.predictionLine.get_x(
+                                                    DEFENSIVE_LINE
+                                                ),
+                                                DEFENSIVE_LINE,
+                                            )
                                         self.predictionMade = True
                                         self.wentBackToGoal = False
                                         self.attacked = False
                                         break
-                                #save thigns for ui #2 reflection only
+                                    # save thigns for ui #2 reflection only
                                     self.predictedPoints.append(self.predictedPoint)
 
                                     self.predictionLine = self.reflectionLine
@@ -752,11 +804,14 @@ class MainWindow(QMainWindow):
                                     # frame = self.updatePostCalculationUi(frame)
                                     loopCounter += 1
 
-                                
-                                # Check if predicted puck position is valid 
-                                if 50 < self.predictedPoint[0] < (CAMERA_FRAME_HEIGHT - 50):
+                                # Check if predicted puck position is valid
+                                if (
+                                    100
+                                    < self.predictedPoint[0]
+                                    < (CAMERA_FRAME_HEIGHT - 100)
+                                ):
                                     # Calculate robot movement to the predicted puck position
-                                
+
                                     moveX, moveY = self.mapCoordinates(
                                         self.predictedPoint[0],
                                         self.predictedPoint[1],
@@ -766,16 +821,20 @@ class MainWindow(QMainWindow):
                                         TABLE_MAX_Y,
                                     )
                                     moveX = TABLE_MAX_X - moveX
-                                
-                                    
+
                                     # If bot is activated move to the calculated position
                                     if self.botActivated:
+                                        self.logTextbox.append(f"{self.puckSpeed}")
                                         self.positionsSent += 1
-                                        self.sendMoveValues(int(moveX), int(moveY))
+                                        self.sendMoveValues(
+                                            int(moveX),
+                                            int(moveY),
+                                            "Defense/Active Defense",
+                                        )
                         except:
                             pass
-                
-                # Executed if the puck isn't moving to the robot or didn't move to the robot in the previous update 
+
+                # Executed if the puck isn't moving to the robot or didn't move to the robot in the previous update
                 else:
                     self.predictionMade = False
 
@@ -795,14 +854,20 @@ class MainWindow(QMainWindow):
 
                         # If bot is activated move to the calculated position
                         if self.botActivated:
-                            self.sendMoveValues(int(moveX), int(moveY))
-                
+                            self.sendMoveValues(int(moveX), int(moveY), "Homeing")
+
                 # check if Puck is staying in own half
-                if(self.puckSpeed < 3 and self.currentRobotPosition[1] + 10 < self.currentPosition[1] < 150 and GORIGHT_MAX < self.currentPosition[0] < GOLEFT_MAX):
+                if (
+                    self.puckSpeed < 3
+                    and self.currentRobotPosition[1] + 10
+                    < self.currentPosition[1]
+                    < 150
+                    and GORIGHT_MAX < self.currentPosition[0] < GOLEFT_MAX
+                ):
                     offsetX = 0
-                    if(self.currentPosition[0] < 100):
+                    if self.currentPosition[0] < 100:
                         offsetX = -10
-                    if(self.currentPosition[0] > 300):
+                    if self.currentPosition[0] > 300:
                         offsetX = 10
                     moveX, moveY = self.mapCoordinates(
                         self.currentPosition[0] + offsetX,
@@ -813,10 +878,10 @@ class MainWindow(QMainWindow):
                         TABLE_MAX_Y,
                     )
                     moveX = TABLE_MAX_X - moveX
-                                    
+
                     if self.botActivated:
                         self.positionsSent += 1
-                        self.sendMoveValues(int(moveX), int(moveY))
+                        self.sendMoveValues(int(moveX), int(moveY), "Playing Back")
 
                     # time.sleep(0.2)
                     # Calculate robot movements to goal
@@ -831,7 +896,9 @@ class MainWindow(QMainWindow):
 
                     # If bot is activated move to the calculated position
                     if self.botActivated:
-                        self.sendMoveValues(int(moveX), int(moveY))
+                        self.sendMoveValues(
+                            int(moveX), int(moveY), "Homing after play back"
+                        )
 
                 self.wasPuckGoingToRobot = self.isPuckGoingToRobot
                 self.puckWasGoingLeft = self.puckIsGoingLeft
@@ -841,75 +908,98 @@ class MainWindow(QMainWindow):
 
                 frame = self.updatePostCalculationUi(frame)
                 frame = self.updateFrameTime
-    
 
     def updatePostCalculationUi(self, frame):
         if self.predictionMade and self.predictionLine.get_m() is not None:
             if self.showDebugImages:
                 # Draw predicted and current puck position
-                cv2.circle(frame, (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
-                           5, (255, 0, 255), -1)
-                cv2.circle(frame, (int(self.savedPoint[0]),
-                                   int(self.savedPoint[1])), 5, (0, 0, 0), -1)
-                
+                cv2.circle(
+                    frame,
+                    (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
+                    5,
+                    (255, 0, 255),
+                    -1,
+                )
+                cv2.circle(
+                    frame,
+                    (int(self.savedPoint[0]), int(self.savedPoint[1])),
+                    5,
+                    (0, 0, 0),
+                    -1,
+                )
+
                 # Draw predicted line
                 if not self.puckCollides:
                     cv2.line(
                         frame,
-                        (int(self.currentPosition[0]),
-                         int(self.currentPosition[1])),
-                        (int(self.predictedPoint[0]), int(
-                            self.predictedPoint[1])),
+                        (int(self.currentPosition[0]), int(self.currentPosition[1])),
+                        (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
                         (255, 0, 0),
                         thickness=2,
                         lineType=4,
                     )
                     cv2.line(
                         frame,
-                        (int(self.savedPoint[0]),
-                         int(self.savedPoint[1])),
-                        (int(self.predictedPoint[0]), int(
-                            self.predictedPoint[1])),
+                        (int(self.savedPoint[0]), int(self.savedPoint[1])),
+                        (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
                         (255, 0, 0),
                         thickness=2,
                         lineType=4,
                     )
 
             # Draw prediction line before collision
-            cv2.line(frame,
-                     (int(self.savedPoints[0][0]), int(
-                         self.savedPoints[0][1])),
-                     (int(self.collisionPoints[0][0]), int(
-                         self.collisionPoints[0][1])),
-                     (255, 0, 0), thickness=2, lineType=4)
+            cv2.line(
+                frame,
+                (int(self.savedPoints[0][0]), int(self.savedPoints[0][1])),
+                (int(self.collisionPoints[0][0]), int(self.collisionPoints[0][1])),
+                (255, 0, 0),
+                thickness=2,
+                lineType=4,
+            )
             # Executed if the puck collides with a wall
             if self.puckCollides:
                 if len(self.collisionPoints) > 0:
                     for i in range(len(self.predictedPoints)):
                         # Draw collision point
-                        cv2.circle(frame, (int(self.collisionPoints[i][0]), int(self.collisionPoints[i][1])),
-                                   10, (255, 255, 255), -1)
+                        cv2.circle(
+                            frame,
+                            (
+                                int(self.collisionPoints[i][0]),
+                                int(self.collisionPoints[i][1]),
+                            ),
+                            10,
+                            (255, 255, 255),
+                            -1,
+                        )
                         # Draw reflection line after collision
-                        cv2.line(frame,
-                                 (int(self.collisionPoints[i][0]), int(
-                                     self.collisionPoints[i][1])),
-                                 (int(self.predictedPoints[i][0]), int(
-                                     self.predictedPoints[i][1])),
-                                 (255, 255, 0), thickness=2, lineType=4)
-                    
+                        cv2.line(
+                            frame,
+                            (
+                                int(self.collisionPoints[i][0]),
+                                int(self.collisionPoints[i][1]),
+                            ),
+                            (
+                                int(self.predictedPoints[i][0]),
+                                int(self.predictedPoints[i][1]),
+                            ),
+                            (255, 255, 0),
+                            thickness=2,
+                            lineType=4,
+                        )
+
         if self.showDebugImages:
             self.updateImageFromFrame(self.cameraImageLabel, frame)
-        
+
         return frame
-    
+
     def updateFrameTime(self):
-     # Calculate frame time and FPS
-        frameTimeMs = (self.currentFrameTimestamp -
-                       self.lastFrameTimestamp).microseconds / 1000
+        # Calculate frame time and FPS
+        frameTimeMs = (
+            self.currentFrameTimestamp - self.lastFrameTimestamp
+        ).microseconds / 1000
         self.lastFrameTimestamp = self.currentFrameTimestamp
         fps = 1000 / frameTimeMs
-        self.frameTimeLabel.setText(
-            f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
+        self.frameTimeLabel.setText(f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
 
     def updatePreCalculationUi(self, frame, x, y, radius, robotX, robotY, robotRadius):
         # Update puck and robot values in the UI
@@ -935,24 +1025,24 @@ class MainWindow(QMainWindow):
             if self.cornersApplied:
                 # Input corners clockwise
                 selectedCorners = np.float32(
-                        [
-                            [self.croppedTableCoords[0][0],
-                            self.croppedTableCoords[0][1]],
-                            [self.croppedTableCoords[1][0],
-                            self.croppedTableCoords[1][1]],
-                            [self.croppedTableCoords[2][0],
-                            self.croppedTableCoords[2][1]],
-                            [self.croppedTableCoords[3][0],
-                            self.croppedTableCoords[3][1]],
-                        ]
-                    )
+                    [
+                        [self.croppedTableCoords[0][0], self.croppedTableCoords[0][1]],
+                        [self.croppedTableCoords[1][0], self.croppedTableCoords[1][1]],
+                        [self.croppedTableCoords[2][0], self.croppedTableCoords[2][1]],
+                        [self.croppedTableCoords[3][0], self.croppedTableCoords[3][1]],
+                    ]
+                )
 
                 # Calculate transformation matrix (to apply a perspective transformation to the image)
-                matrix = cv2.getPerspectiveTransform(selectedCorners, self.originalCorners)
-                
+                matrix = cv2.getPerspectiveTransform(
+                    selectedCorners, self.originalCorners
+                )
+
                 # Apply perspective transformation
-                frame = cv2.warpPerspective(frame, matrix, (CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH))
-            
+                frame = cv2.warpPerspective(
+                    frame, matrix, (CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH)
+                )
+
             # Select corners of the camera image if they aren't set
             if not self.cornersApplied:
                 for corner in self.croppedTableCoords:
@@ -965,13 +1055,13 @@ class MainWindow(QMainWindow):
             print("Couldn't process frame!")
             self.camera.stop()
             return None
-    
+
     def mapCoordinates(
-            self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
+        self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
     ):
         # Scale so it fits the other coordinate system
-        xScale = maxWidthTo / maxWidthFrom 
-        yScale = maxHeightTo / maxHeightFrom 
+        xScale = maxWidthTo / maxWidthFrom
+        yScale = maxHeightTo / maxHeightFrom
         x = x * xScale
         y = y * yScale
         return x, y
@@ -982,8 +1072,7 @@ class MainWindow(QMainWindow):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         height, width, ch = frame.shape
         bytesPerLine = ch * width
-        qtImg = QImage(frame.data, width, height,
-                       bytesPerLine, QImage.Format_RGB888)
+        qtImg = QImage(frame.data, width, height, bytesPerLine, QImage.Format_RGB888)
         pixmap = QPixmap(qtImg)
         image.setPixmap(pixmap)
 
