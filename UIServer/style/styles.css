@@ -85,11 +85,11 @@
     color: white;
 }
 
-#start-button {
+#startButton {
     background-color: green;
 }
 
-#stop-button {
+#stopButton {
     background-color: red;
     display: none;
 }

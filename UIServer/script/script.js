@@ -82,14 +82,14 @@ setInterval(() => {
 }, 500);
 
 async function startGame() {
-    document.getElementById("start-button").disabled = true;
+    startButton.disabled = true;
 
     await fetch("resetScores");
     await fetch("start");
 
-    document.getElementById("stop-button").style.display = "block";
-    document.getElementById("start-button").style.display = "none";
-    document.getElementById("stop-button").disabled = false;
+    stopButton.style.display = "block";
+    startButton.style.display = "none";
+    stopButton.disabled = false;
 
     startAudio.volume = 0.35;
     startAudio.play();
@@ -99,13 +99,13 @@ async function startGame() {
 };
 
 async function stopGame() {
-    document.getElementById("stop-button").disabled = true;
+    stopButton.disabled = true;
 
     await fetch("stop");
 
-    document.getElementById("start-button").style.display = "block";
-    document.getElementById("stop-button").style.display = "none";
-    document.getElementById("start-button").disabled = false;
+    startButton.style.display = "block";
+    stopButton.style.display = "none";
+    startButton.disabled = false;
 
     backgroundAudio.pause();
     backgroundAudio.currentTime = 0;
