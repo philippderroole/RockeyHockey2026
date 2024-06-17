@@ -47,19 +47,20 @@ function onGoalAnimationEnded(videoElement) {
     requestedAnimation = null;
 }
 
-setInterval(() => {
-    fetch("state").then((res) => res.json().then((json) => {
-        const playerIncrement = json.playerScore - scoreSpieler.value;
-        const botIncrement = json.botScore - scoreRoboter.value;
-        const playerLead = json.playerScore - json.botScore;
+function update(playerScore, botScore) {
+    const playerIncrement = playerScore - scoreSpieler.value;
+        const botIncrement = botScore - scoreRoboter.value;
+        const playerLead = playerScore - botScore;
 
         if (playerIncrement > 0) {
             animation("blue");
             requestedAnimation = "left";
 
-            playGoalAnimation(null, scoreSoundFileNames[json.playerScore]);
-
-            if (playerLead == 2)
+            playGoalAnimation(null, scoreSoundFileNames[playerScore]);
+            
+            if (playerScore === 10)
+                setTimeout(() => finish(), 1200);
+            else if (playerLead == 2)
                 setTimeout(() => playGoalAnimation('losingteeth', 'resources/sounds/godlike.wav'), 1200);
             else if (playerLead == 4)
                 setTimeout(() => playGoalAnimation('dog', 'resources/sounds/godlike.wav'), 1200);
@@ -70,7 +71,9 @@ setInterval(() => {
             animation("red");
             requestedAnimation = "right";
             
-            if (playerLead == -2)
+            if (botScore === 10)
+                finish();
+            else if (playerLead == -2)
                 playGoalAnimation('pulp', 'resources/sounds/unstoppable.wav');
             else if (playerLead == -4)
                 playGoalAnimation('pengu', 'resources/sounds/unstoppable.wav');
@@ -78,16 +81,26 @@ setInterval(() => {
                 playGoalAnimation('godzilla', 'resources/sounds/rampage.wav');
         }
 
-        scoreSpieler.value = json.playerScore;
-        scoreRoboter.value = json.botScore;
-    }))
-}, 500);
+        scoreSpieler.value = playerScore;
+        scoreRoboter.value = botScore;
+    
+}
+
+async function fetchUpdate() {
+    const response = await fetch("state");
+    const json = await response.json();
+    update(json.playerScore, json.botScore);
+}
+
+let updateInterval = null;
 
 async function startGame() {
     startButton.disabled = true;
 
     await fetch("resetScores");
     await fetch("start");
+    
+    updateInterval = setInterval(fetchUpdate, 500);
 
     stopButton.style.display = "block";
     startButton.style.display = "none";
@@ -105,6 +118,9 @@ async function stopGame() {
 
     await fetch("stop");
 
+    clearInterval(updateInterval);
+    updateInterval = null;
+    
     startButton.style.display = "block";
     stopButton.style.display = "none";
     startButton.disabled = false;
@@ -113,6 +129,16 @@ async function stopGame() {
     backgroundAudio.currentTime = 0;
     gameStopped = true;
 };
+
+function finish() {
+    const playerLead = scoreSpieler.value - scoreRoboter.value;
+    stopGame();
+    
+    if (playerLead > 0)
+    	playGoalAnimation(null, "resources/sounds/winner.wav");
+    if (playerLead < 0)
+    	playGoalAnimation(null, "resources/sounds/lostmatch.wav");
+}
 
 function startTimer(duration) {
     let timer = duration;
@@ -128,13 +154,15 @@ function startTimer(duration) {
 
         countdown.value = minutes + ":" + seconds;
 
-        if (--timer < 0) {
-            timer = duration;
-        }
-
-        if (gameStopped) {
+        if (timer === 0) {
+            finish();
             clearInterval(intervalId);
-        }
+        } else
+            timer--;
+
+        if (gameStopped)
+            clearInterval(intervalId);
+        
     }, 1000);
 };
 
