@@ -4,14 +4,45 @@ let gameStopped = true;
 const scoreSoundFileNames = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].map((name) => "resources/sounds/" + name + ".wav");
 
 function playGoalAnimation(gifName, soundName) {
-    if (gifName)
-        playGIF(gifName);
+   // if (gifName)
+   //     playGIF(gifName);
 
     if (soundName) {
         goalAudio.src = soundName;
         goalAudio.volume = 0.75;
         goalAudio.play();
     }
+}
+
+let requestedAnimation = null;
+
+document.getElementById("idleVideo").addEventListener("seeking", () => {
+    let goalVideoElement = null;
+    if (requestedAnimation === "right")
+        goalVideoElement = rightGoalVideo;
+    else if (requestedAnimation === "left")
+        goalVideoElement = leftGoalVideo;
+    
+    if (goalVideoElement) {
+        goalVideoElement.style.display = "block";
+        goalVideoElement.play();
+        
+        idleVideo.pause();
+        idleVideo.currentTime = 0;
+        idleVideo.style.display = "none";
+    }
+    
+    requestedAnimation = null;
+});
+
+leftGoalVideo.addEventListener ("ended", (e) => onGoalAnimationEnded(e.srcElement));
+rightGoalVideo.addEventListener("ended", (e) => onGoalAnimationEnded(e.srcElement));
+
+function onGoalAnimationEnded(videoElement) {
+    videoElement.currentTime = 0;
+    idleVideo.style.display = "block";
+    idleVideo.play();
+    videoElement.style.display = "none";
 }
 
 setInterval(() => {
@@ -22,6 +53,7 @@ setInterval(() => {
 
         if (playerIncrement > 0) {
             animation("blue");
+            requestedAnimation = "left";
 
             playGoalAnimation(null, scoreSoundFileNames[json.playerScore]);
 
@@ -34,6 +66,7 @@ setInterval(() => {
         }
         if (botIncrement > 0) {
             animation("red");
+            requestedAnimation = "right";
             
             if (playerLead == -2)
                 playGoalAnimation('pulp', 'resources/sounds/unstoppable.wav');
