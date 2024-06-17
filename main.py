@@ -99,7 +99,6 @@ class MainWindow(QMainWindow):
         self.frameCounter = 0
         self.moveForward = True
         self.lastRobotPosition = (0, 0)
-        self.currentRobotPosition = (0, 0)
         self.puckSpeed = 0
         self.robotIsStopped = True
         self.robotWasStopped = True
@@ -587,8 +586,6 @@ class MainWindow(QMainWindow):
 
         self.lastMovePosition = (x, y)
 
-        # self.currentRobotPosition = (x, y)
-
         # if self.botActivated:
         self.positionsSent += 1
         # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
@@ -657,7 +654,6 @@ class MainWindow(QMainWindow):
                     robotRadius = -1
 
                 self.currentPosition = (x, y)
-                self.currentRobotPosition = (robotX, robotY)
 
                 # Calculate robot and puck speed
                 self.puckSpeed = math.sqrt(
@@ -772,11 +768,11 @@ class MainWindow(QMainWindow):
                                     else:
                                         # check if puck is arriving in specific area
                                         if (
-                                            GORIGHT_MAX
+                                            GOLEFT_MAX
                                             < self.predictionLine.get_x(
                                                 DEFENSIVE_LINE + GOFORWARD_MAX
                                             )
-                                            < GOLEFT_MAX
+                                            < GORIGHT_MAX
                                             and self.puckSpeed < 6
                                         ):
                                             self.predictedPoint = (
@@ -805,11 +801,7 @@ class MainWindow(QMainWindow):
                                     loopCounter += 1
 
                                 # Check if predicted puck position is valid
-                                if (
-                                    100
-                                    < self.predictedPoint[0]
-                                    < (CAMERA_FRAME_HEIGHT - 100)
-                                ):
+                                if GOLEFT_MAX < self.predictedPoint[0] < (GORIGHT_MAX):
                                     # Calculate robot movement to the predicted puck position
 
                                     moveX, moveY = self.mapCoordinates(
@@ -859,16 +851,14 @@ class MainWindow(QMainWindow):
                 # check if Puck is staying in own half
                 if (
                     self.puckSpeed < 3
-                    and self.currentRobotPosition[1] + 10
-                    < self.currentPosition[1]
-                    < 150
-                    and GORIGHT_MAX < self.currentPosition[0] < GOLEFT_MAX
+                    and self.currentPosition[1] < DEFENSIVE_LINE + 10 < 150
+                    and GOLEFT_MAX < self.currentPosition[0] < GORIGHT_MAX
                 ):
                     offsetX = 0
                     if self.currentPosition[0] < 100:
-                        offsetX = -10
+                        offsetX = -20
                     if self.currentPosition[0] > 300:
-                        offsetX = 10
+                        offsetX = 20
                     moveX, moveY = self.mapCoordinates(
                         self.currentPosition[0] + offsetX,
                         self.currentPosition[1] + 10,
@@ -903,7 +893,6 @@ class MainWindow(QMainWindow):
                 self.wasPuckGoingToRobot = self.isPuckGoingToRobot
                 self.puckWasGoingLeft = self.puckIsGoingLeft
                 self.lastPosition = self.currentPosition
-                self.lastRobotPosition = self.currentRobotPosition
                 self.robotWasStopped = self.robotIsStopped
 
                 frame = self.updatePostCalculationUi(frame)
