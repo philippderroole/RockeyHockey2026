@@ -43,6 +43,8 @@ function onGoalAnimationEnded(videoElement) {
     idleVideo.style.display = "block";
     idleVideo.play();
     videoElement.style.display = "none";
+    
+    requestedAnimation = null;
 }
 
 setInterval(() => {
