@@ -6,11 +6,15 @@ from enum import Enum
 
 
 class StepperController:
+
+    readyForNewPosition = True
+
     def __init__(self, port, baudrate):
         super().__init__()
         self.port = port
         self.baudrate = baudrate
         self.connection = None
+        self.readyForNewPosition = True
         self.position_queue = Queue()
 
     def connect(self):

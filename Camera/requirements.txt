@@ -1,0 +1,3 @@
+openvc-python-headless
+picamera
+flask
