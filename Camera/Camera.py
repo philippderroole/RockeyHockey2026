@@ -66,9 +66,9 @@ class Camera:
                     #self.videoWriter.write(tmp_frame) 
                     tmp_frame = cv2.rotate(
                         tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
-                    tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
+                    #tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
                     # Flip again to mirror so the bot starts in the top right corner.
-                    tmp_frame = cv2.flip(tmp_frame, 1)
+                    #tmp_frame = cv2.flip(tmp_frame, 1)
                     self.frame = tmp_frame
                     self.new_frame = True
                 except Exception as e:
