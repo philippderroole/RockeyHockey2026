@@ -19,7 +19,12 @@ class Camera:
         else:
             # self.stream = cv2.VideoCapture(camera_index)
             self.stream = cv2.VideoCapture(camera_stream_url)
-            
+
+        # If URL is set to "virtual" in Constants.py then use the pre-recorded video instead of the video stream from the Raspberry Pi
+        if self.url == "virtual":
+            self.stream = cv2.VideoCapture('Camera/VirtualCamVideos/video1.avi')
+            self.fps = self.stream.get(cv2.CAP_PROP_FPS)
+      
         # This would be important if we directly pull from the camera instead of a stream.
         # self.stream.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
         # # self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, frame_width)
@@ -33,6 +38,11 @@ class Camera:
         self.grabbed = True
         self.stopped = False
         self.new_frame = False
+        
+        # Only needed to capture new video for virtual cam
+        #self.fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        #self.videoWriter = cv2.VideoWriter('output_video.avi', self.fourcc, fps, (frame_width, frame_height))  
+
 
     def start(self):
         self.stopped = False
@@ -53,6 +63,7 @@ class Camera:
             else:
                 try:
                     (self.grabbed, tmp_frame) = self.stream.read()
+                    #self.videoWriter.write(tmp_frame) 
                     tmp_frame = cv2.rotate(
                         tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE)
                     tmp_frame = cv2.flip(tmp_frame, 1)  # Flip horizontally
@@ -67,6 +78,7 @@ class Camera:
 
     def stop(self):
         self.stopped = True
+        #self.videoWriter.release()
 
     def __del__(self):
         self.stream.release()
