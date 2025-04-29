@@ -1,6 +1,6 @@
 import math
 
-
+# f(x) = mx+b
 class Line:
     def __init__(self, p1, p2=None, m=None):
         self.p1 = p1
@@ -21,7 +21,7 @@ class Line:
     def get_x(self, y):
         return (y - self.b) / self.m
 
-    def get_m(self):
+    def get_m(self): 
         return self.m
 
     def get_b(self):

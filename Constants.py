@@ -20,7 +20,7 @@ CAMERA_ROBOT_MIN_RADIUS = 10
 
 CAMERA_INDEX=0
 # Change the URL to "virtual" if you want to simulate the Camera using a pre-recorded video
-CAMERA_STREAM_URL = "http://10.0.0.2:5000/video_feed"
+CAMERA_STREAM_URL = "virtual"  # "http://10.0.0.2:5000/video_feed"
 CAMERA_FRAME_WIDTH = 640
 CAMERA_FRAME_HEIGHT = 480
 CAMERA_FRAME_ROBOT_MAX_Y = 270
@@ -32,7 +32,7 @@ CAMERA_BUFFERSIZE = 2
 # The camera can be used to detect the robot every x frames.
 CAMERA_ROBOT_DETECTION_FREQUENCY = 1
 
-STEPPER_COM_PORT = "COM4"
+STEPPER_COM_PORT = "COM5"
 STEPPER_BAUDRATE = 115200
 
 TABLE_MAX_X = 1885

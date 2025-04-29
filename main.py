@@ -28,19 +28,16 @@ from Camera import Camera
 from StepperController import *
 from Processing.ProcessFrame import processFrame
 from Processing.Line import Line
-
+from Strategy import RobotController
 
 class MainWindow(QMainWindow):
     def __init__(self):
         self.skippedPositions = 0
-        super().__init__()
+        super().__init__()  # ruft QMainWindow.__init__ auf
         self.setWindowTitle("Rocky Hockey 2023")
         self.setWindowIcon(QIcon("RockyHockey2023Logo.png"))
         self.setupUI()
         # Create a timer to continuously update and process the camera image.
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update)
-        self.timer.start(1)  # Every 1 ms
         # Camera used for image.
         self.camera = Camera(
             CAMERA_INDEX,
@@ -51,6 +48,10 @@ class MainWindow(QMainWindow):
             CAMERA_FRAMERATE,
             CAMERA_STREAM_URL,
         ).start()
+        self.timer = QTimer(self)
+        self.controller = RobotController(self.sendMoveValues, self.camera)
+        self.timer.timeout.connect(self.controller.update)
+        self.timer.start(1)  # Every 1 ms
         self.stepperController = None
         try:
             self.stepperController = StepperController(
@@ -911,88 +912,6 @@ class MainWindow(QMainWindow):
                 frame = self.updatePostCalculationUi(frame)
                 frame = self.updateFrameTime
 
-    def updatePostCalculationUi(self, frame):
-        if self.predictionMade and self.predictionLine.get_m() is not None:
-            if self.showDebugImages:
-                # Draw predicted and current puck position
-                cv2.circle(
-                    frame,
-                    (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
-                    5,
-                    (255, 0, 255),
-                    -1,
-                )
-                cv2.circle(
-                    frame,
-                    (int(self.savedPoint[0]), int(self.savedPoint[1])),
-                    5,
-                    (0, 0, 0),
-                    -1,
-                )
-
-                # Draw predicted line
-                if not self.puckCollides:
-                    cv2.line(
-                        frame,
-                        (int(self.currentPosition[0]), int(self.currentPosition[1])),
-                        (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
-                        (255, 0, 0),
-                        thickness=2,
-                        lineType=4,
-                    )
-                    cv2.line(
-                        frame,
-                        (int(self.savedPoint[0]), int(self.savedPoint[1])),
-                        (int(self.predictedPoint[0]), int(self.predictedPoint[1])),
-                        (255, 0, 0),
-                        thickness=2,
-                        lineType=4,
-                    )
-
-            # Draw prediction line before collision
-            cv2.line(
-                frame,
-                (int(self.savedPoints[0][0]), int(self.savedPoints[0][1])),
-                (int(self.collisionPoints[0][0]), int(self.collisionPoints[0][1])),
-                (255, 0, 0),
-                thickness=2,
-                lineType=4,
-            )
-            # Executed if the puck collides with a wall
-            if self.puckCollides:
-                if len(self.collisionPoints) > 0:
-                    for i in range(len(self.predictedPoints)):
-                        # Draw collision point
-                        cv2.circle(
-                            frame,
-                            (
-                                int(self.collisionPoints[i][0]),
-                                int(self.collisionPoints[i][1]),
-                            ),
-                            10,
-                            (255, 255, 255),
-                            -1,
-                        )
-                        # Draw reflection line after collision
-                        cv2.line(
-                            frame,
-                            (
-                                int(self.collisionPoints[i][0]),
-                                int(self.collisionPoints[i][1]),
-                            ),
-                            (
-                                int(self.predictedPoints[i][0]),
-                                int(self.predictedPoints[i][1]),
-                            ),
-                            (255, 255, 0),
-                            thickness=2,
-                            lineType=4,
-                        )
-
-        if self.showDebugImages:
-            self.updateImageFromFrame(self.cameraImageLabel, frame)
-
-        return frame
 
     def updateFrameTime(self):
         # Calculate frame time and FPS
@@ -1002,62 +921,6 @@ class MainWindow(QMainWindow):
         self.lastFrameTimestamp = self.currentFrameTimestamp
         fps = 1000 / frameTimeMs
         self.frameTimeLabel.setText(f"Frame Time: {frameTimeMs:.0f}ms ({fps:.0f} FPS)")
-
-    def updatePreCalculationUi(self, frame, x, y, radius, robotX, robotY, robotRadius):
-        # Update puck and robot values in the UI
-        self.puckXLabel.setText(str(f"X: {x:.0f}"))
-        self.puckYLabel.setText(str(f"Y: {y:.0f}"))
-        self.puckRadiusLabel.setText(str(f"Radius: {radius:.0f}"))
-        self.puckSpeedLabel.setText(str(f"Speed: {self.puckSpeed:.1f}"))
-
-        self.robotXLabel.setText(str(f"X: {robotX:.0f}"))
-        self.robotYLabel.setText(str(f"Y: {robotY:.0f}"))
-        self.robotRadiusLabel.setText(str(f"Radius: {robotRadius:.0f}"))
-
-        return frame
-
-    def initializeCamera(self):
-        try:
-            self.currentFrameTimestamp = datetime.now()
-
-            # Current camera image
-            frame = self.camera.get_current_frame()
-
-            # Check if corners of the camera image have been set
-            if self.cornersApplied:
-                # Input corners clockwise
-                selectedCorners = np.float32(
-                    [
-                        [self.croppedTableCoords[0][0], self.croppedTableCoords[0][1]],
-                        [self.croppedTableCoords[1][0], self.croppedTableCoords[1][1]],
-                        [self.croppedTableCoords[2][0], self.croppedTableCoords[2][1]],
-                        [self.croppedTableCoords[3][0], self.croppedTableCoords[3][1]],
-                    ]
-                )
-
-                # Calculate transformation matrix (to apply a perspective transformation to the image)
-                matrix = cv2.getPerspectiveTransform(
-                    selectedCorners, self.originalCorners
-                )
-
-                # Apply perspective transformation
-                frame = cv2.warpPerspective(
-                    frame, matrix, (CAMERA_FRAME_HEIGHT, CAMERA_FRAME_WIDTH)
-                )
-
-            # Select corners of the camera image if they aren't set
-            if not self.cornersApplied:
-                for corner in self.croppedTableCoords:
-                    cv2.circle(frame, (corner[0], corner[1]), 5, (255, 255, 255), 2)
-
-            self.frameCounter = self.frameCounter + 1
-
-            return frame
-        except Exception as e:
-            print("Couldn't process frame!")
-            print(e)
-            self.camera.stop()
-            return None
 
     def mapCoordinates(
         self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
