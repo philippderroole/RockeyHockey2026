@@ -1,0 +1,12 @@
+- Idle -> Playing Back
+    ->	Wenn Puck sich auf der Seite des Roboters befindet und nicht bewegt oder sich langsam vom Tor wegbewegt (Puck bewegt sich mit Geschwindigkeit < x)
+- Idle -> Defending
+    ->	Wenn sich der Puck auf das Tor zubewegt und in Reichweite des Schlägers ist  (Puck bewegt sich mit Geschwindigkeit > x)
+- Defending -> Homing
+    ->	Nachdem der Roboter den Puck zurückgespielt hat
+- Playing Back -> Homing
+    ->	Nachdem der Roboter den Puck zurückgespielt hat
+- Homing -> Idle
+    ->	Wenn der Roboter die Home-Position erreicht
+- Homing -> Defending
+    ->	Wenn sich der Puck wieder auf der Seite des Roboters befindet, sich auf das Tor zubewegt und in Reichweite des Schlägers ist, während sich der Schläger noch zur Home-Position bewegt (Puck bewegt sich mit Geschwindigkeit > x?)
