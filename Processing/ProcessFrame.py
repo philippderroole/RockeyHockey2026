@@ -36,6 +36,7 @@ def processFrame(frame, sliders):
         sliders.upperSaturationRobotSlider.value(),
         sliders.upperValueRobotSlider.value(),
     ])
+    
     robotMinRadius = sliders.lowerRobotRadiusSlider.value()
     robotMaxRadius = sliders.upperRobotRadiusSlider.value()
 
@@ -53,12 +54,10 @@ def processFrame(frame, sliders):
         useBlur=False,
         useUMat=False,
         detectRobot=detectRobot
-    )
-    #print(int(robotX),"       ",int(robotY)) #Ben
-    
+    )    
     
     # If the robot is detected, save the data.
-    if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:
+    if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:        
         lastRobotData = ((robotX, robotY), robotRadius)
     # If the robot is not detected, use the last known data.
     else:
@@ -68,19 +67,18 @@ def processFrame(frame, sliders):
         lastRobotDetection = lastRobotDetection + 1
         if lastRobotDetection >= CAMERA_ROBOT_DETECTION_FREQUENCY:
             lastRobotDetection = 0
-    
-    print(f"Robot: {robotX:.0f},{robotY:.0f} Radius: {robotRadius:.0f}")
 
     # Mark Puck
     if x != -1 and y != -1 and radius != -1:
         frame = markInFrame(frame, x, y, radius, FRAME_PUCK_OUTLINE_COLOR)
     # Mark robot
     if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:
+        robotRadius = 30 #Constant robot radius instead of robotRadius
         frame = markInFrame(frame, robotX, robotY,
                             robotRadius, FRAME_ROBOT_OUTLINE_COLOR)
-    frame = markRobotRectangle(frame)
-
+    frame = markRobotRectangle(frame)         
     return x, y, radius, robotX, robotY, robotRadius
+
 
 def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlur=True, useUMat=False, detectRobot=True):
     if resizeFrame:
@@ -94,18 +92,11 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
 
     hsv = cv2.cvtColor(usedFrame, cv2.COLOR_BGR2HSV)
 
-    results = []
+
+    results = []    
+    
     for i, (lowerBoundary, upperBoundary, minRadius, maxRadius) in enumerate(boundaries):
         mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
-        
-        
-        
-        
-        #Ben Extra Fenster von Gefiltertem Bild 
-        if i == 1:  # Roboter
-            cv2.imshow("Roboter-Maske", mask)
-            
-            
             
         # i == 1 -> Robot Detection
         if i == 1:
@@ -115,15 +106,8 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
                 continue
             # Only consider the upper half of the frame
             # This is not possible when uMat is used
-            if not useUMat:
-                mask[mask.shape[0]//2:, :] = 0
-
-            #Rand für Robot Detection, dass der Roboter nicht fehlerhaft am Rand erkannt wird
-                mask[:, :100] = 0       # linker Rand
-                mask[:, -100:] = 0      # rechter Rand
-                mask[:20, :] = 0        # oberer Rand
-
-            
+            if not useUMat:#The robot can only be detected in the own half
+                mask[mask.shape[0]//2:, :] = 0        
             
         usedMask = None
         if useBlur:
@@ -136,18 +120,9 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
         
         for cnt in contours:
             (x, y), radius = cv2.minEnclosingCircle(cnt)
-            
-            #Ben Test mindestfläche
-            area = cv2.contourArea(cnt)
-            if area < 450:  # Fläche in Pixeln (450 ist ein recht guter Wert aber kann noch besser werden)
-                continue
-            #Ben Test zuende
-            
-            
-            #alte Version mit Roboter Radius unterschiedlich
+                
             if minRadius <= radius <= maxRadius:
                 results.append(((x, y), radius))
-                #results.append(((x, y), 25)) #Ben - hier ist radius =25 von Roboter und Puck
                 break
         else:
             results.append(((-1, -1), -1))
