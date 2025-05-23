@@ -576,7 +576,7 @@ class MainWindow(QMainWindow):
             )
             self.sendMoveValues(moveX, moveY)
 
-    def sendMoveValues(self, x, y, type):
+    def sendMoveValues(self, x, y, type = None):
         # Do scaling.
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
 
