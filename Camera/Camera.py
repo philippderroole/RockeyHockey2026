@@ -5,6 +5,7 @@ import platform
 import numpy as np
 import requests
 from io import BytesIO
+from PyQt5.QtCore import Qt
 
 class Camera:
     def __init__(
@@ -104,3 +105,31 @@ class Camera:
 
     def __del__(self):
         self.stream.release()
+
+        
+# with this algorithm the user does not have to set 
+# the corner points in a specific order
+def order_points(pts):
+    pts = np.array(pts, dtype="float32")
+    rect = np.zeros((4,2), dtype="float32")
+
+    s = pts.sum(axis= 1)
+    rect[0] = pts[np.argmin(s)] #Top-left
+    rect[2] = pts[np.argmax(s)] #Bottom-right
+
+    diff = np.diff(pts, axis=1)
+    rect[1] = pts[np.argmin(diff)] #Top-left
+    rect[3] = pts[np.argmax(diff)] #Bottom-left
+
+    return rect
+#The user can remove a corner with 'r'
+#Are the Corners Applied and th user presses 'r' las orner gets removed 
+#and the user has to apply all the corners agai
+def keyPressEvent(self, event):
+        if event.key() == Qt.Key_R:
+            if self.croppedTableCoords:
+                removed = self.croppedTableCoords.pop()
+                print(f"Removed last corner: {removed}")
+                # Optional: Bild neu zeichnen
+                frame = self.initializeCamera()
+                self.updateImageFromFrame(self.cameraImageLabel, frame)

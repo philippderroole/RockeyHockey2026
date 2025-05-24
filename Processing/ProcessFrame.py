@@ -36,6 +36,7 @@ def processFrame(frame, sliders):
         sliders.upperSaturationRobotSlider.value(),
         sliders.upperValueRobotSlider.value(),
     ])
+    
     robotMinRadius = sliders.lowerRobotRadiusSlider.value()
     robotMaxRadius = sliders.upperRobotRadiusSlider.value()
 
@@ -44,7 +45,7 @@ def processFrame(frame, sliders):
     if CAMERA_FRAME_HEIGHT > 700 or CAMERA_FRAME_WIDTH > 1200:
         resizeFrame = True
 
-    detectRobot = False
+    detectRobot = True
 
     ((x, y), radius), ((robotX, robotY), robotRadius) = detectPuckCustomizeable(
         filteredFrame=frame, 
@@ -53,10 +54,10 @@ def processFrame(frame, sliders):
         useBlur=False,
         useUMat=False,
         detectRobot=detectRobot
-    )
-
+    )    
+    
     # If the robot is detected, save the data.
-    if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:
+    if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:        
         lastRobotData = ((robotX, robotY), robotRadius)
     # If the robot is not detected, use the last known data.
     else:
@@ -67,19 +68,17 @@ def processFrame(frame, sliders):
         if lastRobotDetection >= CAMERA_ROBOT_DETECTION_FREQUENCY:
             lastRobotDetection = 0
 
-    # print(f"Puck: {x:.0f},{y:.0f} Radius: {radius:.0f}")
-    # print(f"Robot: {robotX:.0f},{robotY:.0f} Radius: {robotRadius:.0f}")
-
     # Mark Puck
     if x != -1 and y != -1 and radius != -1:
         frame = markInFrame(frame, x, y, radius, FRAME_PUCK_OUTLINE_COLOR)
     # Mark robot
     if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:
+        robotRadius = 30 #Constant robot radius instead of robotRadius
         frame = markInFrame(frame, robotX, robotY,
                             robotRadius, FRAME_ROBOT_OUTLINE_COLOR)
-    frame = markRobotRectangle(frame)
-
+    frame = markRobotRectangle(frame)         
     return x, y, radius, robotX, robotY, robotRadius
+
 
 def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlur=True, useUMat=False, detectRobot=True):
     if resizeFrame:
@@ -93,10 +92,12 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
 
     hsv = cv2.cvtColor(usedFrame, cv2.COLOR_BGR2HSV)
 
-    results = []
+
+    results = []    
+    
     for i, (lowerBoundary, upperBoundary, minRadius, maxRadius) in enumerate(boundaries):
         mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
-
+            
         # i == 1 -> Robot Detection
         if i == 1:
             if not detectRobot:
@@ -105,9 +106,9 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
                 continue
             # Only consider the upper half of the frame
             # This is not possible when uMat is used
-            if not useUMat:
-                mask[mask.shape[0]//2:, :] = 0
-
+            if not useUMat:#The robot can only be detected in the own half
+                mask[mask.shape[0]//2:, :] = 0        
+            
         usedMask = None
         if useBlur:
             # Blur Mask
@@ -116,8 +117,10 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
             usedMask = mask
         contours, hierarchy = cv2.findContours(usedMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+        
         for cnt in contours:
             (x, y), radius = cv2.minEnclosingCircle(cnt)
+                
             if minRadius <= radius <= maxRadius:
                 results.append(((x, y), radius))
                 break
