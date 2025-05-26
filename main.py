@@ -48,7 +48,7 @@ class MainWindow(QMainWindow):
             CAMERA_FRAMERATE,
             CAMERA_STREAM_URL,
         ).start()
-        self.controller = RobotController(self.sendMoveValues,self.updatePreCalculationUi, self.camera)
+        self.controller = RobotController(self.sendMoveValues, self.updatePreCalculationUi, self.camera)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.preUpdate)
         self.timer.start(1)  # Every 1 ms
@@ -467,9 +467,9 @@ class MainWindow(QMainWindow):
 
     def setBotState(self):
         if self.activateBotCheckBox.checkState() == Qt.CheckState.Checked:
-            self.botActivated = True
+            self.data.botActivated = True
         else:
-            self.botActivated = False
+            self.data.botActivated = False
 
     def applyCorners(self):
         if len(self.croppedTableCoords) == 4:
@@ -517,15 +517,15 @@ class MainWindow(QMainWindow):
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
 
         if (
-            abs(x - self.lastMovePosition[0]) < 50
-            and abs(y - self.lastMovePosition[1]) < 50
+            abs(x - self.data.lastMovePosition[0]) < 50
+            and abs(y - self.data.lastMovePosition[1]) < 50
         ):
             return
 
-        self.lastMovePosition = (x, y)
+        self.data.lastMovePosition = (x, y)
 
         # if self.botActivated:
-        self.positionsSent += 1
+        self.data.positionsSent += 1
         # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
         response = self.stepperController.move_to_position(x, y)
         print(f"{x},{y}")

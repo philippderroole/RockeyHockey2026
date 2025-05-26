@@ -8,6 +8,8 @@ import math
 import time
 from Processing.Line import Line
 from Processing.ProcessFrame import processFrame
+
+
 class State:
     IDLE = "IDLE"
     TRACKING = "TRACKING"
@@ -18,7 +20,7 @@ class State:
 
 
 class RobotController:
-    def __init__(self, sendMoveValues,updatePreCalculationUi, camera):
+    def __init__(self, sendMoveValues, updatePreCalculationUi, camera):
         self.data = model
         self.state = State.IDLE
         self.sendMoveValues = sendMoveValues
@@ -265,7 +267,7 @@ class RobotController:
                         if self.data.botActivated:
                             #self.logTextbox.append(f"{self.puckSpeed}")
                             self.data.positionsSent += 1
-                            self.data.sendMoveValues(
+                            self.sendMoveValues(
                                 int(moveX),
                                 int(moveY),
                                 "Defense/Active Defense",
