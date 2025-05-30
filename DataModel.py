@@ -4,6 +4,7 @@ import math
 from collections import deque
 from Processing.Line import Line
 from datetime import datetime
+from PyQt5.QtCore import Qt, QTimer, QFile, QIODevice, QTextStream
 class DataModel: 
     def __init__(self):
         self.skippedPositions = 0
@@ -74,6 +75,5 @@ class DataModel:
         self.frameTimeCount =0
         self.frameTimeSum=0
         self.frameTimes = deque(maxlen=100)
-        self.setFocusPolicy(Qt.StrongFocus)
 
 model = DataModel()

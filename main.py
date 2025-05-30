@@ -68,6 +68,7 @@ class MainWindow(QMainWindow):
         self.moveWorker = MoveWorker(self.stepperController)
         self.moveWorker.start()
         self.data = model
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def setupUI(self):
         # Create a label to display the camera image.
@@ -478,16 +479,16 @@ class MainWindow(QMainWindow):
             self.logTextbox.append(
                 "Applied corners. Fitting image. If the image does not look right then reset the corners. Made a mistake press 'r' to reset last corner"
             )
-            self.cornersApplied = True
+            self.data.cornersApplied = True
         else:
             self.logTextbox.append(
                 "ERROR: Not all corners set. There must be 4 corners set. Use left click to set the corners."
             )
-            self.cornersApplied = False
+            self.data.cornersApplied = False
 
     def resetCorners(self):
         self.logTextbox.append("Reset corners. Resetting image fit.")
-        self.cornersApplied = False
+        self.data.cornersApplied = False
         self.croppedTableCoords = []
 
     def getImageClickPos(self, event):
@@ -1088,11 +1089,11 @@ class MainWindow(QMainWindow):
         image.setPixmap(pixmap)
     def updateFrameTime(self):
         # Calculate average frame time and FPS from the last 100 frames
-        frameTimeMs = (self.currentFrameTimestamp - self.lastFrameTimestamp).microseconds / 1000
-        self.lastFrameTimestamp = self.currentFrameTimestamp
+        frameTimeMs = (self.data.currentFrameTimestamp - self.data.lastFrameTimestamp).microseconds / 1000
+        self.data.lastFrameTimestamp = self.data.currentFrameTimestamp
         
-        self.frameTimes.append(frameTimeMs)
-        average = sum(self.frameTimes) / len(self.frameTimes)
+        self.data.frameTimes.append(frameTimeMs)
+        average = sum(self.data.frameTimes) / len(self.data.frameTimes)
         fps = 1000 / average if average > 0 else 0
 
         #Update the frame time and FPS in the UI
@@ -1151,20 +1152,20 @@ class MainWindow(QMainWindow):
    
     def initializeCamera(self):
         try:
-            self.currentFrameTimestamp = datetime.now()
+            self.data.currentFrameTimestamp = datetime.now()
 
             # Current camera image
             frame = self.camera.get_current_frame()
 
             # Check if corners of the camera image have been set
-            if self.cornersApplied and len(self.croppedTableCoords) == 4:
+            if self.data.cornersApplied and len(self.data.croppedTableCoords) == 4:
                 #automatic sorting
                 #the method order_points is calles to order the corner setting of the user
-                selectedCorners = order_points(self.croppedTableCoords)
+                selectedCorners = order_points(self.data.croppedTableCoords)
 
                 # Calculate transformation matrix (to apply a perspective transformation to the image)
                 matrix = cv2.getPerspectiveTransform(
-                    selectedCorners, self.originalCorners
+                    selectedCorners, self.data.originalCorners
                 )
 
                 # Apply perspective transformation
@@ -1173,11 +1174,11 @@ class MainWindow(QMainWindow):
                 )
 
             # Select corners of the camera image if they aren't set
-            if not self.cornersApplied:
+            if not self.data.cornersApplied:
                 for corner in self.croppedTableCoords:
                     cv2.circle(frame, (corner[0], corner[1]), 5, (255, 255, 255), 2)
 
-            self.frameCounter = self.frameCounter + 1
+            self.data.frameCounter = self.data.frameCounter + 1
 
             return frame
         except Exception as e:
