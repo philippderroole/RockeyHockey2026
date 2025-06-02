@@ -242,29 +242,6 @@ class RobotController:
                         # frame = self.updatePostCalculationUi(frame)
                         loopCounter += 1
 
-                    # Check if predicted puck position is valid
-                    if GOLEFT_MAX < self.data.predictedPoint[0] < (GORIGHT_MAX):
-                        # Calculate robot movement to the predicted puck position
-
-                        moveX, moveY = self.mapCoordinates(
-                            self.data.predictedPoint[0],
-                            self.data.predictedPoint[1],
-                            CAMERA_FRAME_HEIGHT,
-                            CAMERA_FRAME_ROBOT_MAX_Y,
-                            TABLE_MAX_X,
-                            TABLE_MAX_Y,
-                        )
-                        moveX = TABLE_MAX_X - moveX
-
-                        # If bot is activated move to the calculated position
-                        if self.data.botActivated:
-                            #self.logTextbox.append(f"{self.puckSpeed}")
-                            self.data.positionsSent += 1
-                            self.sendMoveValues(
-                                int(moveX),
-                                int(moveY),
-                                "Defense/Active Defense",
-                            )
             except Exception as e:
                 print("in Exception, kp warum")
                 print(e)
