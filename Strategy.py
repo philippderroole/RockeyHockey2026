@@ -295,7 +295,6 @@ class RobotController:
     def _atHome(self):
         if abs(CAMERA_FRAME_HEIGHT / 2 - self.data.robotX) > 40 or abs(DEFENSIVE_LINE - self.data.robotY) > 40:
             return False
-        #time.sleep(1)
         return True
 
     def _saveState(self):
