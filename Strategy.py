@@ -53,6 +53,7 @@ class RobotController:
             frame, x, y, radius, robotX, robotY, robotRadius
         )
         self.isPuckGoingToRobot = self._isGoingToRobot()
+        self._resetPrediction()
         self._makePrediction(frame)
 
         if self.state == State.IDLE:
