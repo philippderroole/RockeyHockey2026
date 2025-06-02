@@ -516,15 +516,13 @@ class MainWindow(QMainWindow):
             self.sendMoveValues(moveX, moveY)
 
     def sendMoveValues(self, x, y, type = None):
-        # Do scaling.
-        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
-
         if (
             abs(x - self.data.lastMovePosition[0]) < 50
             and abs(y - self.data.lastMovePosition[1]) < 50
         ):
             return
 
+        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
         self.data.lastMovePosition = (x, y)
 
         # if self.botActivated:
