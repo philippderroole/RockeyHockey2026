@@ -99,7 +99,7 @@ class RobotController:
         return math.sqrt(dx ** 2 + dy ** 2)
 
     def _isGoingToRobot(self):
-        return self.data.currentPosition[1] < self.data.lastPosition[1] and abs(self.data.lastPosition[1] - self.data.currentPosition[1]) > 10
+        return self.data.currentPosition[1] < self.data.lastPosition[1] and abs(self.data.lastPosition[1] - self.data.currentPosition[1]) > 3
 
     def _isAbleToAttack(self):
         # logik falls puck sich im Bereich des Roboters befindet und sich so bewegt, dass Roboter angreifen kann
@@ -269,15 +269,16 @@ class RobotController:
             self.sendMoveValues(int(moveX), int(moveY), "Defense")
 
     def _goHome(self):
-        moveX, moveY = self.mapCoordinates(
-            (CAMERA_FRAME_HEIGHT / 2),
-            DEFENSIVE_LINE,
-            CAMERA_FRAME_HEIGHT,
-            CAMERA_FRAME_ROBOT_MAX_Y,
-            TABLE_MAX_X,
-            TABLE_MAX_Y,
-        )
         if self.data.botActivated:
+            moveX, moveY = self.mapCoordinates(
+                (CAMERA_FRAME_HEIGHT / 2),
+                DEFENSIVE_LINE,
+                CAMERA_FRAME_HEIGHT,
+                CAMERA_FRAME_ROBOT_MAX_Y,
+                TABLE_MAX_X,
+                TABLE_MAX_Y,
+            )
+            print("_goHome")
             self.sendMoveValues(int(moveX), int(moveY), "Homing")
             self.atHome = True
 
@@ -294,6 +295,7 @@ class RobotController:
     def _atHome(self):
         if abs(CAMERA_FRAME_HEIGHT / 2 - self.data.robotX) > 40 or abs(DEFENSIVE_LINE - self.data.robotY) > 40:
             return False
+        #time.sleep(1)
         return True
 
     def _saveState(self):
