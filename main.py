@@ -657,8 +657,9 @@ class MainWindow(QMainWindow):
             ).start()
 
         if self.camera.new_frame:
-            frame, frame_timestamp = self.initializeCamera()
-
+            
+            frame, frame_timestamp = self.camera.get_current_frame_with_timestamp()
+            frame = self.apply_perspective_correction(frame)
             if frame is not None:
                 x, y, radius, robotX, robotY, robotRadius = processFrame(frame, self)
 
@@ -1022,12 +1023,9 @@ class MainWindow(QMainWindow):
 
         return frame
    
-    def initializeCamera(self):
+    def apply_perspective_correction(self,frame):
         try:
             self.timestamp_to_measure_processed_frames = datetime.now()
-
-            # Current camera image with matching Timestamp
-            frame, frame_timestamp = self.camera.get_current_frame_with_timestamp()
 
             # Check if corners of the camera image have been set
             if self.cornersApplied and len(self.croppedTableCoords) == 4:
@@ -1052,7 +1050,7 @@ class MainWindow(QMainWindow):
 
             self.frameCounter = self.frameCounter + 1
 
-            return frame, frame_timestamp
+            return frame
         except Exception as e:
             print("Couldn't process frame!")
             print(e)
