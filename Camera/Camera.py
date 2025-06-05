@@ -141,5 +141,5 @@ def keyPressEvent(self, event):
                 removed = self.croppedTableCoords.pop()
                 print(f"Removed last corner: {removed}")
                 # Optional: Bild neu zeichnen
-                frame = self.initializeCamera()
-                self.updateImageFromFrame(self.cameraImageLabel, frame)
+                #frame = self.apply_perspective_correction(frame)
+                #self.updateImageFromFrame(self.cameraImageLabel, frame)
