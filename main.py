@@ -662,7 +662,7 @@ class MainWindow(QMainWindow):
             frame = self.initializeCamera()
 
             if frame is not None:
-                x, y, radius, robotX, robotY, robotRadius = processFrame(frame, self)
+                x, y, radius, robotX, robotY, robotRadius, axisright,axisleft = processFrame(frame, self)
 
                 # TODO: Robot detection is not that stable
                 # Check detected robot radius (if robot was not recognised correctly set invalid values)

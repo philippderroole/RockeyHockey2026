@@ -39,6 +39,15 @@ def processFrame(frame, sliders):
     
     robotMinRadius = sliders.lowerRobotRadiusSlider.value()
     robotMaxRadius = sliders.upperRobotRadiusSlider.value()
+    
+    axisRightLowerBoundary = np.array([15, 84, 117])
+    axisRightUpperBoundary = np.array([36, 212, 245])
+
+    axisLeftLowerBoundary = np.array([15, 84, 117])
+    axisLeftUpperBoundary = np.array([36, 212, 245])
+
+    axisMinRadius = 1
+    axisMaxRadius = 100
 
 
     resizeFrame = False
@@ -47,9 +56,15 @@ def processFrame(frame, sliders):
 
     detectRobot = True
 
-    ((x, y), radius), ((robotX, robotY), robotRadius) = detectPuckCustomizeable(
+
+    ((x, y), radius), ((robotX, robotY), robotRadius), ((axisRightX, axisRightY), axisRightRadius), ((axisLeftX, axisLeftY), axisLeftRadius)  = detectPuckCustomizeable(
         filteredFrame=frame, 
-        boundaries=[(lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius), (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius)], 
+boundaries = [
+    (lowerBoundary, upperBoundary, puckMinRadius, puckMaxRadius),
+    (robotLowerBoundary, robotUpperBoundary, robotMinRadius, robotMaxRadius),
+    (axisRightLowerBoundary, axisRightUpperBoundary, axisMinRadius, axisMaxRadius),
+    (axisLeftLowerBoundary,axisLeftUpperBoundary,axisMinRadius,axisMaxRadius)
+],
         resizeFrame=resizeFrame,
         useBlur=False,
         useUMat=False,
@@ -73,11 +88,21 @@ def processFrame(frame, sliders):
         frame = markInFrame(frame, x, y, radius, FRAME_PUCK_OUTLINE_COLOR)
     # Mark robot
     if detectRobot and robotX != -1 and robotY != -1 and robotRadius != -1:
-        robotRadius = 30 #Constant robot radius instead of robotRadius
+        robotRadius = 28 #Constant robot radius instead of variable robotRadius
         frame = markInFrame(frame, robotX, robotY,
                             robotRadius, FRAME_ROBOT_OUTLINE_COLOR)
-    frame = markRobotRectangle(frame)         
-    return x, y, radius, robotX, robotY, robotRadius
+    frame = markRobotRectangle(frame)
+       
+         
+    if axisLeftX != -1 and axisRightX != -1:
+        cv2.line(frame, (int(axisLeftX), int(axisLeftY)), (int(axisRightX), int(axisRightY)), (200, 0, 200), 2)
+    
+    # mark right and left Axis
+    cv2.circle(frame, (int(axisRightX), int(axisRightY)), 4, (255, 0, 255), -1)
+    cv2.circle(frame, (int(axisLeftX), int(axisLeftY)), 4, (0, 255, 255), -1)    
+    
+    
+    return x, y, radius, robotX, robotY, robotRadius, axisRightY, axisLeftY
 
 
 def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlur=True, useUMat=False, detectRobot=True):
@@ -97,7 +122,17 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
     
     for i, (lowerBoundary, upperBoundary, minRadius, maxRadius) in enumerate(boundaries):
         mask = cv2.inRange(hsv, lowerBoundary, upperBoundary)
-            
+
+
+        
+        #if i== 3:
+        #    cv2.imshow("Axis Right Maske", mask)
+        
+        if i == 2:  # AxisRight
+            mask[:, :mask.shape[1] // 2] = 0  # Nur rechte Hälfte behalten
+        elif i == 3:  # AxisLeft
+            mask[:, mask.shape[1] // 2:] = 0  # Nur linke Hälfte behalten
+
         # i == 1 -> Robot Detection
         if i == 1:
             if not detectRobot:
