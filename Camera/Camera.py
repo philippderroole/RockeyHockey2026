@@ -6,6 +6,7 @@ import numpy as np
 import requests
 from io import BytesIO
 from PyQt5.QtCore import Qt
+from Constants import *
 
 class Camera:
     def __init__(
@@ -13,17 +14,12 @@ class Camera:
     ):
         self.fps = fps
         self.url = camera_stream_url
-        # Check if we are running on windows because then we need the CAP_DSHOW flag.
-        if platform.system() == "Windows":
-            #self.stream = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+
+        # If VIRTUAL_CAM = True in Constants.py then use the pre-recorded video instead of the video stream from the Raspberry Pi
+        if (VIRTUAL_CAM != True):
             self.stream = cv2.VideoCapture(camera_stream_url)
         else:
-            # self.stream = cv2.VideoCapture(camera_index)
-            self.stream = cv2.VideoCapture(camera_stream_url)
-
-        # If URL is set to "virtual" in Constants.py then use the pre-recorded video instead of the video stream from the Raspberry Pi
-        if self.url == "virtual":
-            self.stream = cv2.VideoCapture('Camera/VirtualCamVideos/video1.avi')
+            self.stream = cv2.VideoCapture('Camera/VirtualCamVideos/video4.avi')
             self.fps = self.stream.get(cv2.CAP_PROP_FPS)
       
         # This would be important if we directly pull from the camera instead of a stream.
@@ -41,13 +37,14 @@ class Camera:
         self.new_frame = False
 
         # Only needed to capture new video for virtual cam
-        #self.fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        #self.videoWriter = cv2.VideoWriter('output_video.avi', self.fourcc, fps, (frame_width, frame_height))  
+        if(RECORD_VIDEO == True):
+            self.fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+            self.videoWriter = cv2.VideoWriter('output_video.avi', self.fourcc, fps, (frame_width, frame_height))  
 
 
     def start(self):
         self.stopped = False
-        if(self.url != "virtual"):
+        if(VIRTUAL_CAM != True):
             Thread(target=self.read_next_frame_continuously, args=()).start()
         else:
             Thread(target=self.read_next_frame_continuously_at_desired_rate, args=()).start() # Use framerate control so the pre-recorded video for the virtual cam doesnt run as quick as possible
@@ -101,6 +98,8 @@ class Camera:
             (self.grabbed, tmp_frame) = self.stream.read()  
             # Create timestamp for the frame (could be done by physical camera for better precision)
             self.temp_timestamp = time.perf_counter() 
+            if(RECORD_VIDEO == True):
+                self.videoWriter.write(tmp_frame) 
             # Rotate the frame (should propably be done somewhere else)
             tmp_frame = cv2.rotate(tmp_frame, rotateCode=cv2.ROTATE_90_CLOCKWISE) 
             self.frame = tmp_frame 
@@ -111,7 +110,8 @@ class Camera:
 
     def stop(self):
         self.stopped = True
-        #self.videoWriter.release()
+        if(RECORD_VIDEO == True):
+            self.videoWriter.release()
 
     def __del__(self):
         self.stream.release()
