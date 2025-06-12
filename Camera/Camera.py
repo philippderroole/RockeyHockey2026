@@ -128,7 +128,7 @@ def order_points(pts):
     rect[2] = pts[np.argmax(s)] #Bottom-right
 
     diff = np.diff(pts, axis=1)
-    rect[1] = pts[np.argmin(diff)] #Top-left
+    rect[1] = pts[np.argmin(diff)] #Top-right
     rect[3] = pts[np.argmax(diff)] #Bottom-left
 
     return rect
@@ -136,10 +136,7 @@ def order_points(pts):
 #Are the Corners Applied and th user presses 'r' las orner gets removed 
 #and the user has to apply all the corners agai
 def keyPressEvent(self, event):
-        if event.key() == Qt.Key_R:
+        if event.key() == Qt.Key_R and not self.cornersApplied:
             if self.croppedTableCoords:
                 removed = self.croppedTableCoords.pop()
                 print(f"Removed last corner: {removed}")
-                # Optional: Bild neu zeichnen
-                #frame = self.apply_perspective_correction(frame)
-                #self.updateImageFromFrame(self.cameraImageLabel, frame)
