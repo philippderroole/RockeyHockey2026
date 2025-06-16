@@ -104,7 +104,7 @@ class RobotController:
         
 
     def _isGoingToRobot(self):
-        return self.data.currentPosition[1] < self.data.lastPosition[1] and abs(self.data.lastPosition[1] - self.data.currentPosition[1]) > 3
+        return self.data.currentPosition[1] < self.data.lastPosition[1] and self.data.puckSpeed >= 3
 
     def _isAbleToAttack(self):
         # logik falls puck sich im Bereich des Roboters befindet und sich so bewegt, dass Roboter angreifen kann
@@ -271,10 +271,10 @@ class RobotController:
                 TABLE_MAX_Y,
             )
             moveX = TABLE_MAX_X - moveX
-            self.sendMoveValues(int(moveX), int(moveY), "Defense")
+            self.moveIfPossible(moveX, moveY, "Defense")
 
     def _goHome(self):
-        if self.data.botActivated and not self.isPuckBehindRobot():
+        if self.data.botActivated:
             moveX, moveY = self.mapCoordinates(
                 (CAMERA_FRAME_HEIGHT / 2),
                 DEFENSIVE_LINE,
@@ -284,7 +284,7 @@ class RobotController:
                 TABLE_MAX_Y,
             )
             #print("_goHome")
-            self.sendMoveValues(int(moveX), int(moveY), "Homing")
+            self.moveIfPossible(moveX, moveY, "Homing")
             self.atHome = True
 
     def _playBack(self):
@@ -306,7 +306,7 @@ class RobotController:
         moveX = TABLE_MAX_X - moveX
         #moveX = self.data.currentPosition[0]
         #moveY = self.data.currentPosition[1]
-        self.sendMoveValues(int(moveX), int(moveY), "Defending")
+        self.moveIfPossible(moveX, moveY, "Play Back")
         self.data.attackedPoint = self.data.currentPosition
         print(f"Attacking: {self.data.currentPosition[0]}, {self.data.currentPosition[1]}")
 
@@ -315,7 +315,7 @@ class RobotController:
         # Logik zur erkennung ob Puck zurückgespielt wurde
         # Fallback einbauen, falls Roboter Puck nicht getroffen hat
         # dieser soll dann zurück in PREDICTION FALLEN
-        is_near = abs(self.data.attackedPoint[0] - self.data.robotX) < 40 or abs(self.data.attackedPoint[1] - self.data.robotY) < 40
+        is_near = abs(self.data.attackedPoint[0] - self.data.robotX) < 40 and abs(self.data.attackedPoint[1] - self.data.robotY) < 40
         return is_near
 
     def _atHome(self):
@@ -344,7 +344,10 @@ class RobotController:
 
         return self.data.robotY > self.data.currentPosition[1] and self.data.currentPosition[0] - CAMERA_FRAME_WIDTH/6 < self.data.robotX < self.data.currentPosition[0] + CAMERA_FRAME_WIDTH/6
 
-    
+    def moveIfPossible(self, x, y, type):
+        if self.isPuckBehindRobot():
+            return
+        self.sendMoveValues(int(x), int(y), type)
 
 
 """# schauen ob das so compiliert
