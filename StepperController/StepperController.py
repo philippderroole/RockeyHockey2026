@@ -31,7 +31,7 @@ class StepperController:
         self.connection.write(command.encode())
         print(f"Zeit benötigt für write: {time.time()-start_time1}")
         start_time2 = time.time()
-        response = self.connection.readline().decode().strip()
+        # response = self.connection.readline().decode().strip()
         print(f"Zeit benötigt für response: {time.time()-start_time2}")
         return ""
 

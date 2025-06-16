@@ -306,7 +306,7 @@ class RobotController:
         moveX = TABLE_MAX_X - moveX
         #moveX = self.data.currentPosition[0]
         #moveY = self.data.currentPosition[1]
-        self.sendMoveValues(int(moveX), int(moveY), "Homing")
+        self.sendMoveValues(int(moveX), int(moveY), "Defending")
         self.data.attackedPoint = self.data.currentPosition
         print(f"Attacking: {self.data.currentPosition[0]}, {self.data.currentPosition[1]}")
 
