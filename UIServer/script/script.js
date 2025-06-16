@@ -1,6 +1,9 @@
 const gameTime = 600; // 10 Mins
 let gameStopped = true;
 
+const loadingVideo = document.getElementById("loadingVideo");
+const idleVideo = document.getElementById("idleVideo");
+
 const scoreSoundFileNames = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].map((name) => "resources/sounds/" + name + ".wav");
 
 function playGoalAnimation(gifName, soundName) {
@@ -95,7 +98,16 @@ async function fetchUpdate() {
 let updateInterval = null;
 
 async function startGame() {
-    startButton.disabled = true;
+    loadingVideo.pause();
+    loadingVideo.currentTime = 0;
+    loadiongVideo.style.display = "none";
+    
+
+    idleVideo.style.display = "block";
+    idleVideo.loop = true;
+    idleVideo.play();
+
+    //startButton.disabled = true;
 
     await fetch("resetScores");
     await fetch("start");
