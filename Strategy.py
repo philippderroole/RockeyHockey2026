@@ -291,13 +291,13 @@ class RobotController:
         # Playback-Logik bei langsamem Puck in eigenem Feld
         if not self.data.botActivated: return
         offsetX = 0
-        if self.currentPosition[0] < 120:
+        if self.data.currentPosition[0] < 120:
             offsetX = -20
-        if self.currentPosition[0] > 280:
+        if self.data.currentPosition[0] > 280:
             offsetX = 20
         moveX, moveY = self.mapCoordinates(
-            self.currentPosition[0] + offsetX,
-            self.currentPosition[1] + 10,
+            self.data.currentPosition[0] + offsetX,
+            self.data.currentPosition[1] + 10,
             CAMERA_FRAME_HEIGHT,
             CAMERA_FRAME_ROBOT_MAX_Y,
             TABLE_MAX_X,
