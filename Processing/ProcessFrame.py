@@ -125,13 +125,13 @@ def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlu
 
 
         
-        #if i== 3:
-        #    cv2.imshow("Axis Right Maske", mask)
-        
         if i == 2:  # AxisRight
-            mask[:, :mask.shape[1] // 2] = 0  # Nur rechte Hälfte behalten
+            mask[:, :mask.shape[1] // 2] = 0  #Only right half
+            mask[mask.shape[0] // 2:, :] = 0  #Only in robot half
         elif i == 3:  # AxisLeft
-            mask[:, mask.shape[1] // 2:] = 0  # Nur linke Hälfte behalten
+            mask[:, mask.shape[1] // 2:] = 0  #Only left half
+            mask[mask.shape[0] // 2:, :] = 0  #Only in robot half
+
 
         # i == 1 -> Robot Detection
         if i == 1:
