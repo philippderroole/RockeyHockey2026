@@ -38,7 +38,7 @@ RECORD_VIDEO = False
 # The camera can be used to detect the robot every x frames.
 CAMERA_ROBOT_DETECTION_FREQUENCY = 1
 
-STEPPER_COM_PORT = "COM3"
+STEPPER_COM_PORT = "COM5"
 STEPPER_BAUDRATE = 115200
 
 TABLE_MAX_X = 1885
