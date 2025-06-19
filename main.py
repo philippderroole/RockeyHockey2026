@@ -1194,6 +1194,18 @@ class MainWindow(QMainWindow):
                         "robotRadius": robotRadius,
                         "frame": frame
                     }
+
+                    newRobotX, newRobotY = self.mapCoordinates(
+                                        robotX,
+                                        robotY,
+                                        CAMERA_FRAME_HEIGHT,
+                                        CAMERA_FRAME_ROBOT_MAX_Y,
+                                        TABLE_MAX_X,
+                                        TABLE_MAX_Y,
+                                    )
+                    if self.stepperController is not None:
+                        self.stepperController.updateRobotPos(newRobotX,newRobotY)
+
                     frame = self.controller.update(data)
                     self.updatePostCalculationUi(frame)
                     self.updateFrameTime()

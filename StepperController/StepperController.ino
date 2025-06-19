@@ -74,9 +74,25 @@ void loop() {
       else
         Serial.println("READY");
     } else {
-      int delimiterIndex = command.indexOf(',');
-      long movement_x = command.substring(0, delimiterIndex).toInt();   //new x pos
-      long movement_y = command.substring(delimiterIndex + 1).toInt();  //new y pos
+      int firstComma = command.indexOf(',');
+      int secondComma = command.indexOf(',', firstComma + 1);
+      int thirdComma = command.indexOf(',', secondComma + 1);
+      
+      long movement_x = command.substring(0, firstComma).toInt();
+      long movement_y = command.substring(firstComma + 1, secondComma).toInt();
+      long cam_x = command.substring(secondComma + 1, thirdComma).toInt();
+      long cam_y = command.substring(thirdComma + 1).toInt();
+
+      if (abs(stepperx.currentPosition() - cam_x) > 20) 
+      {
+      stepperx.setCurrentPosition(cam_x);
+      }
+
+      if (abs(steppery.currentPosition() - cam_y) > 20) 
+      {
+        steppery.setCurrentPosition(cam_y);
+      }
+
       long positions[2] = { movement_x, movement_y };
       if (movement_x >= 0 && movement_x <= MAX_X && movement_y >= 0 && movement_y <= MAX_Y) {
 
