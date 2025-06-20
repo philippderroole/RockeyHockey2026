@@ -95,6 +95,14 @@ async function fetchUpdate() {
 let updateInterval = null;
 
 async function startGame() {
+    let loadingVideo = document.getElementById("loadingVideo");
+    loadingVideo.pause();
+    loadingVideo.style.display = "none";
+    
+    idleVideo.style.display = "block";
+    idleVideo.loop = true;
+    idleVideo.play();
+    
     startButton.disabled = true;
 
     await fetch("resetScores");
@@ -115,6 +123,15 @@ async function startGame() {
 
 async function stopGame() {
     stopButton.disabled = true;
+    
+    
+    idleVideo.pause();
+    idleVideo.style.display = "none";
+    
+    loadingVideo.style.display = "block";
+    loadingVideo.loop = true;
+    loadingVideo.play();
+    
 
     await fetch("stop");
 
