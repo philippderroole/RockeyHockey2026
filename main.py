@@ -522,7 +522,14 @@ class MainWindow(QMainWindow):
             and type != "Homing"
         ):
             return
-
+        count = 0
+        if type == 'Homing':
+            count = count+1
+        else:
+            count = 0
+            
+        if count > 200:
+            self.data.syncRobotPosition = True
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
         self.data.lastMovePosition = (x, y)
 
@@ -530,6 +537,7 @@ class MainWindow(QMainWindow):
         self.data.positionsSent += 1
         # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
         response = self.stepperController.move_to_position(x, y)
+        self.data.syncRobotPosition = False
         #print(f"{x},{y}")
         #print(response)
 
@@ -1211,7 +1219,7 @@ class MainWindow(QMainWindow):
                                     )
                     
                     if self.stepperController is not None:
-                        self.stepperController.updateRobotPos(newRobotX,newRobotY)
+                        self.stepperController.updateRobotPos(newRobotX,newRobotY, self.data.syncRobotPosition)
 
                     frame = self.controller.update(data)
                     self.updatePostCalculationUi(frame)

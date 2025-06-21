@@ -20,6 +20,7 @@ class StepperController:
         self.position_queue = Queue()
         self.camRobotPositionX =0
         self.camRobotPositionY =0
+        self.syncRobotPosition = False
 
     def connect(self):
         self.connection = serial.Serial(self.port, self.baudrate, timeout=1)
@@ -41,10 +42,13 @@ class StepperController:
         print(f"Zeit benötigt für response: {time.time()-start_time2}")
         return ""
 
-    def updateRobotPos(self,x,y):
+    def updateRobotPos(self,x,y, syncRobotPosition):
         moveX = TABLE_MAX_X -x
         self.camRobotPositionX =int(moveX)    
         self.camRobotPositionY =int(y)
+        self.syncRobotPosition = syncRobotPosition
+        if syncRobotPosition == True:
+            print('synchRobotPosition=True')
 
     def set_offset(self, x, y):
         if x >= 0:
