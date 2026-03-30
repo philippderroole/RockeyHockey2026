@@ -191,7 +191,7 @@ impl PuckDetector {
             )?;
         }
 
-        #[cfg(target_arch = "arm")]
+        #[cfg(any(target_arch = "arm", all(target_arch = "aarch64", target_os = "linux")))]
         imgproc::cvt_color(
             &self.buffers.resized,
             &mut self.buffers.hsv,
@@ -199,7 +199,7 @@ impl PuckDetector {
             0,
         )?;
 
-        #[cfg(not(target_arch = "arm"))]
+        #[cfg(not(any(target_arch = "arm", all(target_arch = "aarch64", target_os = "linux"))))]
         imgproc::cvt_color(
             &self.buffers.resized,
             &mut self.buffers.hsv,
