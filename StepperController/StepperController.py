@@ -16,16 +16,22 @@ class MockSerial:
         print(f"\n[MOCK HARDWARE] Virtual Arduino connected on {port}")
 
     def write(self, data):
-        command = data.decode('utf-8').strip()
+        # Intercept real-time commands like Jog Cancel (0x85)
+        if b'\x85' in data:
+            print("[MOCK HARDWARE] Received Jog Cancel (0x85) - Aborting current move")
+            data = data.replace(b'\x85', b'')
+            if not data: return
+
+        command = data.decode('utf-8', errors='ignore').strip()
 
         if command != "?":
-            print(f"[MOCK HARDWARE] Received G-Code: {command}")
+            print(f"[MOCK HARDWARE] Received Command: {command}")
 
         if command == "?":
             # If the script asks for status, tell it we are Idle and finished moving
             self.response_queue.append(b"<Idle|MPos:0.000,0.000,0.000|FS:0,0>\n")
-        elif command in ["$X", "$H"] or command.startswith("G"):
-            # If the script sends a move, home, or unlock command, reply 'ok'
+        elif command in ["$X", "$H"] or command.startswith("G") or command.startswith("$J"):
+            # Reply 'ok' to moves, homing, unlocks, and jogs
             self.response_queue.append(b"ok\n")
         elif command == "":
             # Handle the wake-up carriage returns
@@ -93,9 +99,24 @@ class StepperController:
                 break
             time.sleep(0.05) # Check again in 50ms
 
-    def move_to_position(self, x, y):
-        """Streams a rapid movement command to GRBL without blocking."""
-        command = f"G0 X{x} Y{y}"
+    def cancel_jog(self):
+        """
+        Sends the real-time Jog Cancel command (0x85) to GRBL.
+        This forces GRBL to safely decelerate to a stop and flush the buffer.
+        """
+        if self.connection:
+            self.connection.write(b'\x85')
+
+    def move_to_position(self, x, y, feedrate=20000):
+        """
+        Streams a jog movement command to GRBL without blocking.
+        Allows immediate retargeting mid-movement.
+        """
+        # Abort any currently executing movement first
+        self.cancel_jog()
+        
+        # Issue the new Jog command
+        command = f"$J=G90 X{x} Y{y} F{feedrate}"
         self.send_command(command)
 
     def calibrate(self):
