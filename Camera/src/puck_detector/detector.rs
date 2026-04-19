@@ -6,7 +6,7 @@ use opencv::{
 };
 
 use crate::puck_detector::{
-    DetectionPipeline, VirtualCoordinateSystem,
+    DetectionPipeline,
     settings::{DetectorSettings, HsvThresholds, RuntimeDetectorSettings},
 };
 
@@ -15,7 +15,6 @@ pub struct PuckDetector {
     upper_green: Scalar,
     settings: DetectorSettings,
     hsv_thresholds: HsvThresholds,
-    virtual_coordinates: VirtualCoordinateSystem,
     morph_kernel: Mat,
     pub buffers: ProcessingBuffers,
 }
@@ -45,7 +44,6 @@ impl PuckDetector {
         Self::with_runtime_settings(RuntimeDetectorSettings {
             detector: settings,
             hsv: HsvThresholds::default(),
-            virtual_coordinates: VirtualCoordinateSystem::default(),
         })
     }
 
@@ -58,7 +56,6 @@ impl PuckDetector {
             upper_green,
             settings: runtime_settings.detector,
             hsv_thresholds: normalized_hsv,
-            virtual_coordinates: runtime_settings.virtual_coordinates.normalized(),
             morph_kernel: Mat::default(),
             buffers: ProcessingBuffers::default(),
         }
@@ -70,7 +67,6 @@ impl PuckDetector {
 
         self.hsv_thresholds = runtime_settings.hsv.normalized();
         (self.lower_green, self.upper_green) = self.hsv_thresholds.as_scalars();
-        self.virtual_coordinates = runtime_settings.virtual_coordinates.normalized();
 
         if self.settings.quality != old_quality {
             self.morph_kernel = Mat::default();

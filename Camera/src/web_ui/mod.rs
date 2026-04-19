@@ -1,8 +1,10 @@
+use std::path::PathBuf;
 use std::thread;
 
 use anyhow::Context;
-use log::info;
-use tiny_http::Server;
+use log::{error, info};
+use tokio::runtime::Builder;
+use web_ui::{WebUI, WebUIConfig};
 
 mod http;
 mod render;
@@ -20,20 +22,41 @@ pub fn spawn_web_ui_server(
     playback: SharedPlaybackControl,
     port: u16,
 ) -> anyhow::Result<()> {
-    let bind_addr = format!("0.0.0.0:{port}");
-    let server = Server::http(&bind_addr)
-        .map_err(|err| anyhow::anyhow!("failed to bind web UI server on {bind_addr}: {err}"))?;
+    let static_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/web_ui_static");
+    let static_dir_str = static_dir.to_string_lossy().to_string();
 
     thread::Builder::new()
         .name("web-ui-server".to_string())
         .spawn(move || {
-            info!("Web UI available at http://127.0.0.1:{port}");
             let deps = WebUiDependencies {
                 shared,
                 previews,
                 playback,
             };
-            serve_requests(server, deps);
+
+            let runtime = match Builder::new_current_thread().enable_all().build() {
+                Ok(runtime) => runtime,
+                Err(err) => {
+                    error!("failed to create web UI runtime: {err}");
+                    return;
+                }
+            };
+
+            runtime.block_on(async move {
+                let config = WebUIConfig::default()
+                    .with_host([0, 0, 0, 0])
+                    .with_port(port)
+                    .with_title("RockeyHockey Detector Controls".to_string())
+                    .with_static_dir(static_dir_str);
+
+                let web_ui = WebUI::new(config);
+                serve_requests(&web_ui, deps).await;
+
+                info!("Web UI available at http://127.0.0.1:{port}");
+                if let Err(err) = web_ui.run().await {
+                    error!("web UI server stopped with an error: {err}");
+                }
+            });
         })
         .context("failed to spawn web UI server thread")?;
 
