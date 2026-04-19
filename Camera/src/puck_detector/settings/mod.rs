@@ -4,8 +4,6 @@ pub use crop_settings::CropSettings;
 pub use hsv_settings::HsvThresholds;
 pub use quality_settings::ProcessingQuality;
 
-use crate::puck_detector::VirtualCoordinateSystem;
-
 mod crop_settings;
 mod hsv_settings;
 mod quality_settings;
@@ -14,8 +12,6 @@ mod quality_settings;
 pub struct RuntimeDetectorSettings {
     pub detector: DetectorSettings,
     pub hsv: HsvThresholds,
-    #[serde(default)]
-    pub virtual_coordinates: VirtualCoordinateSystem,
 }
 
 impl Default for RuntimeDetectorSettings {
@@ -27,12 +23,11 @@ impl Default for RuntimeDetectorSettings {
                     enabled: true,
                     left_pct: 0.0,
                     top_pct: 0.0,
-                    width_pct: 1.0,
-                    height_pct: 1.0,
+                    width_pct: 0.0,
+                    height_pct: 0.0,
                 },
             },
             hsv: HsvThresholds::default(),
-            virtual_coordinates: VirtualCoordinateSystem::default(),
         }
     }
 }
