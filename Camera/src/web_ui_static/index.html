@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RockeyHockey Camera Control</title>
+    <style>
+        :root {
+            --bg0: #f4f6ef;
+            --bg1: #e8efe4;
+            --ink: #1f2e25;
+            --muted: #4f6658;
+            --panel: #fdfef9;
+            --line: #c7d5c9;
+            --accent: #1f7a48;
+            --warn: #8f3d23;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Avenir Next", "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(1000px 400px at 0% 0%, #dbe8d7, transparent 50%),
+                radial-gradient(900px 500px at 100% 100%, #dbe2c9, transparent 60%),
+                linear-gradient(180deg, var(--bg0), var(--bg1));
+            padding: 18px;
+        }
+
+        .shell {
+            width: min(1500px, 98vw);
+            margin: 0 auto;
+            display: grid;
+            gap: 14px;
+        }
+
+        .hero {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            box-shadow: 0 10px 28px rgba(31, 46, 37, 0.08);
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: 1.35rem;
+            letter-spacing: 0.02em;
+        }
+
+        .hero p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 14px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 12px;
+            box-shadow: 0 8px 20px rgba(31, 46, 37, 0.06);
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .preview-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f8fbf4;
+        }
+
+        .preview-card h3 {
+            margin: 0;
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--line);
+            font-size: 0.88rem;
+            color: #284032;
+        }
+
+        img.preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: contain;
+            display: block;
+            background: linear-gradient(135deg, #e5eee1 0%, #f4f7eb 100%);
+        }
+
+        .stack {
+            display: grid;
+            gap: 10px;
+            align-content: start;
+        }
+
+        .section {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px;
+            background: #f8fbf4;
+        }
+
+        .section h2 {
+            margin: 0 0 8px;
+            font-size: 0.94rem;
+            color: #294336;
+        }
+
+        .line {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .hsv-row {
+            display: grid;
+            grid-template-columns: 44px 1fr 70px;
+            align-items: center;
+            gap: 8px;
+            margin: 7px 0;
+            font-size: 0.86rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        input[type="number"],
+        select {
+            width: 92px;
+            border: 1px solid #a9bdad;
+            border-radius: 8px;
+            padding: 4px 6px;
+            font-size: 0.86rem;
+            background: #fcfffb;
+            color: var(--ink);
+        }
+
+        button {
+            border: 1px solid #a6baa9;
+            background: #eef5ea;
+            color: #1e3c2d;
+            border-radius: 8px;
+            padding: 7px 9px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: transform 120ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            background: #e4efe0;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .playback {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 6px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.83rem;
+        }
+
+        .status {
+            border-top: 1px solid var(--line);
+            padding-top: 8px;
+            font-size: 0.85rem;
+            color: var(--muted);
+            min-height: 26px;
+        }
+
+        .status.error {
+            color: var(--warn);
+        }
+
+        @media (max-width: 1050px) {
+            .board {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .preview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .playback {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="shell">
+        <header class="hero">
+            <h1>RockeyHockey Camera Frontend</h1>
+            <p>Event-driven control panel powered by the Rust web_ui server.</p>
+        </header>
+
+        <section class="board">
+            <section class="panel">
+                <div class="preview-grid">
+                    <article class="preview-card">
+                        <h3>Detection</h3>
+                        <img id="preview-detection" class="preview" alt="Detection preview" />
+                    </article>
+                    <article class="preview-card">
+                        <h3>Mask</h3>
+                        <img id="preview-mask" class="preview" alt="Mask preview" />
+                    </article>
+                    <article class="preview-card">
+                        <h3>Hue Mask</h3>
+                        <img id="preview-h-mask" class="preview" alt="Hue mask preview" />
+                    </article>
+                    <article class="preview-card">
+                        <h3>Saturation Mask</h3>
+                        <img id="preview-s-mask" class="preview" alt="Saturation mask preview" />
+                    </article>
+                    <article class="preview-card">
+                        <h3>Value Mask</h3>
+                        <img id="preview-v-mask" class="preview" alt="Value mask preview" />
+                    </article>
+                </div>
+            </section>
+
+            <aside class="stack">
+                <section class="section">
+                    <h2>Playback</h2>
+                    <div class="playback">
+                        <button id="playback-play" type="button">Play</button>
+                        <button id="playback-pause" type="button">Pause</button>
+                        <button id="playback-reprocess" type="button">Reprocess</button>
+                        <button id="playback-next" type="button">Next</button>
+                    </div>
+                    <p id="playback-state">Running</p>
+                </section>
+
+                <section class="section">
+                    <h2>Runtime</h2>
+                    <div class="metric-grid">
+                        <span>Detection</span><strong id="log-detection">-</strong>
+                        <span>Virtual XY</span><strong id="log-virtual">-</strong>
+                        <span>Capture ms</span><strong id="log-capture">-</strong>
+                        <span>Detect ms</span><strong id="log-detect">-</strong>
+                        <span>Total ms</span><strong id="log-total">-</strong>
+                        <span>Avg Capture</span><strong id="log-capture-avg">-</strong>
+                        <span>Avg Detect</span><strong id="log-detect-avg">-</strong>
+                        <span>Avg Total</span><strong id="log-total-avg">-</strong>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Quality + Crop</h2>
+                    <label class="line">
+                        <span>Quality</span>
+                        <select id="quality">
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                            <option value="ultra_low">Ultra Low</option>
+                        </select>
+                    </label>
+                    <label class="line"><span>Enable Crop</span><input id="crop-enabled" type="checkbox" /></label>
+                    <label class="line"><span>Left</span><input id="crop-left" type="number" min="0" max="1"
+                            step="0.01" /></label>
+                    <label class="line"><span>Top</span><input id="crop-top" type="number" min="0" max="1"
+                            step="0.01" /></label>
+                    <label class="line"><span>Width</span><input id="crop-width" type="number" min="0.01" max="1"
+                            step="0.01" /></label>
+                    <label class="line"><span>Height</span><input id="crop-height" type="number" min="0.01" max="1"
+                            step="0.01" /></label>
+                </section>
+
+                <section class="section">
+                    <h2>HSV Thresholds</h2>
+                    <div class="hsv-row"><span>H min</span><input id="h-min" type="range" min="0" max="179"
+                            step="1" /><input id="h-min-number" type="number" min="0" max="179" step="1" /></div>
+                    <div class="hsv-row"><span>H max</span><input id="h-max" type="range" min="0" max="179"
+                            step="1" /><input id="h-max-number" type="number" min="0" max="179" step="1" /></div>
+                    <div class="hsv-row"><span>S min</span><input id="s-min" type="range" min="0" max="255"
+                            step="1" /><input id="s-min-number" type="number" min="0" max="255" step="1" /></div>
+                    <div class="hsv-row"><span>S max</span><input id="s-max" type="range" min="0" max="255"
+                            step="1" /><input id="s-max-number" type="number" min="0" max="255" step="1" /></div>
+                    <div class="hsv-row"><span>V min</span><input id="v-min" type="range" min="0" max="255"
+                            step="1" /><input id="v-min-number" type="number" min="0" max="255" step="1" /></div>
+                    <div class="hsv-row"><span>V max</span><input id="v-max" type="range" min="0" max="255"
+                            step="1" /><input id="v-max-number" type="number" min="0" max="255" step="1" /></div>
+                </section>
+
+                <section class="section">
+                    <h2>Virtual Coordinates</h2>
+                    <label class="line"><span>Enable</span><input id="virtual-enabled" type="checkbox" /></label>
+                    <label class="line"><span>X size</span><input id="virtual-x-size" type="number" min="1"
+                            step="1" /></label>
+                    <label class="line"><span>Y size</span><input id="virtual-y-size" type="number" min="1"
+                            step="1" /></label>
+                    <div class="buttons">
+                        <button id="save-top-left" type="button">Save Top Left</button>
+                        <button id="save-top-right" type="button">Save Top Right</button>
+                        <button id="save-bottom-left" type="button">Save Bottom Left</button>
+                        <button id="save-bottom-right" type="button">Save Bottom Right</button>
+                        <button id="clear-corners" type="button">Clear Corners</button>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>Profile</h2>
+                    <div class="buttons">
+                        <button id="export-settings" type="button">Export JSON</button>
+                        <button id="import-settings" type="button">Import JSON</button>
+                    </div>
+                    <input id="import-settings-file" type="file" accept="application/json" hidden />
+                </section>
+            </aside>
+        </section>
+
+        <footer id="status" class="status">Connecting...</footer>
+    </main>
+
+    <script src="/webui.js"></script>
+    <script src="/app.js"></script>
+</body>
+
+</html>

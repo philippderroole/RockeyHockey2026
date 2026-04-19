@@ -147,19 +147,20 @@ pub(super) struct WebRuntimeLog {
     detection_point: Option<WebNormalizedPoint>,
 }
 
+#[derive(Clone)]
+pub(super) struct PreviewSnapshot {
+    pub frame: u64,
+    pub detection_jpeg: Option<Vec<u8>>,
+    pub mask_jpeg: Option<Vec<u8>>,
+    pub h_mask_jpeg: Option<Vec<u8>>,
+    pub s_mask_jpeg: Option<Vec<u8>>,
+    pub v_mask_jpeg: Option<Vec<u8>>,
+    pub latest_log: Option<WebRuntimeLog>,
+}
 #[derive(Clone, Serialize)]
 struct WebNormalizedPoint {
     x: f64,
     y: f64,
-}
-
-#[derive(Clone, Copy)]
-pub(super) enum PreviewStreamKind {
-    Detection,
-    Mask,
-    HMask,
-    SMask,
-    VMask,
 }
 
 #[derive(Clone, Default)]
@@ -296,69 +297,62 @@ impl SharedPreviewFrames {
         }
     }
 
-    pub(super) fn get_detection_jpeg(&self) -> Option<Vec<u8>> {
+    pub(super) fn snapshot(&self) -> PreviewSnapshot {
         let (lock, _) = &*self.frames;
-        lock.lock()
-            .ok()
-            .and_then(|guard| guard.detection_jpeg.clone())
-    }
-
-    pub(super) fn get_mask_jpeg(&self) -> Option<Vec<u8>> {
-        let (lock, _) = &*self.frames;
-        lock.lock().ok().and_then(|guard| guard.mask_jpeg.clone())
-    }
-
-    pub(super) fn get_h_mask_jpeg(&self) -> Option<Vec<u8>> {
-        let (lock, _) = &*self.frames;
-        lock.lock().ok().and_then(|guard| guard.h_mask_jpeg.clone())
-    }
-
-    pub(super) fn get_s_mask_jpeg(&self) -> Option<Vec<u8>> {
-        let (lock, _) = &*self.frames;
-        lock.lock().ok().and_then(|guard| guard.s_mask_jpeg.clone())
-    }
-
-    pub(super) fn get_v_mask_jpeg(&self) -> Option<Vec<u8>> {
-        let (lock, _) = &*self.frames;
-        lock.lock().ok().and_then(|guard| guard.v_mask_jpeg.clone())
-    }
-
-    pub(super) fn get_latest_log(&self) -> Option<WebRuntimeLog> {
-        let (lock, _) = &*self.frames;
-        lock.lock().ok().and_then(|guard| guard.latest_log.clone())
-    }
-
-    pub(super) fn wait_for_jpeg(
-        &self,
-        kind: PreviewStreamKind,
-        last_seen_frame: u64,
-        timeout: Duration,
-    ) -> Option<(u64, Vec<u8>)> {
-        let (lock, condvar) = &*self.frames;
-        let guard = lock.lock().ok()?;
-
-        let guard = condvar
-            .wait_timeout_while(guard, timeout, |frames| {
-                frames.frame_count <= last_seen_frame || preview_for_kind(frames, kind).is_none()
-            })
-            .ok()?
-            .0;
-
-        if guard.frame_count <= last_seen_frame {
-            return None;
+        if let Ok(guard) = lock.lock() {
+            return PreviewSnapshot {
+                frame: guard.frame_count,
+                detection_jpeg: guard.detection_jpeg.clone(),
+                mask_jpeg: guard.mask_jpeg.clone(),
+                h_mask_jpeg: guard.h_mask_jpeg.clone(),
+                s_mask_jpeg: guard.s_mask_jpeg.clone(),
+                v_mask_jpeg: guard.v_mask_jpeg.clone(),
+                latest_log: guard.latest_log.clone(),
+            };
         }
 
-        let jpeg = preview_for_kind(&guard, kind)?.clone();
-        Some((guard.frame_count, jpeg))
+        PreviewSnapshot {
+            frame: 0,
+            detection_jpeg: None,
+            mask_jpeg: None,
+            h_mask_jpeg: None,
+            s_mask_jpeg: None,
+            v_mask_jpeg: None,
+            latest_log: None,
+        }
     }
-}
 
-fn preview_for_kind(frames: &PreviewFrames, kind: PreviewStreamKind) -> Option<&Vec<u8>> {
-    match kind {
-        PreviewStreamKind::Detection => frames.detection_jpeg.as_ref(),
-        PreviewStreamKind::Mask => frames.mask_jpeg.as_ref(),
-        PreviewStreamKind::HMask => frames.h_mask_jpeg.as_ref(),
-        PreviewStreamKind::SMask => frames.s_mask_jpeg.as_ref(),
-        PreviewStreamKind::VMask => frames.v_mask_jpeg.as_ref(),
+    pub(super) fn wait_for_snapshot_after(
+        &self,
+        last_seen_frame: u64,
+        timeout: Duration,
+    ) -> PreviewSnapshot {
+        let (lock, condvar) = &*self.frames;
+
+        let mut guard = match lock.lock() {
+            Ok(guard) => guard,
+            Err(_) => return self.snapshot(),
+        };
+
+        if guard.frame_count <= last_seen_frame {
+            match condvar.wait_timeout_while(guard, timeout, |frames| {
+                frames.frame_count <= last_seen_frame
+            }) {
+                Ok((next_guard, _)) => {
+                    guard = next_guard;
+                }
+                Err(_) => return self.snapshot(),
+            }
+        }
+
+        PreviewSnapshot {
+            frame: guard.frame_count,
+            detection_jpeg: guard.detection_jpeg.clone(),
+            mask_jpeg: guard.mask_jpeg.clone(),
+            h_mask_jpeg: guard.h_mask_jpeg.clone(),
+            s_mask_jpeg: guard.s_mask_jpeg.clone(),
+            v_mask_jpeg: guard.v_mask_jpeg.clone(),
+            latest_log: guard.latest_log.clone(),
+        }
     }
 }
