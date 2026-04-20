@@ -13,7 +13,7 @@ pub struct RunConfig {
     pub web_ui_port: u16,
 }
 
-pub fn run(config: RunConfig) -> opencv::Result<()> {
+pub fn run(config: RunConfig) -> anyhow::Result<()> {
     let runtime_settings = RuntimeDetectorSettings::default();
 
     let mut runner = create_runner(config.web_ui_enabled, config.web_ui_port, runtime_settings)?;
@@ -29,7 +29,7 @@ fn create_runner(
     web_ui_enabled: bool,
     web_ui_port: u16,
     runtime_settings: RuntimeDetectorSettings,
-) -> opencv::Result<Box<dyn DetectorRunner>> {
+) -> anyhow::Result<Box<dyn DetectorRunner>> {
     match web_ui_enabled {
         true => Ok(Box::new(WebUiDetectorRunner::with_web_ui(
             web_ui_port,
