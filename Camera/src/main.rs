@@ -1,4 +1,5 @@
 use clap::Parser;
+use rockey_hockey::pi_camera;
 
 mod app;
 
@@ -9,6 +10,9 @@ struct Args {
     /// Optional path to a recorded video file instead of webcam input
     #[arg(long)]
     video: Option<String>,
+    /// Optional flag to use the Raspberry Pi camera instead of a webcam
+    #[arg(long)]
+    pi_camera: bool,
     /// Enable browser-based live settings editor at http://127.0.0.1:<web_ui_port>
     #[arg(long)]
     web_ui: bool,

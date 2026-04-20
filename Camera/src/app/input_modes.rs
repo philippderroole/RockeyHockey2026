@@ -7,6 +7,7 @@ use super::runner::DetectorRunner;
 pub enum InputSource {
     VideoFile(String),
     Camera(i32),
+    PiCamera,
 }
 
 impl InputSource {
@@ -14,6 +15,10 @@ impl InputSource {
         match self {
             Self::VideoFile(path) => self.open_video_capture(path),
             Self::Camera(index) => self.open_camera_capture(*index),
+            Self::PiCamera => Err(Error::new(
+                StsError,
+                "PiCamera input mode not implemented yet",
+            )),
         }
     }
 
