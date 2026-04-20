@@ -79,7 +79,7 @@ impl PlainDetectorRunner {
 
 impl DetectorRunner for PlainDetectorRunner {
     fn run_step(&mut self, cam: &mut VideoCapture) -> anyhow::Result<bool> {
-        Ok(self.detector.capture_and_detect(cam)?.is_some())
+        Ok(!self.detector.capture_and_detect(cam)?.is_empty())
     }
 }
 
@@ -96,7 +96,7 @@ impl WebUiDetectorRunner {
         runtime_settings: RuntimeDetectorSettings,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            detector: TimedPuckDetector::with_runtime_settings(runtime_settings),
+            detector: TimedPuckDetector::with_runtime_settings(runtime_settings.clone()),
             web_ui: WebUiShared::from_runtime_settings(port, runtime_settings)?,
             last_reprocess_generation: 0,
             last_step_generation: 0,

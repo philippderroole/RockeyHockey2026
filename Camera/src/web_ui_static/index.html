@@ -206,6 +206,138 @@
             color: var(--warn);
         }
 
+        .drawer {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f8fbf4;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .drawer summary {
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 12px 10px;
+            cursor: pointer;
+            color: #294336;
+            font-size: 0.94rem;
+            font-weight: 700;
+        }
+
+        .drawer summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .drawer summary::after {
+            content: ">";
+            color: var(--muted);
+            transform: rotate(0deg);
+            transition: transform 160ms ease;
+        }
+
+        .drawer[open] summary::after {
+            transform: rotate(90deg);
+        }
+
+        .drawer-body {
+            border-top: 1px solid var(--line);
+            padding: 10px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .drawer-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .drawer-note {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        .target-list {
+            display: grid;
+            gap: 12px;
+            max-height: 68vh;
+            overflow: auto;
+            padding-right: 2px;
+        }
+
+        .target-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px;
+            background: #fcfffb;
+            box-shadow: 0 6px 16px rgba(31, 46, 37, 0.05);
+            display: grid;
+            gap: 10px;
+        }
+
+        .target-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .target-head h3 {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .target-head p {
+            margin: 2px 0 0;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .target-summary {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .target-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .target-controls {
+            display: grid;
+            gap: 6px;
+        }
+
+        .target-previews {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .target-previews .preview-card h3 {
+            font-size: 0.8rem;
+        }
+
+        .target-previews img.preview {
+            aspect-ratio: 1 / 1;
+        }
+
+        .drawer-empty {
+            border: 1px dashed #b8c8bc;
+            border-radius: 10px;
+            padding: 10px;
+            color: var(--muted);
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
         @media (max-width: 1050px) {
             .board {
                 grid-template-columns: 1fr;
@@ -305,21 +437,19 @@
                             step="0.01" /></label>
                 </section>
 
-                <section class="section">
-                    <h2>HSV Thresholds</h2>
-                    <div class="hsv-row"><span>H min</span><input id="h-min" type="range" min="0" max="179"
-                            step="1" /><input id="h-min-number" type="number" min="0" max="179" step="1" /></div>
-                    <div class="hsv-row"><span>H max</span><input id="h-max" type="range" min="0" max="179"
-                            step="1" /><input id="h-max-number" type="number" min="0" max="179" step="1" /></div>
-                    <div class="hsv-row"><span>S min</span><input id="s-min" type="range" min="0" max="255"
-                            step="1" /><input id="s-min-number" type="number" min="0" max="255" step="1" /></div>
-                    <div class="hsv-row"><span>S max</span><input id="s-max" type="range" min="0" max="255"
-                            step="1" /><input id="s-max-number" type="number" min="0" max="255" step="1" /></div>
-                    <div class="hsv-row"><span>V min</span><input id="v-min" type="range" min="0" max="255"
-                            step="1" /><input id="v-min-number" type="number" min="0" max="255" step="1" /></div>
-                    <div class="hsv-row"><span>V max</span><input id="v-max" type="range" min="0" max="255"
-                            step="1" /><input id="v-max-number" type="number" min="0" max="255" step="1" /></div>
-                </section>
+                <details id="detector-targets" class="drawer" open>
+                    <summary>
+                        <span>Detector Targets</span>
+                        <strong id="target-count">1 target</strong>
+                    </summary>
+                    <div class="drawer-body">
+                        <div class="drawer-toolbar">
+                            <p class="drawer-note">Configure one or more HSV profiles and inspect their masks here.</p>
+                            <button id="add-target" type="button">Add target</button>
+                        </div>
+                        <div id="target-editor" class="target-list"></div>
+                    </div>
+                </details>
 
                 <section class="section">
                     <h2>Virtual Coordinates</h2>

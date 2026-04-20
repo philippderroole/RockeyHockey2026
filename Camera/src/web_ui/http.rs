@@ -30,6 +30,12 @@ struct SyncPayload {
 #[derive(Serialize)]
 struct PreviewPayload {
     detection: Option<String>,
+    targets: Vec<TargetPreviewPayload>,
+}
+
+#[derive(Serialize)]
+struct TargetPreviewPayload {
+    target_index: usize,
     mask: Option<String>,
     h_mask: Option<String>,
     s_mask: Option<String>,
@@ -68,6 +74,7 @@ struct StreamFrameRequest {
 struct StreamFramePayload {
     frame: u64,
     detection: Option<String>,
+    targets: Vec<TargetPreviewPayload>,
     runtime_log: Option<WebRuntimeLog>,
 }
 
@@ -95,6 +102,17 @@ async fn register_stream_frame_handler(web_ui: &WebUI, deps: WebUiDependencies) 
             let payload = StreamFramePayload {
                 frame: snapshot.frame,
                 detection: to_data_uri(snapshot.detection_jpeg),
+                targets: snapshot
+                    .target_previews
+                    .into_iter()
+                    .map(|preview| TargetPreviewPayload {
+                        target_index: preview.target_index,
+                        mask: to_data_uri(preview.mask_jpeg),
+                        h_mask: to_data_uri(preview.h_mask_jpeg),
+                        s_mask: to_data_uri(preview.s_mask_jpeg),
+                        v_mask: to_data_uri(preview.v_mask_jpeg),
+                    })
+                    .collect(),
                 runtime_log: snapshot.latest_log,
             };
 
@@ -149,10 +167,17 @@ fn build_sync_payload(deps: &WebUiDependencies) -> SyncPayload {
         runtime_log: previews.latest_log,
         previews: PreviewPayload {
             detection: to_data_uri(previews.detection_jpeg),
-            mask: to_data_uri(previews.mask_jpeg),
-            h_mask: to_data_uri(previews.h_mask_jpeg),
-            s_mask: to_data_uri(previews.s_mask_jpeg),
-            v_mask: to_data_uri(previews.v_mask_jpeg),
+            targets: previews
+                .target_previews
+                .into_iter()
+                .map(|preview| TargetPreviewPayload {
+                    target_index: preview.target_index,
+                    mask: to_data_uri(preview.mask_jpeg),
+                    h_mask: to_data_uri(preview.h_mask_jpeg),
+                    s_mask: to_data_uri(preview.s_mask_jpeg),
+                    v_mask: to_data_uri(preview.v_mask_jpeg),
+                })
+                .collect(),
         },
     }
 }
