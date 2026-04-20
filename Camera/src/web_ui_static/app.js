@@ -1,6 +1,70 @@
 (function () {
     const POLL_MS = 1000;
 
+    function createDefaultTarget() {
+        return {
+            h_min: 36,
+            s_min: 91,
+            v_min: 100,
+            h_max: 47,
+            s_max: 255,
+            v_max: 209,
+        };
+    }
+
+    function createDefaultSettings() {
+        return {
+            detector: {
+                quality: "ultra_low",
+                crop: {
+                    enabled: true,
+                    left_pct: 0,
+                    top_pct: 0,
+                    width_pct: 1,
+                    height_pct: 1,
+                },
+            },
+            hsv: createDefaultTarget(),
+            additional_hsv_targets: [],
+            virtual_coordinates: {
+                enabled: false,
+                x_size: 100,
+                y_size: 100,
+                corners: {
+                    top_left: null,
+                    top_right: null,
+                    bottom_right: null,
+                    bottom_left: null,
+                },
+            },
+        };
+    }
+
+    function normalizeSettings(settings) {
+        const next = settings ? cloneSettings(settings) : createDefaultSettings();
+
+        if (!next.detector) {
+            next.detector = createDefaultSettings().detector;
+        }
+        if (!next.detector.crop) {
+            next.detector.crop = createDefaultSettings().detector.crop;
+        }
+        if (!next.hsv) {
+            next.hsv = createDefaultTarget();
+        }
+        if (!Array.isArray(next.additional_hsv_targets)) {
+            next.additional_hsv_targets = [];
+        }
+        if (!next.virtual_coordinates) {
+            next.virtual_coordinates = createDefaultSettings().virtual_coordinates;
+        }
+        if (!next.virtual_coordinates.corners) {
+            next.virtual_coordinates.corners = createDefaultSettings().virtual_coordinates.corners;
+        }
+
+        return next;
+    }
+
     const elements = {
         status: document.getElementById("status"),
         playbackState: document.getElementById("playback-state"),
@@ -28,21 +92,15 @@
             cropTop: document.getElementById("crop-top"),
             cropWidth: document.getElementById("crop-width"),
             cropHeight: document.getElementById("crop-height"),
-            hMin: document.getElementById("h-min"),
-            hMinNumber: document.getElementById("h-min-number"),
-            hMax: document.getElementById("h-max"),
-            hMaxNumber: document.getElementById("h-max-number"),
-            sMin: document.getElementById("s-min"),
-            sMinNumber: document.getElementById("s-min-number"),
-            sMax: document.getElementById("s-max"),
-            sMaxNumber: document.getElementById("s-max-number"),
-            vMin: document.getElementById("v-min"),
-            vMinNumber: document.getElementById("v-min-number"),
-            vMax: document.getElementById("v-max"),
-            vMaxNumber: document.getElementById("v-max-number"),
             virtualEnabled: document.getElementById("virtual-enabled"),
             virtualXSize: document.getElementById("virtual-x-size"),
             virtualYSize: document.getElementById("virtual-y-size"),
+        },
+        targets: {
+            drawer: document.getElementById("detector-targets"),
+            count: document.getElementById("target-count"),
+            editor: document.getElementById("target-editor"),
+            add: document.getElementById("add-target"),
         },
         buttons: {
             play: document.getElementById("playback-play"),
@@ -62,6 +120,7 @@
 
     const state = {
         settings: null,
+        previewTargets: [],
         playbackPaused: false,
         latestPoint: null,
         lastSyncFailed: false,
@@ -119,6 +178,224 @@
         return JSON.parse(JSON.stringify(settings));
     }
 
+    function getDetectorTargets(settings) {
+        const next = normalizeSettings(settings);
+        return [next.hsv].concat(next.additional_hsv_targets || []);
+    }
+
+    function formatTargetSummary(target) {
+        return `H ${target.h_min}-${target.h_max} · S ${target.s_min}-${target.s_max} · V ${target.v_min}-${target.v_max}`;
+    }
+
+    function targetRowMarkup(label, field, min, max, value) {
+        return `
+            <div class="hsv-row">
+                <span>${label}</span>
+                <input type="range" min="${min}" max="${max}" step="1" value="${value}" data-target-field="${field}" data-role="range" />
+                <input type="number" min="${min}" max="${max}" step="1" value="${value}" data-target-field="${field}" data-role="number" />
+            </div>
+        `;
+    }
+
+    function targetPreviewMarkup(kind, title) {
+        return `
+            <article class="preview-card preview-mini">
+                <h3>${title}</h3>
+                <img class="preview" alt="${title} preview" data-preview-kind="${kind}" />
+            </article>
+        `;
+    }
+
+    function createTargetCard(target, targetIndex) {
+        const card = document.createElement("article");
+        card.className = "target-card";
+        card.dataset.targetCard = "true";
+        card.dataset.targetIndex = String(targetIndex);
+
+        const title = targetIndex === 0 ? "Primary target" : `Target ${targetIndex + 1}`;
+        const subtitle = targetIndex === 0 ? "Base HSV profile" : "Additional HSV profile";
+
+        card.innerHTML = `
+            <div class="target-head">
+                <div>
+                    <h3>${title}</h3>
+                    <p>${subtitle}</p>
+                    <p class="target-summary">${formatTargetSummary(target)}</p>
+                </div>
+                <div class="target-actions">
+                    <button type="button" data-action="remove-target" ${targetIndex === 0 ? "hidden" : ""}>Remove</button>
+                </div>
+            </div>
+            <div class="target-controls">
+                ${targetRowMarkup("H min", "h_min", 0, 179, target.h_min)}
+                ${targetRowMarkup("H max", "h_max", 0, 179, target.h_max)}
+                ${targetRowMarkup("S min", "s_min", 0, 255, target.s_min)}
+                ${targetRowMarkup("S max", "s_max", 0, 255, target.s_max)}
+                ${targetRowMarkup("V min", "v_min", 0, 255, target.v_min)}
+                ${targetRowMarkup("V max", "v_max", 0, 255, target.v_max)}
+            </div>
+            <div class="target-previews">
+                ${targetPreviewMarkup("mask", "Mask")}
+                ${targetPreviewMarkup("h-mask", "Hue")}
+                ${targetPreviewMarkup("s-mask", "Saturation")}
+                ${targetPreviewMarkup("v-mask", "Value")}
+            </div>
+        `;
+
+        return card;
+    }
+
+    function readTargetValue(card, field, fallback) {
+        const selector = `[data-target-field="${field}"][data-role="number"]`;
+        const input = card.querySelector(selector);
+        return input ? asNumber(input.value, fallback) : fallback;
+    }
+
+    function readTargetFromCard(card) {
+        return {
+            h_min: readTargetValue(card, "h_min", 0),
+            s_min: readTargetValue(card, "s_min", 0),
+            v_min: readTargetValue(card, "v_min", 0),
+            h_max: readTargetValue(card, "h_max", 179),
+            s_max: readTargetValue(card, "s_max", 255),
+            v_max: readTargetValue(card, "v_max", 255),
+        };
+    }
+
+    function updateTargetSummary(card) {
+        const summary = card.querySelector(".target-summary");
+        if (!summary) {
+            return;
+        }
+
+        summary.textContent = formatTargetSummary(readTargetFromCard(card));
+    }
+
+    function bindTargetPair(card, field) {
+        const rangeEl = card.querySelector(`[data-target-field="${field}"][data-role="range"]`);
+        const numberEl = card.querySelector(`[data-target-field="${field}"][data-role="number"]`);
+        if (!rangeEl || !numberEl) {
+            return;
+        }
+
+        const fromRange = () => {
+            numberEl.value = rangeEl.value;
+            updateTargetSummary(card);
+            scheduleSettingsUpdate();
+        };
+
+        const fromNumber = () => {
+            rangeEl.value = numberEl.value;
+            updateTargetSummary(card);
+            scheduleSettingsUpdate();
+        };
+
+        rangeEl.addEventListener("input", fromRange);
+        numberEl.addEventListener("input", fromNumber);
+    }
+
+    function applyTargetPreviews() {
+        if (!elements.targets.editor) {
+            return;
+        }
+
+        const previewByIndex = new Map(
+            (state.previewTargets || []).map((preview) => [preview.target_index, preview]),
+        );
+
+        elements.targets.editor.querySelectorAll("[data-target-card]").forEach((card) => {
+            const targetIndex = Number(card.dataset.targetIndex);
+            const preview = previewByIndex.get(targetIndex);
+
+            const previewKinds = {
+                "mask": preview ? preview.mask : null,
+                "h-mask": preview ? preview.h_mask : null,
+                "s-mask": preview ? preview.s_mask : null,
+                "v-mask": preview ? preview.v_mask : null,
+            };
+
+            Object.entries(previewKinds).forEach(([kind, uri]) => {
+                const image = card.querySelector(`[data-preview-kind="${kind}"]`);
+                setImage(image, uri);
+            });
+        });
+    }
+
+    function applyPrimaryTargetPreview() {
+        const primary = state.previewTargets.length > 0 ? state.previewTargets[0] : null;
+
+        setImage(elements.previews.mask, primary ? primary.mask : null);
+        setImage(elements.previews.hMask, primary ? primary.h_mask : null);
+        setImage(elements.previews.sMask, primary ? primary.s_mask : null);
+        setImage(elements.previews.vMask, primary ? primary.v_mask : null);
+    }
+
+    function renderTargetDrawer(settings) {
+        const normalized = normalizeSettings(settings || state.settings || createDefaultSettings());
+        if (!elements.targets.editor) {
+            return;
+        }
+
+        const targets = getDetectorTargets(normalized);
+        if (elements.targets.count) {
+            elements.targets.count.textContent = `${targets.length} target${targets.length === 1 ? "" : "s"}`;
+        }
+
+        elements.targets.editor.innerHTML = "";
+
+        targets.forEach((target, targetIndex) => {
+            const card = createTargetCard(target, targetIndex);
+            elements.targets.editor.appendChild(card);
+
+            ["h_min", "h_max", "s_min", "s_max", "v_min", "v_max"].forEach((field) => {
+                bindTargetPair(card, field);
+            });
+
+            const removeButton = card.querySelector('[data-action="remove-target"]');
+            if (removeButton) {
+                removeButton.addEventListener("click", () => removeTarget(targetIndex));
+            }
+        });
+
+        applyTargetPreviews();
+    }
+
+    function removeTarget(targetIndex) {
+        const next = collectSettingsFromControls();
+        const additionalIndex = targetIndex - 1;
+        if (additionalIndex < 0 || additionalIndex >= next.additional_hsv_targets.length) {
+            return;
+        }
+
+        next.additional_hsv_targets.splice(additionalIndex, 1);
+        state.settings = next;
+        state.dirtyFromUser = true;
+        renderTargetDrawer(next);
+
+        sendCameraEvent("update_settings", { settings: next }).then(() => {
+            state.dirtyFromUser = false;
+        }).catch((error) => {
+            setStatus(`Failed to update settings: ${error.message}`, true);
+        });
+    }
+
+    function addTarget() {
+        const next = collectSettingsFromControls();
+        const existingTargets = getDetectorTargets(next);
+        const source = existingTargets[existingTargets.length - 1] || createDefaultTarget();
+
+        next.additional_hsv_targets.push(cloneSettings(source));
+        state.settings = next;
+        state.dirtyFromUser = true;
+        renderTargetDrawer(next);
+
+        sendCameraEvent("update_settings", { settings: next }).then(() => {
+            state.dirtyFromUser = false;
+        }).catch((error) => {
+            setStatus(`Failed to update settings: ${error.message}`, true);
+        });
+    }
+
     function applySettingsToControls(settings) {
         if (!settings) {
             return;
@@ -133,58 +410,16 @@
         c.cropWidth.value = settings.detector.crop.width_pct;
         c.cropHeight.value = settings.detector.crop.height_pct;
 
-        c.hMin.value = settings.hsv.h_min;
-        c.hMinNumber.value = settings.hsv.h_min;
-        c.hMax.value = settings.hsv.h_max;
-        c.hMaxNumber.value = settings.hsv.h_max;
-        c.sMin.value = settings.hsv.s_min;
-        c.sMinNumber.value = settings.hsv.s_min;
-        c.sMax.value = settings.hsv.s_max;
-        c.sMaxNumber.value = settings.hsv.s_max;
-        c.vMin.value = settings.hsv.v_min;
-        c.vMinNumber.value = settings.hsv.v_min;
-        c.vMax.value = settings.hsv.v_max;
-        c.vMaxNumber.value = settings.hsv.v_max;
-
         c.virtualEnabled.checked = Boolean(settings.virtual_coordinates.enabled);
         c.virtualXSize.value = settings.virtual_coordinates.x_size;
         c.virtualYSize.value = settings.virtual_coordinates.y_size;
+
+        renderTargetDrawer(settings);
     }
 
     function collectSettingsFromControls() {
         const c = elements.controls;
-
-        const next = state.settings ? cloneSettings(state.settings) : {
-            detector: {
-                quality: "ultra_low",
-                crop: {
-                    enabled: true,
-                    left_pct: 0,
-                    top_pct: 0,
-                    width_pct: 0,
-                    height_pct: 0,
-                },
-            },
-            hsv: {
-                h_min: 36,
-                s_min: 91,
-                v_min: 100,
-                h_max: 47,
-                s_max: 255,
-                v_max: 209,
-            },
-            virtual_coordinates: {
-                enabled: false,
-                x_size: 100,
-                y_size: 100,
-                corners: {
-                    top_left: null,
-                    top_right: null,
-                    bottom_right: null,
-                    bottom_left: null,
-                },
-            },
-        };
+        const next = normalizeSettings(state.settings ? cloneSettings(state.settings) : createDefaultSettings());
 
         next.detector.quality = c.quality.value;
         next.detector.crop.enabled = Boolean(c.cropEnabled.checked);
@@ -192,13 +427,6 @@
         next.detector.crop.top_pct = asNumber(c.cropTop.value, 0);
         next.detector.crop.width_pct = asNumber(c.cropWidth.value, 1);
         next.detector.crop.height_pct = asNumber(c.cropHeight.value, 1);
-
-        next.hsv.h_min = asNumber(c.hMin.value, 0);
-        next.hsv.h_max = asNumber(c.hMax.value, 179);
-        next.hsv.s_min = asNumber(c.sMin.value, 0);
-        next.hsv.s_max = asNumber(c.sMax.value, 255);
-        next.hsv.v_min = asNumber(c.vMin.value, 0);
-        next.hsv.v_max = asNumber(c.vMax.value, 255);
 
         next.virtual_coordinates.enabled = Boolean(c.virtualEnabled.checked);
         next.virtual_coordinates.x_size = asNumber(c.virtualXSize.value, 100);
@@ -212,6 +440,15 @@
             };
         }
 
+        const targets = elements.targets.editor
+            ? Array.from(elements.targets.editor.querySelectorAll("[data-target-card]"))
+            : [];
+
+        if (targets.length > 0) {
+            next.hsv = readTargetFromCard(targets[0]);
+            next.additional_hsv_targets = targets.slice(1).map((card) => readTargetFromCard(card));
+        }
+
         return next;
     }
 
@@ -221,9 +458,9 @@
         }
 
         if (payload.settings) {
-            state.settings = payload.settings;
+            state.settings = normalizeSettings(payload.settings);
             if (!state.dirtyFromUser) {
-                applySettingsToControls(payload.settings);
+                applySettingsToControls(state.settings);
             }
         }
 
@@ -238,10 +475,9 @@
 
         if (payload.previews) {
             setImage(elements.previews.detection, payload.previews.detection);
-            setImage(elements.previews.mask, payload.previews.mask);
-            setImage(elements.previews.hMask, payload.previews.h_mask);
-            setImage(elements.previews.sMask, payload.previews.s_mask);
-            setImage(elements.previews.vMask, payload.previews.v_mask);
+            state.previewTargets = Array.isArray(payload.previews.targets) ? payload.previews.targets : [];
+            applyPrimaryTargetPreview();
+            applyTargetPreviews();
         }
     }
 
@@ -270,6 +506,12 @@
 
         if (typeof payload.detection === "string" && payload.detection.length > 0) {
             setImage(elements.previews.detection, payload.detection);
+        }
+
+        if (Array.isArray(payload.targets)) {
+            state.previewTargets = payload.targets;
+            applyPrimaryTargetPreview();
+            applyTargetPreviews();
         }
 
         if (payload.runtime_log) {
@@ -438,13 +680,6 @@
         const c = elements.controls;
         const b = elements.buttons;
 
-        syncPair(c.hMin, c.hMinNumber);
-        syncPair(c.hMax, c.hMaxNumber);
-        syncPair(c.sMin, c.sMinNumber);
-        syncPair(c.sMax, c.sMaxNumber);
-        syncPair(c.vMin, c.vMinNumber);
-        syncPair(c.vMax, c.vMaxNumber);
-
         [
             c.quality,
             c.cropEnabled,
@@ -462,6 +697,10 @@
             el.addEventListener("change", scheduleSettingsUpdate);
             el.addEventListener("input", scheduleSettingsUpdate);
         });
+
+        if (elements.targets.add) {
+            elements.targets.add.addEventListener("click", addTarget);
+        }
 
         b.play.addEventListener("click", () => {
             sendCameraEvent("playback", { paused: false }).catch((error) => {

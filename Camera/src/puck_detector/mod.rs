@@ -1,11 +1,10 @@
 mod detector;
 mod settings;
 mod timed_detector;
-mod virtual_coordinate_system;
 
-pub use crate::puck_detector::virtual_coordinate_system::VirtualCoordinateSystem;
 pub use detector::DetectionOutput;
 pub use detector::PuckDetector;
+pub use detector::TargetPreviewOutput;
 use opencv::videoio::VideoCapture;
 pub use timed_detector::TimedDetectionOutput;
 pub use timed_detector::TimedFrameProcessing;
