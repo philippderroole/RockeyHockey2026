@@ -11,29 +11,26 @@ pub enum InputSource {
 }
 
 impl InputSource {
-    fn open_capture(&self) -> opencv::Result<VideoCapture> {
+    fn open_capture(&self) -> anyhow::Result<VideoCapture> {
         match self {
             Self::VideoFile(path) => self.open_video_capture(path),
             Self::Camera(index) => self.open_camera_capture(*index),
-            Self::PiCamera => Err(Error::new(
-                StsError,
-                "PiCamera input mode not implemented yet",
-            )),
+            Self::PiCamera => Err(anyhow!("PiCamera input mode not implemented yet",)),
         }
     }
 
-    fn open_video_capture(&self, path: &str) -> opencv::Result<VideoCapture> {
+    fn open_video_capture(&self, path: &str) -> anyhow::Result<VideoCapture> {
         let cam = VideoCapture::from_file(path, CAP_ANY)?;
         if !VideoCapture::is_opened(&cam)? {
-            return Err(Error::new(StsError, "Could not open video file"));
+            return Err(anyhow!("Could not open video file"));
         }
         Ok(cam)
     }
 
-    fn open_camera_capture(&self, index: i32) -> opencv::Result<VideoCapture> {
+    fn open_camera_capture(&self, index: i32) -> anyhow::Result<VideoCapture> {
         let cam = VideoCapture::new(index, CAP_ANY)?; // Open default camera
         if !VideoCapture::is_opened(&cam)? {
-            return Err(Error::new(StsError, "Could not open camera"));
+            return Err(anyhow!("Could not open camera"));
         }
         Ok(cam)
     }
@@ -42,7 +39,7 @@ impl InputSource {
 pub fn run_capture_loop(
     runner: &mut dyn DetectorRunner,
     source: InputSource,
-) -> opencv::Result<()> {
+) -> anyhow::Result<()> {
     let mut cam = source.open_capture()?;
 
     loop {

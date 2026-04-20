@@ -21,7 +21,7 @@ struct Args {
     web_ui_port: u16,
 }
 
-fn main() -> opencv::Result<()> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let args = Args::parse();
