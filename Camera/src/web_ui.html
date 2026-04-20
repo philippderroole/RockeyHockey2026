@@ -1,0 +1,1992 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>RockeyHockey Live Settings</title>
+        <style>
+            :root {
+                --bg: #f2f6f8;
+                --panel: #ffffff;
+                --ink: #16222b;
+                --muted: #55646f;
+                --accent: #0c7a6a;
+                --line: #d9e2e8;
+                --radius: 14px;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                font-family: "IBM Plex Sans", "Noto Sans", sans-serif;
+                color: var(--ink);
+                background:
+                    radial-gradient(
+                        circle at 15% 10%,
+                        #d8ebe8 0,
+                        transparent 30%
+                    ),
+                    radial-gradient(
+                        circle at 85% 90%,
+                        #d5e7f7 0,
+                        transparent 30%
+                    ),
+                    var(--bg);
+                min-height: 100vh;
+                padding: 20px;
+            }
+
+            .shell {
+                width: min(96vw, 1500px);
+                margin: 0 auto;
+                display: grid;
+                gap: 16px;
+            }
+
+            .panel {
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                box-shadow: 0 8px 24px rgba(16, 39, 52, 0.08);
+                overflow: hidden;
+            }
+
+            .header {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--line);
+                background: linear-gradient(120deg, #f8fcfb 0%, #f3f9fe 100%);
+            }
+
+            h1 {
+                margin: 0;
+                font-size: 1.3rem;
+                letter-spacing: 0.01em;
+            }
+
+            .sub {
+                margin: 6px 0 0;
+                color: var(--muted);
+                font-size: 0.94rem;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 16px;
+                padding: 16px;
+            }
+
+            .preview-stage {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 18px;
+                align-items: start;
+            }
+
+            .settings-stage {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 16px;
+            }
+
+            .card {
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 14px;
+                background: #fff;
+            }
+
+            .card h2 {
+                margin: 0 0 10px;
+                font-size: 1rem;
+                color: #10384a;
+            }
+
+            .preview {
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                border-radius: 10px;
+                border: 1px solid #d7e2e8;
+                background: linear-gradient(135deg, #f5f9fb 0%, #f9fcff 100%);
+                object-fit: contain;
+                display: block;
+            }
+
+            .preview-shell {
+                position: relative;
+            }
+
+            .corner-layer {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+            }
+
+            .corner-marker {
+                position: absolute;
+                width: 14px;
+                height: 14px;
+                margin-left: -7px;
+                margin-top: -7px;
+                border-radius: 999px;
+                border: 2px solid #ffffff;
+                box-shadow: 0 0 0 2px rgba(12, 122, 106, 0.55);
+                background: #0c7a6a;
+                color: #ffffff;
+                display: none;
+            }
+
+            .corner-marker::after {
+                position: absolute;
+                top: -18px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 0.62rem;
+                font-weight: 700;
+                color: #0f3f4a;
+                background: rgba(255, 255, 255, 0.9);
+                border: 1px solid #cfe0e8;
+                border-radius: 5px;
+                padding: 1px 4px;
+                white-space: nowrap;
+            }
+
+            .corner-marker[data-corner="top_left"]::after {
+                content: "TL";
+            }
+
+            .corner-marker[data-corner="top_right"]::after {
+                content: "TR";
+            }
+
+            .corner-marker[data-corner="bottom_right"]::after {
+                content: "BR";
+            }
+
+            .corner-marker[data-corner="bottom_left"]::after {
+                content: "BL";
+            }
+
+            .preview-card {
+                padding: 16px;
+            }
+
+            .preview-controls {
+                margin-top: 12px;
+                border-top: 1px solid #e3edf2;
+                padding-top: 10px;
+            }
+
+            .hint {
+                margin: 8px 0 0;
+                font-size: 0.82rem;
+                color: #5b6a74;
+            }
+
+            .metric-list {
+                margin: 8px 0 0;
+                padding: 0;
+                list-style: none;
+                display: grid;
+                gap: 6px;
+                font-size: 0.9rem;
+                color: #294452;
+            }
+
+            .metric-list li {
+                display: flex;
+                justify-content: space-between;
+                padding: 6px 8px;
+                background: #f8fbfd;
+                border: 1px solid #e3edf2;
+                border-radius: 8px;
+            }
+
+            .runtime-top {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+
+            .runtime-top .metric {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 7px 9px;
+                background: #f8fbfd;
+                border: 1px solid #e3edf2;
+                border-radius: 8px;
+                font-size: 0.88rem;
+            }
+
+            .timing-grid {
+                display: grid;
+                grid-template-columns: minmax(90px, 1fr) 90px 90px;
+                gap: 6px;
+                align-items: center;
+            }
+
+            .timing-head {
+                font-size: 0.77rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #557180;
+                padding: 2px 0;
+            }
+
+            .timing-head.right {
+                text-align: right;
+            }
+
+            .timing-label,
+            .timing-value {
+                padding: 7px 9px;
+                border: 1px solid #e3edf2;
+                border-radius: 8px;
+                background: #f8fbfd;
+                font-size: 0.88rem;
+            }
+
+            .timing-value {
+                text-align: right;
+                color: #1f4455;
+            }
+
+            label {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                margin: 10px 0;
+                color: #1f3845;
+                font-size: 0.93rem;
+            }
+
+            input[type="range"] {
+                width: 100%;
+                accent-color: var(--accent);
+            }
+
+            input[type="number"],
+            select {
+                width: 130px;
+                border: 1px solid #c9d6de;
+                border-radius: 8px;
+                padding: 4px 8px;
+                font-size: 0.92rem;
+                background: #fdfefe;
+            }
+
+            .line {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 8px;
+                align-items: center;
+                margin: 8px 0;
+            }
+
+            .hsv-row {
+                display: grid;
+                grid-template-columns: 52px 1fr 72px;
+                gap: 10px;
+                align-items: center;
+                margin: 10px 0;
+                color: #1f3845;
+                font-size: 0.93rem;
+            }
+
+            .hsv-row input[type="number"] {
+                width: 72px;
+                text-align: right;
+            }
+
+            .settings-actions {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin-top: 10px;
+            }
+
+            .action-btn {
+                border: 1px solid #b9cbd6;
+                background: #f7fbfd;
+                color: #1a3f50;
+                border-radius: 8px;
+                padding: 7px 10px;
+                font-size: 0.88rem;
+                cursor: pointer;
+            }
+
+            .action-btn:hover {
+                background: #eef7fb;
+            }
+
+            .player-controls {
+                margin-top: 12px;
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .player-btn {
+                border: 1px solid #9cb8c6;
+                border-radius: 8px;
+                padding: 8px 10px;
+                font-size: 0.88rem;
+                background: #f4f9fc;
+                color: #184255;
+                cursor: pointer;
+            }
+
+            .player-btn.active {
+                background: #0c7a6a;
+                border-color: #0c7a6a;
+                color: #ffffff;
+            }
+
+            .player-state {
+                margin: 10px 0 0;
+                color: #355968;
+                font-size: 0.84rem;
+            }
+
+            .stat {
+                padding: 8px 12px;
+                border-top: 1px solid var(--line);
+                color: #284755;
+                font-size: 0.9rem;
+                min-height: 38px;
+            }
+
+            .ok {
+                color: #0c6f51;
+            }
+            .err {
+                color: #a7352d;
+            }
+
+            @media (max-width: 640px) {
+                body {
+                    padding: 10px;
+                }
+                .header {
+                    padding: 14px;
+                }
+                .grid {
+                    padding: 12px;
+                    gap: 12px;
+                }
+                .preview-stage {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+            }
+
+            @media (max-width: 980px) {
+                .preview-stage {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="shell">
+            <section class="panel">
+                <header class="header">
+                    <h1>RockeyHockey Detector Controls</h1>
+                    <p class="sub">
+                        Changes are sent live and applied on the next processed
+                        frame.
+                    </p>
+                </header>
+
+                <div class="grid">
+                    <div class="preview-stage">
+                        <section class="card preview-card">
+                            <h2>Detection Preview</h2>
+                            <div class="preview-shell">
+                                <img
+                                    id="preview-detection"
+                                    class="preview"
+                                    alt="Live detection preview"
+                                />
+                                <div
+                                    id="corner-layer"
+                                    class="corner-layer"
+                                    aria-hidden="true"
+                                >
+                                    <span
+                                        id="marker-top-left"
+                                        class="corner-marker"
+                                        data-corner="top_left"
+                                    ></span>
+                                    <span
+                                        id="marker-top-right"
+                                        class="corner-marker"
+                                        data-corner="top_right"
+                                    ></span>
+                                    <span
+                                        id="marker-bottom-right"
+                                        class="corner-marker"
+                                        data-corner="bottom_right"
+                                    ></span>
+                                    <span
+                                        id="marker-bottom-left"
+                                        class="corner-marker"
+                                        data-corner="bottom_left"
+                                    ></span>
+                                </div>
+                            </div>
+
+                            <div class="player-controls">
+                                <button
+                                    id="playback-play"
+                                    type="button"
+                                    class="player-btn"
+                                >
+                                    Play
+                                </button>
+                                <button
+                                    id="playback-stop"
+                                    type="button"
+                                    class="player-btn"
+                                >
+                                    Stop
+                                </button>
+                                <button
+                                    id="playback-reprocess"
+                                    type="button"
+                                    class="player-btn"
+                                >
+                                    Recalculate
+                                </button>
+                                <button
+                                    id="playback-next-frame"
+                                    type="button"
+                                    class="player-btn"
+                                >
+                                    Next Frame
+                                </button>
+                            </div>
+                            <p id="playback-state" class="player-state">
+                                Playback running.
+                            </p>
+                        </section>
+
+                        <section class="card preview-card">
+                            <h2>Green Mask Preview</h2>
+                            <img
+                                id="preview-mask"
+                                class="preview"
+                                alt="Live green mask preview"
+                            />
+                        </section>
+
+                        <section class="card preview-card">
+                            <h2>H Mask Preview</h2>
+                            <img
+                                id="preview-h-mask"
+                                class="preview"
+                                alt="Live hue threshold mask preview"
+                            />
+                            <div class="preview-controls">
+                                <div class="hsv-row">
+                                    <span>H min</span>
+                                    <input
+                                        id="h-min"
+                                        type="range"
+                                        min="0"
+                                        max="179"
+                                        step="1"
+                                    />
+                                    <input
+                                        id="h-min-input"
+                                        type="number"
+                                        min="0"
+                                        max="179"
+                                        step="1"
+                                    />
+                                </div>
+                                <div class="hsv-row">
+                                    <span>H max</span>
+                                    <input
+                                        id="h-max"
+                                        type="range"
+                                        min="0"
+                                        max="179"
+                                        step="1"
+                                    />
+                                    <input
+                                        id="h-max-input"
+                                        type="number"
+                                        min="0"
+                                        max="179"
+                                        step="1"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="card preview-card">
+                            <h2>S Mask Preview</h2>
+                            <img
+                                id="preview-s-mask"
+                                class="preview"
+                                alt="Live saturation threshold mask preview"
+                            />
+                            <div class="preview-controls">
+                                <div class="hsv-row">
+                                    <span>S min</span>
+                                    <input
+                                        id="s-min"
+                                        type="range"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                    <input
+                                        id="s-min-input"
+                                        type="number"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                </div>
+                                <div class="hsv-row">
+                                    <span>S max</span>
+                                    <input
+                                        id="s-max"
+                                        type="range"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                    <input
+                                        id="s-max-input"
+                                        type="number"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="card preview-card">
+                            <h2>V Mask Preview</h2>
+                            <img
+                                id="preview-v-mask"
+                                class="preview"
+                                alt="Live value threshold mask preview"
+                            />
+                            <div class="preview-controls">
+                                <div class="hsv-row">
+                                    <span>V min</span>
+                                    <input
+                                        id="v-min"
+                                        type="range"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                    <input
+                                        id="v-min-input"
+                                        type="number"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                </div>
+                                <div class="hsv-row">
+                                    <span>V max</span>
+                                    <input
+                                        id="v-max"
+                                        type="range"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                    <input
+                                        id="v-max-input"
+                                        type="number"
+                                        min="0"
+                                        max="255"
+                                        step="1"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <section class="card">
+                        <h2>Live Runtime Log</h2>
+                        <div class="runtime-top">
+                            <div class="metric">
+                                <span>Detection</span
+                                ><strong id="log-detection">-</strong>
+                            </div>
+                            <div class="metric">
+                                <span>Virtual XY</span
+                                ><strong id="log-virtual">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="timing-grid">
+                            <div class="timing-head">Timing</div>
+                            <div class="timing-head right">Current</div>
+                            <div class="timing-head right">Average</div>
+
+                            <div class="timing-label">Capture</div>
+                            <strong id="log-capture" class="timing-value"
+                                >-</strong
+                            >
+                            <strong id="log-capture-avg" class="timing-value"
+                                >-</strong
+                            >
+
+                            <div class="timing-label">Detect</div>
+                            <strong id="log-detect" class="timing-value"
+                                >-</strong
+                            >
+                            <strong id="log-detect-avg" class="timing-value"
+                                >-</strong
+                            >
+
+                            <div class="timing-label">Total</div>
+                            <strong id="log-total" class="timing-value"
+                                >-</strong
+                            >
+                            <strong id="log-total-avg" class="timing-value"
+                                >-</strong
+                            >
+                        </div>
+                        <p class="hint">
+                            Updated from the latest processed frame in real
+                            time.
+                        </p>
+                    </section>
+
+                    <div class="settings-stage">
+                        <section class="card">
+                            <h2>Pipeline</h2>
+                            <label>
+                                <span>Quality</span>
+                                <select id="quality">
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                    <option value="ultra_low">UltraLow</option>
+                                </select>
+                            </label>
+                        </section>
+
+                        <section class="card">
+                            <h2>Virtual Coordinates</h2>
+                            <div class="line">
+                                <span>Virtual X Size</span
+                                ><input
+                                    id="virtual-x-size"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value="100"
+                                />
+                            </div>
+                            <div class="line">
+                                <span>Virtual Y Size</span
+                                ><input
+                                    id="virtual-y-size"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value="100"
+                                />
+                            </div>
+                            <div class="settings-actions">
+                                <button
+                                    id="save-top-left"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Save Current as Top Left
+                                </button>
+                                <button
+                                    id="save-top-right"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Save Current as Top Right
+                                </button>
+                                <button
+                                    id="save-bottom-left"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Save Current as Bottom Left
+                                </button>
+                                <button
+                                    id="save-bottom-right"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Save Current as Bottom Right
+                                </button>
+                            </div>
+                            <div class="settings-actions">
+                                <button
+                                    id="clear-all-corners"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Clear Saved Corners
+                                </button>
+                            </div>
+                            <p class="hint" id="tracker-candidates-hint">
+                                Move your single physical tracker into each
+                                corner and press the matching save button.
+                            </p>
+                        </section>
+
+                        <section class="card">
+                            <h2>Settings Files</h2>
+                            <div class="settings-actions">
+                                <button
+                                    id="export-settings"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Export Settings
+                                </button>
+                                <button
+                                    id="import-settings"
+                                    type="button"
+                                    class="action-btn"
+                                >
+                                    Import Settings
+                                </button>
+                            </div>
+                            <input
+                                id="import-settings-file"
+                                type="file"
+                                accept="application/json"
+                                hidden
+                            />
+                            <p class="hint">
+                                Export current values or import a previously
+                                saved JSON profile.
+                            </p>
+                        </section>
+
+                        <section class="card">
+                            <h2>Crop Rectangle</h2>
+                            <div class="line">
+                                <span>Enable Crop</span>
+                                <input id="crop-enabled" type="checkbox" />
+                            </div>
+                            <div class="line">
+                                <span>Left %</span
+                                ><input
+                                    id="left-pct"
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value="0"
+                                />
+                            </div>
+                            <div class="line">
+                                <span>Top %</span
+                                ><input
+                                    id="top-pct"
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value="0"
+                                />
+                            </div>
+                            <div class="line">
+                                <span>Right %</span
+                                ><input
+                                    id="right-pct"
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value="0"
+                                />
+                            </div>
+                            <div class="line">
+                                <span>Bottom %</span
+                                ><input
+                                    id="bottom-pct"
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.01"
+                                    value="0"
+                                />
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div id="status" class="stat">Loading settings...</div>
+            </section>
+        </main>
+
+        <script>
+            (() => {
+                const DEFAULT_API = {
+                    settings: "/api/settings",
+                    playback: "/api/playback",
+                    detectionPreview: "/api/stream/detection.mjpg",
+                    maskPreview: "/api/stream/mask.mjpg",
+                    hMaskPreview: "/api/stream/mask-h.mjpg",
+                    sMaskPreview: "/api/stream/mask-s.mjpg",
+                    vMaskPreview: "/api/stream/mask-v.mjpg",
+                    latestLog: "/api/logs/latest",
+                };
+
+                const DEFAULT_TIMING = {
+                    settingsDebounceMs: 120,
+                    logPollMs: 220,
+                    backendHeartbeatMs: 1000,
+                };
+
+                function createApp(deps) {
+                    const {
+                        doc,
+                        win,
+                        fetchImpl,
+                        api = DEFAULT_API,
+                        timing = DEFAULT_TIMING,
+                    } = deps;
+
+                    const ui = buildUi(doc);
+                    const state = {
+                        settingsTimer: null,
+                        logTimer: null,
+                        heartbeatTimer: null,
+                        backendWasOffline: false,
+                        latestDetectionPoint: null,
+                        playbackPaused: false,
+                    };
+
+                    const settingsMapper = createSettingsMapper(ui.fields);
+
+                    function setStatus(message, isError) {
+                        ui.status.textContent = message;
+                        ui.status.className =
+                            "stat " + (isError ? "err" : "ok");
+                    }
+
+                    async function fetchJson(url, options) {
+                        const response = await fetchImpl(url, options);
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(
+                                errorText ||
+                                    "Request failed: " + response.status,
+                            );
+                        }
+                        return response.json();
+                    }
+
+                    async function postSettings(payload) {
+                        const response = await fetchImpl(api.settings, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload),
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(
+                                errorText ||
+                                    "Request failed: " + response.status,
+                            );
+                        }
+                    }
+
+                    async function postPlayback(payload) {
+                        const response = await fetchImpl(api.playback, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload),
+                        });
+
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(
+                                errorText ||
+                                    "Request failed: " + response.status,
+                            );
+                        }
+
+                        return response.json();
+                    }
+
+                    function updatePlaybackUi() {
+                        ui.playbackPlayBtn.classList.toggle(
+                            "active",
+                            !state.playbackPaused,
+                        );
+                        ui.playbackStopBtn.classList.toggle(
+                            "active",
+                            state.playbackPaused,
+                        );
+                        ui.playbackState.textContent = state.playbackPaused
+                            ? "Playback stopped. Settings changes recalculate the same frame."
+                            : "Playback running.";
+                    }
+
+                    async function setPlaybackPaused(paused) {
+                        const response = await postPlayback({ paused });
+                        state.playbackPaused = Boolean(response.paused);
+                        updatePlaybackUi();
+                    }
+
+                    async function requestFrameReprocess() {
+                        await postPlayback({ reprocess_current_frame: true });
+                    }
+
+                    async function stepToNextFrame() {
+                        await postPlayback({
+                            paused: true,
+                            step_next_frame: true,
+                        });
+                    }
+
+                    async function pushSettings() {
+                        try {
+                            const payload = settingsMapper.collect();
+                            await postSettings(payload);
+                            if (state.playbackPaused) {
+                                await requestFrameReprocess();
+                            }
+                            clearAverageRuntimeLogFields();
+                            setStatus(
+                                "Applied at " + new Date().toLocaleTimeString(),
+                                false,
+                            );
+                        } catch (err) {
+                            setStatus(
+                                "Failed to apply settings: " + err.message,
+                                true,
+                            );
+                        }
+                    }
+
+                    function debouncePushSettings() {
+                        if (state.settingsTimer) {
+                            clearTimeout(state.settingsTimer);
+                        }
+                        state.settingsTimer = setTimeout(
+                            pushSettings,
+                            timing.settingsDebounceMs,
+                        );
+                    }
+
+                    function exportSettings() {
+                        try {
+                            const payload = settingsMapper.collect();
+                            const json = JSON.stringify(payload, null, 2);
+                            const blob = new Blob([json], {
+                                type: "application/json;charset=utf-8",
+                            });
+                            const url = URL.createObjectURL(blob);
+                            const link = doc.createElement("a");
+                            const stamp = new Date()
+                                .toISOString()
+                                .replace(/[:.]/g, "-");
+                            link.href = url;
+                            link.download =
+                                "rockey-hockey-settings-" + stamp + ".json";
+                            doc.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            URL.revokeObjectURL(url);
+                            setStatus("Settings exported.", false);
+                        } catch (err) {
+                            setStatus(
+                                "Failed to export settings: " + err.message,
+                                true,
+                            );
+                        }
+                    }
+
+                    async function importSettingsFromFile(file) {
+                        const text = await file.text();
+                        const parsed = JSON.parse(text);
+                        const normalized = settingsMapper.normalize(parsed);
+                        settingsMapper.fill(normalized);
+                        renderCornerMarkers();
+                        await postSettings(settingsMapper.collect());
+                        if (state.playbackPaused) {
+                            await requestFrameReprocess();
+                        }
+                        clearAverageRuntimeLogFields();
+                        setStatus("Settings imported and applied.", false);
+                    }
+
+                    function formatMs(value) {
+                        return typeof value === "number"
+                            ? value.toFixed(2) + " ms"
+                            : "n/a";
+                    }
+
+                    function clearAverageRuntimeLogFields() {
+                        ui.logCaptureAvg.textContent = "n/a";
+                        ui.logDetectAvg.textContent = "n/a";
+                        ui.logTotalAvg.textContent = "n/a";
+                    }
+
+                    function solveLinearSystem(matrix, vector) {
+                        const n = matrix.length;
+                        const a = matrix.map((row) => row.slice());
+                        const b = vector.slice();
+
+                        for (let col = 0; col < n; col += 1) {
+                            let pivot = col;
+                            for (let row = col + 1; row < n; row += 1) {
+                                if (
+                                    Math.abs(a[row][col]) >
+                                    Math.abs(a[pivot][col])
+                                ) {
+                                    pivot = row;
+                                }
+                            }
+
+                            if (Math.abs(a[pivot][col]) < 1e-10) {
+                                return null;
+                            }
+
+                            if (pivot !== col) {
+                                [a[col], a[pivot]] = [a[pivot], a[col]];
+                                [b[col], b[pivot]] = [b[pivot], b[col]];
+                            }
+
+                            const divisor = a[col][col];
+                            for (let c = col; c < n; c += 1) {
+                                a[col][c] /= divisor;
+                            }
+                            b[col] /= divisor;
+
+                            for (let row = 0; row < n; row += 1) {
+                                if (row === col) {
+                                    continue;
+                                }
+
+                                const factor = a[row][col];
+                                if (factor === 0) {
+                                    continue;
+                                }
+
+                                for (let c = col; c < n; c += 1) {
+                                    a[row][c] -= factor * a[col][c];
+                                }
+                                b[row] -= factor * b[col];
+                            }
+                        }
+
+                        return b;
+                    }
+
+                    function buildHomography(srcPoints, dstPoints) {
+                        const matrix = [];
+                        const vector = [];
+
+                        for (let i = 0; i < 4; i += 1) {
+                            const src = srcPoints[i];
+                            const dst = dstPoints[i];
+                            const x = src.x;
+                            const y = src.y;
+                            const u = dst.x;
+                            const v = dst.y;
+
+                            matrix.push([x, y, 1, 0, 0, 0, -u * x, -u * y]);
+                            vector.push(u);
+
+                            matrix.push([0, 0, 0, x, y, 1, -v * x, -v * y]);
+                            vector.push(v);
+                        }
+
+                        const solved = solveLinearSystem(matrix, vector);
+                        if (!solved) {
+                            return null;
+                        }
+
+                        return [
+                            solved[0],
+                            solved[1],
+                            solved[2],
+                            solved[3],
+                            solved[4],
+                            solved[5],
+                            solved[6],
+                            solved[7],
+                            1,
+                        ];
+                    }
+
+                    function projectPoint(point, homography) {
+                        const x = point.x;
+                        const y = point.y;
+                        const w =
+                            homography[6] * x +
+                            homography[7] * y +
+                            homography[8];
+                        if (Math.abs(w) < 1e-10) {
+                            return null;
+                        }
+
+                        return {
+                            x:
+                                (homography[0] * x +
+                                    homography[1] * y +
+                                    homography[2]) /
+                                w,
+                            y:
+                                (homography[3] * x +
+                                    homography[4] * y +
+                                    homography[5]) /
+                                w,
+                        };
+                    }
+
+                    function updateVirtualCoordinateReadout() {
+                        const settings = settingsMapper.collect();
+                        const virtualSettings = settings.virtual_coordinates;
+
+                        if (!virtualSettings.enabled) {
+                            ui.logVirtual.textContent = "disabled";
+                            return;
+                        }
+
+                        if (!state.latestDetectionPoint) {
+                            ui.logVirtual.textContent = "n/a";
+                            return;
+                        }
+
+                        const corners = virtualSettings.corners;
+                        if (
+                            !corners.top_left ||
+                            !corners.top_right ||
+                            !corners.bottom_right ||
+                            !corners.bottom_left
+                        ) {
+                            ui.logVirtual.textContent = "calibrate corners";
+                            return;
+                        }
+
+                        const srcPoints = [
+                            corners.top_left,
+                            corners.top_right,
+                            corners.bottom_right,
+                            corners.bottom_left,
+                        ];
+                        const dstPoints = [
+                            { x: 0, y: 0 },
+                            { x: virtualSettings.x_size, y: 0 },
+                            {
+                                x: virtualSettings.x_size,
+                                y: virtualSettings.y_size,
+                            },
+                            { x: 0, y: virtualSettings.y_size },
+                        ];
+
+                        const homography = buildHomography(
+                            srcPoints,
+                            dstPoints,
+                        );
+                        if (!homography) {
+                            ui.logVirtual.textContent = "invalid calibration";
+                            return;
+                        }
+
+                        const projected = projectPoint(
+                            state.latestDetectionPoint,
+                            homography,
+                        );
+                        if (!projected) {
+                            ui.logVirtual.textContent = "n/a";
+                            return;
+                        }
+
+                        ui.logVirtual.textContent =
+                            projected.x.toFixed(1) +
+                            " / " +
+                            projected.y.toFixed(1);
+                    }
+
+                    async function refreshRuntimeLog() {
+                        try {
+                            const data = await fetchJson(api.latestLog, {
+                                cache: "no-store",
+                            });
+                            ui.logDetection.textContent = data.detection_found
+                                ? "Found"
+                                : "Missing";
+                            ui.logCapture.textContent = formatMs(
+                                data.capture_ms,
+                            );
+                            ui.logCaptureAvg.textContent = formatMs(
+                                data.avg_capture_ms,
+                            );
+                            ui.logDetect.textContent = formatMs(data.detect_ms);
+                            ui.logDetectAvg.textContent = formatMs(
+                                data.avg_detect_ms,
+                            );
+                            ui.logTotal.textContent = formatMs(data.total_ms);
+                            ui.logTotalAvg.textContent = formatMs(
+                                data.avg_total_ms,
+                            );
+
+                            state.latestDetectionPoint = data.detection_point
+                                ? {
+                                      x: Number(data.detection_point.x),
+                                      y: Number(data.detection_point.y),
+                                  }
+                                : null;
+
+                            ui.trackerCandidatesHint.textContent =
+                                state.latestDetectionPoint
+                                    ? "Current tracker: (" +
+                                      Math.round(
+                                          state.latestDetectionPoint.x * 100,
+                                      ) +
+                                      "%, " +
+                                      Math.round(
+                                          state.latestDetectionPoint.y * 100,
+                                      ) +
+                                      "%). Use save buttons to store corners."
+                                    : "No tracker detected in current frame.";
+                            updateVirtualCoordinateReadout();
+                            renderCornerMarkers();
+                        } catch (_) {
+                            // Keep previous values if polling fails briefly.
+                        }
+                    }
+
+                    async function checkBackendHealth() {
+                        try {
+                            const response = await fetchImpl(api.settings, {
+                                cache: "no-store",
+                            });
+                            if (!response.ok) {
+                                throw new Error("Backend unavailable");
+                            }
+
+                            if (state.backendWasOffline) {
+                                win.location.reload();
+                                return;
+                            }
+                        } catch (_) {
+                            state.backendWasOffline = true;
+                        }
+                    }
+
+                    function startPreviewStreams() {
+                        ui.previewDetection.src = api.detectionPreview;
+                        ui.previewMask.src = api.maskPreview;
+                        ui.previewHMask.src = api.hMaskPreview;
+                        ui.previewSMask.src = api.sMaskPreview;
+                        ui.previewVMask.src = api.vMaskPreview;
+                    }
+
+                    function renderedImageRect(img) {
+                        const boxWidth = img.clientWidth;
+                        const boxHeight = img.clientHeight;
+                        const naturalWidth = img.naturalWidth || boxWidth;
+                        const naturalHeight = img.naturalHeight || boxHeight;
+                        const scale = Math.min(
+                            boxWidth / naturalWidth,
+                            boxHeight / naturalHeight,
+                        );
+                        const width = naturalWidth * scale;
+                        const height = naturalHeight * scale;
+                        return {
+                            x: (boxWidth - width) / 2,
+                            y: (boxHeight - height) / 2,
+                            width,
+                            height,
+                        };
+                    }
+
+                    function renderCornerMarkers() {
+                        const corners = settingsMapper.getCornerPoints();
+                        const rect = renderedImageRect(ui.previewDetection);
+
+                        for (const corner of CORNER_KEYS) {
+                            const marker = ui.cornerMarkers[corner];
+                            const point = corners[corner];
+                            if (!point) {
+                                marker.style.display = "none";
+                                continue;
+                            }
+
+                            marker.style.display = "block";
+                            marker.style.left =
+                                rect.x + point.x * rect.width + "px";
+                            marker.style.top =
+                                rect.y + point.y * rect.height + "px";
+                        }
+                    }
+
+                    function stopPreviewStreams() {
+                        ui.previewDetection.removeAttribute("src");
+                        ui.previewMask.removeAttribute("src");
+                        ui.previewHMask.removeAttribute("src");
+                        ui.previewSMask.removeAttribute("src");
+                        ui.previewVMask.removeAttribute("src");
+                    }
+
+                    function startLogPolling() {
+                        stopLogPolling();
+                        refreshRuntimeLog();
+                        state.logTimer = setInterval(
+                            refreshRuntimeLog,
+                            timing.logPollMs,
+                        );
+                    }
+
+                    function stopLogPolling() {
+                        if (state.logTimer) {
+                            clearInterval(state.logTimer);
+                            state.logTimer = null;
+                        }
+                    }
+
+                    function startHeartbeatPolling() {
+                        stopHeartbeatPolling();
+                        checkBackendHealth();
+                        state.heartbeatTimer = setInterval(
+                            checkBackendHealth,
+                            timing.backendHeartbeatMs,
+                        );
+                    }
+
+                    function stopHeartbeatPolling() {
+                        if (state.heartbeatTimer) {
+                            clearInterval(state.heartbeatTimer);
+                            state.heartbeatTimer = null;
+                        }
+                    }
+
+                    function bindVisibilityHandler() {
+                        doc.addEventListener("visibilitychange", () => {
+                            if (doc.hidden) {
+                                stopPreviewStreams();
+                                stopLogPolling();
+                                stopHeartbeatPolling();
+                                return;
+                            }
+                            startPreviewStreams();
+                            startLogPolling();
+                            startHeartbeatPolling();
+                        });
+                    }
+
+                    function bindFieldListeners() {
+                        const allFields = Object.values(ui.fields);
+                        allFields.forEach((el) => {
+                            el.addEventListener("input", debouncePushSettings);
+                            el.addEventListener("change", debouncePushSettings);
+                        });
+                    }
+
+                    function bindCornerMarkerSync() {
+                        ui.previewDetection.addEventListener("load", () => {
+                            renderCornerMarkers();
+                        });
+
+                        win.addEventListener("resize", renderCornerMarkers);
+
+                        function saveCurrentCorner(corner) {
+                            if (!state.latestDetectionPoint) {
+                                setStatus(
+                                    "No tracker detected yet. Place tracker and wait for detection.",
+                                    true,
+                                );
+                                return;
+                            }
+
+                            settingsMapper.setCornerPoint(
+                                corner,
+                                state.latestDetectionPoint,
+                            );
+                            renderCornerMarkers();
+                            updateVirtualCoordinateReadout();
+                            debouncePushSettings();
+                        }
+
+                        ui.saveTopLeftBtn.addEventListener("click", () => {
+                            saveCurrentCorner("top_left");
+                        });
+                        ui.saveTopRightBtn.addEventListener("click", () => {
+                            saveCurrentCorner("top_right");
+                        });
+                        ui.saveBottomRightBtn.addEventListener("click", () => {
+                            saveCurrentCorner("bottom_right");
+                        });
+                        ui.saveBottomLeftBtn.addEventListener("click", () => {
+                            saveCurrentCorner("bottom_left");
+                        });
+                        ui.clearAllCornersBtn.addEventListener("click", () => {
+                            settingsMapper.clearCornerPoints();
+                            renderCornerMarkers();
+                            updateVirtualCoordinateReadout();
+                            debouncePushSettings();
+                        });
+                    }
+
+                    function bindHsvValueSync() {
+                        const f = ui.fields;
+                        syncRangeAndInput(f.hMinRange, f.hMinInput);
+                        syncRangeAndInput(f.sMinRange, f.sMinInput);
+                        syncRangeAndInput(f.vMinRange, f.vMinInput);
+                        syncRangeAndInput(f.hMaxRange, f.hMaxInput);
+                        syncRangeAndInput(f.sMaxRange, f.sMaxInput);
+                        syncRangeAndInput(f.vMaxRange, f.vMaxInput);
+                    }
+
+                    function bindSettingsImportExport() {
+                        ui.exportSettingsBtn.addEventListener(
+                            "click",
+                            exportSettings,
+                        );
+
+                        ui.importSettingsBtn.addEventListener("click", () => {
+                            ui.importSettingsFile.value = "";
+                            ui.importSettingsFile.click();
+                        });
+
+                        ui.importSettingsFile.addEventListener(
+                            "change",
+                            async () => {
+                                try {
+                                    const file =
+                                        ui.importSettingsFile.files?.[0];
+                                    if (!file) {
+                                        return;
+                                    }
+                                    await importSettingsFromFile(file);
+                                } catch (err) {
+                                    setStatus(
+                                        "Failed to import settings: " +
+                                            err.message,
+                                        true,
+                                    );
+                                }
+                            },
+                        );
+                    }
+
+                    function bindPlaybackControls() {
+                        ui.playbackPlayBtn.addEventListener("click", () => {
+                            setPlaybackPaused(false).catch((err) => {
+                                setStatus(
+                                    "Failed to resume playback: " + err.message,
+                                    true,
+                                );
+                            });
+                        });
+
+                        ui.playbackStopBtn.addEventListener("click", () => {
+                            setPlaybackPaused(true)
+                                .then(() => requestFrameReprocess())
+                                .catch((err) => {
+                                    setStatus(
+                                        "Failed to stop playback: " +
+                                            err.message,
+                                        true,
+                                    );
+                                });
+                        });
+
+                        ui.playbackReprocessBtn.addEventListener(
+                            "click",
+                            () => {
+                                requestFrameReprocess()
+                                    .then(() => {
+                                        setStatus(
+                                            "Recalculated current frame.",
+                                            false,
+                                        );
+                                    })
+                                    .catch((err) => {
+                                        setStatus(
+                                            "Failed to recalculate frame: " +
+                                                err.message,
+                                            true,
+                                        );
+                                    });
+                            },
+                        );
+
+                        ui.playbackNextFrameBtn.addEventListener(
+                            "click",
+                            () => {
+                                stepToNextFrame()
+                                    .then(() => {
+                                        state.playbackPaused = true;
+                                        updatePlaybackUi();
+                                        return refreshRuntimeLog();
+                                    })
+                                    .then(() => {
+                                        setStatus(
+                                            "Advanced to next frame.",
+                                            false,
+                                        );
+                                    })
+                                    .catch((err) => {
+                                        setStatus(
+                                            "Failed to step frame: " +
+                                                err.message,
+                                            true,
+                                        );
+                                    });
+                            },
+                        );
+                    }
+
+                    async function init() {
+                        bindFieldListeners();
+                        bindHsvValueSync();
+                        bindSettingsImportExport();
+                        bindCornerMarkerSync();
+                        bindPlaybackControls();
+                        bindVisibilityHandler();
+
+                        try {
+                            const settings = await fetchJson(api.settings);
+                            settingsMapper.fill(settings);
+                            renderCornerMarkers();
+                            setStatus(
+                                "Connected. Edit any value to apply live.",
+                                false,
+                            );
+                        } catch (err) {
+                            setStatus(
+                                "Initialization failed: " + err.message,
+                                true,
+                            );
+                        }
+
+                        try {
+                            const playback = await fetchJson(api.playback, {
+                                cache: "no-store",
+                            });
+                            state.playbackPaused = Boolean(playback.paused);
+                        } catch (_) {
+                            state.playbackPaused = false;
+                        }
+                        updatePlaybackUi();
+
+                        startPreviewStreams();
+                        startLogPolling();
+                        startHeartbeatPolling();
+                        renderCornerMarkers();
+                    }
+
+                    return { init };
+                }
+
+                function byId(doc, id) {
+                    const node = doc.getElementById(id);
+                    if (!node) {
+                        throw new Error("Missing element #" + id);
+                    }
+                    return node;
+                }
+
+                function buildUi(doc) {
+                    return {
+                        status: byId(doc, "status"),
+                        previewDetection: byId(doc, "preview-detection"),
+                        previewMask: byId(doc, "preview-mask"),
+                        previewHMask: byId(doc, "preview-h-mask"),
+                        previewSMask: byId(doc, "preview-s-mask"),
+                        previewVMask: byId(doc, "preview-v-mask"),
+                        cornerLayer: byId(doc, "corner-layer"),
+                        cornerMarkers: {
+                            top_left: byId(doc, "marker-top-left"),
+                            top_right: byId(doc, "marker-top-right"),
+                            bottom_right: byId(doc, "marker-bottom-right"),
+                            bottom_left: byId(doc, "marker-bottom-left"),
+                        },
+                        logDetection: byId(doc, "log-detection"),
+                        logCapture: byId(doc, "log-capture"),
+                        logCaptureAvg: byId(doc, "log-capture-avg"),
+                        logDetect: byId(doc, "log-detect"),
+                        logDetectAvg: byId(doc, "log-detect-avg"),
+                        logTotal: byId(doc, "log-total"),
+                        logTotalAvg: byId(doc, "log-total-avg"),
+                        trackerCandidatesHint: byId(
+                            doc,
+                            "tracker-candidates-hint",
+                        ),
+                        exportSettingsBtn: byId(doc, "export-settings"),
+                        importSettingsBtn: byId(doc, "import-settings"),
+                        importSettingsFile: byId(doc, "import-settings-file"),
+                        playbackPlayBtn: byId(doc, "playback-play"),
+                        playbackStopBtn: byId(doc, "playback-stop"),
+                        playbackReprocessBtn: byId(doc, "playback-reprocess"),
+                        playbackNextFrameBtn: byId(doc, "playback-next-frame"),
+                        playbackState: byId(doc, "playback-state"),
+                        saveTopLeftBtn: byId(doc, "save-top-left"),
+                        saveTopRightBtn: byId(doc, "save-top-right"),
+                        saveBottomRightBtn: byId(doc, "save-bottom-right"),
+                        saveBottomLeftBtn: byId(doc, "save-bottom-left"),
+                        clearAllCornersBtn: byId(doc, "clear-all-corners"),
+                        logVirtual: byId(doc, "log-virtual"),
+                        fields: {
+                            quality: byId(doc, "quality"),
+                            cropEnabled: byId(doc, "crop-enabled"),
+                            leftPct: byId(doc, "left-pct"),
+                            topPct: byId(doc, "top-pct"),
+                            rightPct: byId(doc, "right-pct"),
+                            bottomPct: byId(doc, "bottom-pct"),
+                            virtualXSize: byId(doc, "virtual-x-size"),
+                            virtualYSize: byId(doc, "virtual-y-size"),
+                            hMinRange: byId(doc, "h-min"),
+                            sMinRange: byId(doc, "s-min"),
+                            vMinRange: byId(doc, "v-min"),
+                            hMaxRange: byId(doc, "h-max"),
+                            sMaxRange: byId(doc, "s-max"),
+                            vMaxRange: byId(doc, "v-max"),
+                            hMinInput: byId(doc, "h-min-input"),
+                            sMinInput: byId(doc, "s-min-input"),
+                            vMinInput: byId(doc, "v-min-input"),
+                            hMaxInput: byId(doc, "h-max-input"),
+                            sMaxInput: byId(doc, "s-max-input"),
+                            vMaxInput: byId(doc, "v-max-input"),
+                        },
+                    };
+                }
+
+                function readNumber(input) {
+                    return Number(input.value);
+                }
+
+                const CORNER_KEYS = [
+                    "top_left",
+                    "top_right",
+                    "bottom_right",
+                    "bottom_left",
+                ];
+
+                function clampToUnit(value) {
+                    const number = Number(value);
+                    if (!Number.isFinite(number)) {
+                        return 0;
+                    }
+                    return Math.min(1, Math.max(0, number));
+                }
+
+                function createSettingsMapper(fields) {
+                    let cornerPoints = {
+                        top_left: null,
+                        top_right: null,
+                        bottom_right: null,
+                        bottom_left: null,
+                    };
+
+                    function sanitizeCornerPoints(rawCorners) {
+                        const output = {
+                            top_left: null,
+                            top_right: null,
+                            bottom_right: null,
+                            bottom_left: null,
+                        };
+
+                        for (const key of CORNER_KEYS) {
+                            const point = rawCorners?.[key];
+                            if (
+                                !point ||
+                                !Number.isFinite(Number(point.x)) ||
+                                !Number.isFinite(Number(point.y))
+                            ) {
+                                output[key] = null;
+                                continue;
+                            }
+
+                            output[key] = {
+                                x: clampToUnit(point.x),
+                                y: clampToUnit(point.y),
+                            };
+                        }
+
+                        return output;
+                    }
+
+                    function cloneCornerPoints() {
+                        return {
+                            top_left: cornerPoints.top_left
+                                ? { ...cornerPoints.top_left }
+                                : null,
+                            top_right: cornerPoints.top_right
+                                ? { ...cornerPoints.top_right }
+                                : null,
+                            bottom_right: cornerPoints.bottom_right
+                                ? { ...cornerPoints.bottom_right }
+                                : null,
+                            bottom_left: cornerPoints.bottom_left
+                                ? { ...cornerPoints.bottom_left }
+                                : null,
+                        };
+                    }
+
+                    function collect() {
+                        const leftPct = readNumber(fields.leftPct);
+                        const topPct = readNumber(fields.topPct);
+                        const rightPct = readNumber(fields.rightPct);
+                        const bottomPct = readNumber(fields.bottomPct);
+
+                        const widthPct = Math.max(0, 1 - leftPct - rightPct);
+                        const heightPct = Math.max(0, 1 - topPct - bottomPct);
+
+                        return {
+                            detector: {
+                                quality: fields.quality.value,
+                                crop: {
+                                    enabled: fields.cropEnabled.checked,
+                                    left_pct: leftPct,
+                                    top_pct: topPct,
+                                    width_pct: widthPct,
+                                    height_pct: heightPct,
+                                },
+                            },
+                            hsv: {
+                                h_min: readNumber(fields.hMinInput),
+                                s_min: readNumber(fields.sMinInput),
+                                v_min: readNumber(fields.vMinInput),
+                                h_max: readNumber(fields.hMaxInput),
+                                s_max: readNumber(fields.sMaxInput),
+                                v_max: readNumber(fields.vMaxInput),
+                            },
+                            virtual_coordinates: {
+                                enabled: true,
+                                x_size: Math.max(
+                                    1,
+                                    readNumber(fields.virtualXSize),
+                                ),
+                                y_size: Math.max(
+                                    1,
+                                    readNumber(fields.virtualYSize),
+                                ),
+                                corners: cloneCornerPoints(),
+                            },
+                        };
+                    }
+
+                    function fill(settings) {
+                        fields.quality.value = settings.detector.quality;
+                        fields.cropEnabled.checked =
+                            settings.detector.crop.enabled;
+                        fields.leftPct.value = settings.detector.crop.left_pct;
+                        fields.topPct.value = settings.detector.crop.top_pct;
+                        fields.rightPct.value = Math.max(
+                            0,
+                            1 -
+                                settings.detector.crop.left_pct -
+                                settings.detector.crop.width_pct,
+                        );
+                        fields.bottomPct.value = Math.max(
+                            0,
+                            1 -
+                                settings.detector.crop.top_pct -
+                                settings.detector.crop.height_pct,
+                        );
+
+                        fields.hMinRange.value = settings.hsv.h_min;
+                        fields.sMinRange.value = settings.hsv.s_min;
+                        fields.vMinRange.value = settings.hsv.v_min;
+                        fields.hMaxRange.value = settings.hsv.h_max;
+                        fields.sMaxRange.value = settings.hsv.s_max;
+                        fields.vMaxRange.value = settings.hsv.v_max;
+
+                        fields.hMinInput.value = settings.hsv.h_min;
+                        fields.sMinInput.value = settings.hsv.s_min;
+                        fields.vMinInput.value = settings.hsv.v_min;
+                        fields.hMaxInput.value = settings.hsv.h_max;
+                        fields.sMaxInput.value = settings.hsv.s_max;
+                        fields.vMaxInput.value = settings.hsv.v_max;
+
+                        fields.virtualXSize.value =
+                            settings.virtual_coordinates?.x_size ?? 100;
+                        fields.virtualYSize.value =
+                            settings.virtual_coordinates?.y_size ?? 100;
+                        cornerPoints = sanitizeCornerPoints(
+                            settings.virtual_coordinates?.corners,
+                        );
+                    }
+
+                    function normalize(raw) {
+                        const current = collect();
+                        const detector = raw?.detector ?? {};
+                        const crop = detector?.crop ?? {};
+                        const hsv = raw?.hsv ?? {};
+                        const virtualCoordinates =
+                            raw?.virtual_coordinates ?? {};
+
+                        const quality = String(
+                            detector.quality ?? current.detector.quality,
+                        );
+                        const qualityValues = [
+                            "high",
+                            "medium",
+                            "low",
+                            "ultra_low",
+                        ];
+
+                        return {
+                            detector: {
+                                quality: qualityValues.includes(quality)
+                                    ? quality
+                                    : current.detector.quality,
+                                crop: {
+                                    enabled:
+                                        typeof crop.enabled === "boolean"
+                                            ? crop.enabled
+                                            : current.detector.crop.enabled,
+                                    left_pct: Number.isFinite(
+                                        Number(crop.left_pct),
+                                    )
+                                        ? Number(crop.left_pct)
+                                        : current.detector.crop.left_pct,
+                                    top_pct: Number.isFinite(
+                                        Number(crop.top_pct),
+                                    )
+                                        ? Number(crop.top_pct)
+                                        : current.detector.crop.top_pct,
+                                    width_pct: Number.isFinite(
+                                        Number(crop.width_pct),
+                                    )
+                                        ? Number(crop.width_pct)
+                                        : current.detector.crop.width_pct,
+                                    height_pct: Number.isFinite(
+                                        Number(crop.height_pct),
+                                    )
+                                        ? Number(crop.height_pct)
+                                        : current.detector.crop.height_pct,
+                                },
+                            },
+                            hsv: {
+                                h_min: Number.isFinite(Number(hsv.h_min))
+                                    ? Number(hsv.h_min)
+                                    : current.hsv.h_min,
+                                s_min: Number.isFinite(Number(hsv.s_min))
+                                    ? Number(hsv.s_min)
+                                    : current.hsv.s_min,
+                                v_min: Number.isFinite(Number(hsv.v_min))
+                                    ? Number(hsv.v_min)
+                                    : current.hsv.v_min,
+                                h_max: Number.isFinite(Number(hsv.h_max))
+                                    ? Number(hsv.h_max)
+                                    : current.hsv.h_max,
+                                s_max: Number.isFinite(Number(hsv.s_max))
+                                    ? Number(hsv.s_max)
+                                    : current.hsv.s_max,
+                                v_max: Number.isFinite(Number(hsv.v_max))
+                                    ? Number(hsv.v_max)
+                                    : current.hsv.v_max,
+                            },
+                            virtual_coordinates: {
+                                enabled: true,
+                                x_size: Number.isFinite(
+                                    Number(virtualCoordinates.x_size),
+                                )
+                                    ? Number(virtualCoordinates.x_size)
+                                    : current.virtual_coordinates.x_size,
+                                y_size: Number.isFinite(
+                                    Number(virtualCoordinates.y_size),
+                                )
+                                    ? Number(virtualCoordinates.y_size)
+                                    : current.virtual_coordinates.y_size,
+                                corners: sanitizeCornerPoints(
+                                    virtualCoordinates.corners,
+                                ),
+                            },
+                        };
+                    }
+
+                    function setCornerPoint(corner, point) {
+                        if (!CORNER_KEYS.includes(corner)) {
+                            return;
+                        }
+
+                        cornerPoints[corner] = {
+                            x: clampToUnit(point.x),
+                            y: clampToUnit(point.y),
+                        };
+                    }
+
+                    function clearCornerPoints() {
+                        cornerPoints = {
+                            top_left: null,
+                            top_right: null,
+                            bottom_right: null,
+                            bottom_left: null,
+                        };
+                    }
+
+                    function getCornerPoints() {
+                        return cloneCornerPoints();
+                    }
+
+                    return {
+                        collect,
+                        fill,
+                        normalize,
+                        setCornerPoint,
+                        clearCornerPoints,
+                        getCornerPoints,
+                    };
+                }
+
+                function syncRangeAndInput(rangeEl, inputEl) {
+                    function clampNumber(value) {
+                        const min = Number(inputEl.min);
+                        const max = Number(inputEl.max);
+                        const fallback = Number(rangeEl.value);
+                        const parsed = Number(value);
+                        if (!Number.isFinite(parsed)) {
+                            return fallback;
+                        }
+                        return Math.min(max, Math.max(min, Math.round(parsed)));
+                    }
+
+                    rangeEl.addEventListener("input", () => {
+                        inputEl.value = rangeEl.value;
+                    });
+
+                    inputEl.addEventListener("input", () => {
+                        const next = clampNumber(inputEl.value);
+                        rangeEl.value = String(next);
+                    });
+
+                    inputEl.addEventListener("change", () => {
+                        const next = clampNumber(inputEl.value);
+                        inputEl.value = String(next);
+                        rangeEl.value = String(next);
+                    });
+                }
+
+                const app = createApp({
+                    doc: document,
+                    win: window,
+                    fetchImpl: window.fetch.bind(window),
+                });
+
+                app.init();
+            })();
+        </script>
+    </body>
+</html>
