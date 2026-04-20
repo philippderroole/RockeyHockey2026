@@ -16,8 +16,8 @@ impl CropSettings {
             enabled: false,
             left_pct: 0.0,
             top_pct: 0.0,
-            width_pct: 0.0,
-            height_pct: 0.0,
+            width_pct: 1.0,
+            height_pct: 1.0,
         }
     }
 

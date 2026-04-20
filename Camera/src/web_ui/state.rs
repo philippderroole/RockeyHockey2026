@@ -107,7 +107,10 @@ impl SharedRuntimeSettings {
     }
 
     pub fn get(&self) -> RuntimeDetectorSettings {
-        self.settings.lock().map(|guard| *guard).unwrap_or_default()
+        self.settings
+            .lock()
+            .map(|guard| guard.clone())
+            .unwrap_or_default()
     }
 
     pub fn set(&self, next: RuntimeDetectorSettings) {
@@ -120,10 +123,7 @@ impl SharedRuntimeSettings {
 #[derive(Default)]
 struct PreviewFrames {
     detection_jpeg: Option<Vec<u8>>,
-    mask_jpeg: Option<Vec<u8>>,
-    h_mask_jpeg: Option<Vec<u8>>,
-    s_mask_jpeg: Option<Vec<u8>>,
-    v_mask_jpeg: Option<Vec<u8>>,
+    target_previews: Vec<TargetPreviewFrames>,
     latest_log: Option<WebRuntimeLog>,
     frame_count: u64,
     capture_sum_ms: f64,
@@ -151,11 +151,26 @@ pub(super) struct WebRuntimeLog {
 pub(super) struct PreviewSnapshot {
     pub frame: u64,
     pub detection_jpeg: Option<Vec<u8>>,
+    pub target_previews: Vec<TargetPreviewSnapshot>,
+    pub latest_log: Option<WebRuntimeLog>,
+}
+
+#[derive(Default)]
+struct TargetPreviewFrames {
+    target_index: usize,
+    mask_jpeg: Option<Vec<u8>>,
+    h_mask_jpeg: Option<Vec<u8>>,
+    s_mask_jpeg: Option<Vec<u8>>,
+    v_mask_jpeg: Option<Vec<u8>>,
+}
+
+#[derive(Clone)]
+pub(super) struct TargetPreviewSnapshot {
+    pub target_index: usize,
     pub mask_jpeg: Option<Vec<u8>>,
     pub h_mask_jpeg: Option<Vec<u8>>,
     pub s_mask_jpeg: Option<Vec<u8>>,
     pub v_mask_jpeg: Option<Vec<u8>>,
-    pub latest_log: Option<WebRuntimeLog>,
 }
 #[derive(Clone, Serialize)]
 struct WebNormalizedPoint {
@@ -182,62 +197,39 @@ impl SharedPreviewFrames {
 
         let detection_overlay = draw_debug_detection(&processed.original, &processed.output)?;
         let detection_jpeg = encode_jpeg(&detection_overlay)?;
-
-        let mask_jpeg = if let Some(mask) = &processed.green_mask {
-            if mask.empty() {
-                None
-            } else {
-                Some(encode_jpeg(mask)?)
-            }
-        } else {
-            None
-        };
-
-        let h_mask_jpeg = if let Some(mask) = &processed.h_mask {
-            if mask.empty() {
-                None
-            } else {
-                Some(encode_jpeg(mask)?)
-            }
-        } else {
-            None
-        };
-
-        let s_mask_jpeg = if let Some(mask) = &processed.s_mask {
-            if mask.empty() {
-                None
-            } else {
-                Some(encode_jpeg(mask)?)
-            }
-        } else {
-            None
-        };
-
-        let v_mask_jpeg = if let Some(mask) = &processed.v_mask {
-            if mask.empty() {
-                None
-            } else {
-                Some(encode_jpeg(mask)?)
-            }
-        } else {
-            None
-        };
+        let target_previews = processed
+            .target_previews
+            .iter()
+            .map(|preview| -> opencv::Result<TargetPreviewFrames> {
+                Ok(TargetPreviewFrames {
+                    target_index: preview.target_index,
+                    mask_jpeg: encode_optional_mat(&preview.mask)?,
+                    h_mask_jpeg: encode_optional_mat(&preview.h_mask)?,
+                    s_mask_jpeg: encode_optional_mat(&preview.s_mask)?,
+                    v_mask_jpeg: encode_optional_mat(&preview.v_mask)?,
+                })
+            })
+            .collect::<opencv::Result<Vec<_>>>()?;
 
         let total_ms =
             Some(processed.capture_ms.unwrap_or(0.0) + processed.detect_ms.unwrap_or(0.0));
 
         let width = processed.original.cols().max(1) as f64;
         let height = processed.original.rows().max(1) as f64;
-        let detection_point = processed
-            .output
-            .inner
-            .as_ref()
-            .and_then(|detection| detection.detection)
+        let detections = processed.output.inner.as_ref();
+        let detection_point = detections
+            .and_then(|detections| detections.iter().find_map(|detection| detection.detection))
             .map(|point| WebNormalizedPoint {
                 x: (point.x as f64 / width).clamp(0.0, 1.0),
                 y: (point.y as f64 / height).clamp(0.0, 1.0),
             });
-        let detection_found = detection_point.is_some();
+        let detection_found = detections
+            .map(|detections| {
+                detections
+                    .iter()
+                    .any(|detection| detection.detection.is_some())
+            })
+            .unwrap_or(false);
 
         let (lock, condvar) = &*self.frames;
         if let Ok(mut guard) = lock.lock() {
@@ -255,10 +247,7 @@ impl SharedPreviewFrames {
                 guard.total_samples += 1;
             }
             guard.detection_jpeg = Some(detection_jpeg);
-            guard.mask_jpeg = mask_jpeg;
-            guard.h_mask_jpeg = h_mask_jpeg;
-            guard.s_mask_jpeg = s_mask_jpeg;
-            guard.v_mask_jpeg = v_mask_jpeg;
+            guard.target_previews = target_previews;
             guard.latest_log = Some(WebRuntimeLog {
                 frame: guard.frame_count,
                 detection_found,
@@ -303,10 +292,17 @@ impl SharedPreviewFrames {
             return PreviewSnapshot {
                 frame: guard.frame_count,
                 detection_jpeg: guard.detection_jpeg.clone(),
-                mask_jpeg: guard.mask_jpeg.clone(),
-                h_mask_jpeg: guard.h_mask_jpeg.clone(),
-                s_mask_jpeg: guard.s_mask_jpeg.clone(),
-                v_mask_jpeg: guard.v_mask_jpeg.clone(),
+                target_previews: guard
+                    .target_previews
+                    .iter()
+                    .map(|preview| TargetPreviewSnapshot {
+                        target_index: preview.target_index,
+                        mask_jpeg: preview.mask_jpeg.clone(),
+                        h_mask_jpeg: preview.h_mask_jpeg.clone(),
+                        s_mask_jpeg: preview.s_mask_jpeg.clone(),
+                        v_mask_jpeg: preview.v_mask_jpeg.clone(),
+                    })
+                    .collect(),
                 latest_log: guard.latest_log.clone(),
             };
         }
@@ -314,10 +310,7 @@ impl SharedPreviewFrames {
         PreviewSnapshot {
             frame: 0,
             detection_jpeg: None,
-            mask_jpeg: None,
-            h_mask_jpeg: None,
-            s_mask_jpeg: None,
-            v_mask_jpeg: None,
+            target_previews: Vec::new(),
             latest_log: None,
         }
     }
@@ -348,11 +341,26 @@ impl SharedPreviewFrames {
         PreviewSnapshot {
             frame: guard.frame_count,
             detection_jpeg: guard.detection_jpeg.clone(),
-            mask_jpeg: guard.mask_jpeg.clone(),
-            h_mask_jpeg: guard.h_mask_jpeg.clone(),
-            s_mask_jpeg: guard.s_mask_jpeg.clone(),
-            v_mask_jpeg: guard.v_mask_jpeg.clone(),
+            target_previews: guard
+                .target_previews
+                .iter()
+                .map(|preview| TargetPreviewSnapshot {
+                    target_index: preview.target_index,
+                    mask_jpeg: preview.mask_jpeg.clone(),
+                    h_mask_jpeg: preview.h_mask_jpeg.clone(),
+                    s_mask_jpeg: preview.s_mask_jpeg.clone(),
+                    v_mask_jpeg: preview.v_mask_jpeg.clone(),
+                })
+                .collect(),
             latest_log: guard.latest_log.clone(),
         }
     }
+}
+
+fn encode_optional_mat(mat: &opencv::core::Mat) -> opencv::Result<Option<Vec<u8>>> {
+    if mat.empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(encode_jpeg(mat)?))
 }

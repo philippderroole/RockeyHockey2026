@@ -11,19 +11,21 @@ use crate::puck_detector::{
 };
 
 pub struct PuckDetector {
-    lower_green: Scalar,
-    upper_green: Scalar,
+    pub original: Mat,
+    cropped: Mat,
+    resized: Mat,
     settings: DetectorSettings,
-    hsv_thresholds: HsvThresholds,
     morph_kernel: Mat,
+    pub detector_states: Vec<DetectorState>,
+}
+
+pub struct DetectorState {
+    pub hsv_thresholds: HsvThresholds,
     pub buffers: ProcessingBuffers,
 }
 
 #[derive(Default)]
 pub struct ProcessingBuffers {
-    pub original: Mat,
-    cropped: Mat,
-    resized: Mat,
     hsv: Mat,
     h_channel: Mat,
     s_channel: Mat,
@@ -44,72 +46,121 @@ impl PuckDetector {
         Self::with_runtime_settings(RuntimeDetectorSettings {
             detector: settings,
             hsv: HsvThresholds::default(),
+            additional_hsv_targets: Vec::new(),
         })
     }
 
     pub fn with_runtime_settings(runtime_settings: RuntimeDetectorSettings) -> Self {
-        let normalized_hsv = runtime_settings.hsv.normalized();
-        let (lower_green, upper_green) = normalized_hsv.as_scalars();
-
         Self {
-            lower_green,
-            upper_green,
+            original: Mat::default(),
+            cropped: Mat::default(),
+            resized: Mat::default(),
             settings: runtime_settings.detector,
-            hsv_thresholds: normalized_hsv,
             morph_kernel: Mat::default(),
-            buffers: ProcessingBuffers::default(),
+            detector_states: Self::build_detector_states(&runtime_settings),
         }
     }
 
     pub fn apply_runtime_settings(&mut self, runtime_settings: RuntimeDetectorSettings) {
         let old_quality = self.settings.quality;
         self.settings = runtime_settings.detector;
-
-        self.hsv_thresholds = runtime_settings.hsv.normalized();
-        (self.lower_green, self.upper_green) = self.hsv_thresholds.as_scalars();
+        self.detector_states = Self::build_detector_states(&runtime_settings);
 
         if self.settings.quality != old_quality {
             self.morph_kernel = Mat::default();
         }
     }
+
+    pub fn target_previews(&self) -> Vec<TargetPreviewOutput> {
+        self.detector_states
+            .iter()
+            .enumerate()
+            .map(|(target_index, state)| TargetPreviewOutput {
+                target_index,
+                hsv_thresholds: state.hsv_thresholds,
+                mask: state.buffers.cleaned_mask.clone(),
+                h_mask: state.buffers.h_mask.clone(),
+                s_mask: state.buffers.s_mask.clone(),
+                v_mask: state.buffers.v_mask.clone(),
+            })
+            .collect()
+    }
+
+    fn build_detector_states(runtime_settings: &RuntimeDetectorSettings) -> Vec<DetectorState> {
+        let targets = runtime_settings.all_hsv_targets();
+
+        if targets.is_empty() {
+            return vec![DetectorState {
+                hsv_thresholds: HsvThresholds::default().normalized(),
+                buffers: ProcessingBuffers::default(),
+            }];
+        }
+
+        targets
+            .into_iter()
+            .map(|hsv_thresholds| DetectorState {
+                hsv_thresholds: hsv_thresholds.normalized(),
+                buffers: ProcessingBuffers::default(),
+            })
+            .collect()
+    }
 }
 
 impl DetectionPipeline for PuckDetector {
     type CaptureOutput = opencv::Result<()>;
-    type DetectOutput = opencv::Result<DetectionOutput>;
-    type CombinedOutput = opencv::Result<Option<DetectionOutput>>;
+    type DetectOutput = opencv::Result<Vec<DetectionOutput>>;
+    type CombinedOutput = opencv::Result<Vec<Option<DetectionOutput>>>;
 
     fn capture(&mut self, cam: &mut VideoCapture) -> opencv::Result<()> {
-        cam.read(&mut self.buffers.original)?;
+        cam.read(&mut self.original)?;
 
         Ok(())
     }
 
-    fn detect(&mut self) -> opencv::Result<DetectionOutput> {
-        if self.buffers.original.empty() {
-            return Ok(DetectionOutput { detection: None });
+    fn detect(&mut self) -> opencv::Result<Vec<DetectionOutput>> {
+        if self.original.empty() {
+            return Ok(Vec::new());
         }
 
         self.crop()?;
-        self.resize()?;
-        self.create_mask()?;
 
-        let scale_factor = self.settings.quality.scale_factor();
-        let detection = self
-            .detect_center_in_resized_mask()?
-            .map(|center| self.map_center_to_original(center, scale_factor));
+        let quality = self.settings.quality;
+        let scale_factor = quality.scale_factor();
+        self.resize(quality.resize_interpolation(), scale_factor)?;
+        self.ensure_morph_kernel()?;
 
-        Ok(DetectionOutput { detection })
+        let resized = self.resized.clone();
+        let morph_kernel = self.morph_kernel.clone();
+        let crop_rect = self
+            .settings
+            .crop
+            .as_rect(self.original.cols(), self.original.rows());
+
+        let mut detections = Vec::with_capacity(self.detector_states.len());
+        for (target_index, state) in self.detector_states.iter_mut().enumerate() {
+            Self::create_mask(&morph_kernel, &resized, state)?;
+
+            let detection = Self::detect_center_in_resized_mask(state)?
+                .map(|center| Self::map_center_to_original(center, scale_factor, crop_rect));
+
+            detections.push(DetectionOutput {
+                target_index,
+                hsv_thresholds: state.hsv_thresholds,
+                detection,
+            });
+        }
+
+        Ok(detections)
     }
 
     fn capture_and_detect(
         &mut self,
         cam: &mut VideoCapture,
-    ) -> opencv::Result<Option<DetectionOutput>> {
+    ) -> opencv::Result<Vec<Option<DetectionOutput>>> {
         self.capture(cam)?;
         let output = self.detect()?;
 
-        Ok(Some(output))
+        Ok(output.into_iter().map(Some).collect())
     }
 }
 
@@ -124,31 +175,45 @@ impl PuckDetector {
         let crop_rect = self
             .settings
             .crop
-            .as_rect(self.buffers.original.cols(), self.buffers.original.rows());
-        let roi = self.buffers.original.roi(crop_rect)?;
+            .as_rect(self.original.cols(), self.original.rows());
+        let roi = self.original.roi(crop_rect)?;
 
-        self.buffers.cropped = roi.clone_pointee();
+        self.cropped = roi.clone_pointee();
         Ok(())
     }
 
-    fn resize(&mut self) -> opencv::Result<f64> {
-        let quality = self.settings.quality;
-        let scale_factor = quality.scale_factor();
-
+    fn resize(&mut self, quality: i32, scale_factor: f64) -> opencv::Result<f64> {
         imgproc::resize(
-            &self.buffers.cropped,
-            &mut self.buffers.resized,
+            &self.cropped,
+            &mut self.resized,
             Size::new(0, 0),
             scale_factor,
             scale_factor,
-            quality.resize_interpolation(),
+            quality,
         )?;
 
         Ok(scale_factor)
     }
 
-    fn detect_center_in_resized_mask(&self) -> opencv::Result<Option<Point>> {
-        let moments = imgproc::moments(&self.buffers.cleaned_mask, true)?;
+    fn ensure_morph_kernel(&mut self) -> opencv::Result<()> {
+        if !self.morph_kernel.empty() {
+            return Ok(());
+        }
+
+        self.morph_kernel = imgproc::get_structuring_element(
+            MORPH_ELLIPSE,
+            Size::new(
+                self.settings.quality.morphology_kernel_size(),
+                self.settings.quality.morphology_kernel_size(),
+            ),
+            Point::new(-1, -1),
+        )?;
+
+        Ok(())
+    }
+
+    fn detect_center_in_resized_mask(state: &DetectorState) -> opencv::Result<Option<Point>> {
+        let moments = imgproc::moments(&state.buffers.cleaned_mask, true)?;
         if moments.m00.abs() < f64::EPSILON {
             return Ok(None);
         }
@@ -158,12 +223,7 @@ impl PuckDetector {
         Ok(Some(Point::new(center_x, center_y)))
     }
 
-    fn map_center_to_original(&self, center: Point, scale_factor: f64) -> Point {
-        let crop_rect = self
-            .settings
-            .crop
-            .as_rect(self.buffers.original.cols(), self.buffers.original.rows());
-
+    fn map_center_to_original(center: Point, scale_factor: f64, crop_rect: core::Rect) -> Point {
         let inv_scale = if scale_factor <= 0.0 {
             1.0
         } else {
@@ -175,73 +235,58 @@ impl PuckDetector {
         Point::new(mapped_x, mapped_y)
     }
 
-    fn create_mask(&mut self) -> opencv::Result<()> {
-        if self.morph_kernel.empty() {
-            self.morph_kernel = imgproc::get_structuring_element(
-                MORPH_ELLIPSE,
-                Size::new(
-                    self.settings.quality.morphology_kernel_size(),
-                    self.settings.quality.morphology_kernel_size(),
-                ),
-                Point::new(-1, -1),
-            )?;
-        }
-
-        #[cfg(any(target_arch = "arm", all(target_arch = "aarch64", target_os = "linux")))]
+    fn create_mask(
+        morph_kernel: &Mat,
+        resized: &Mat,
+        state: &mut DetectorState,
+    ) -> opencv::Result<()> {
         imgproc::cvt_color(
-            &self.buffers.resized,
-            &mut self.buffers.hsv,
-            COLOR_BGR2HSV,
-            0,
-        )?;
-
-        #[cfg(not(any(target_arch = "arm", all(target_arch = "aarch64", target_os = "linux"))))]
-        imgproc::cvt_color(
-            &self.buffers.resized,
-            &mut self.buffers.hsv,
+            resized,
+            &mut state.buffers.hsv,
             COLOR_BGR2HSV,
             0,
             core::AlgorithmHint::ALGO_HINT_DEFAULT,
         )?;
 
-        core::extract_channel(&self.buffers.hsv, &mut self.buffers.h_channel, 0)?;
-        core::extract_channel(&self.buffers.hsv, &mut self.buffers.s_channel, 1)?;
-        core::extract_channel(&self.buffers.hsv, &mut self.buffers.v_channel, 2)?;
+        core::extract_channel(&state.buffers.hsv, &mut state.buffers.h_channel, 0)?;
+        core::extract_channel(&state.buffers.hsv, &mut state.buffers.s_channel, 1)?;
+        core::extract_channel(&state.buffers.hsv, &mut state.buffers.v_channel, 2)?;
+
+        let (lower_hsv, upper_hsv) = state.hsv_thresholds.as_scalars();
+        core::in_range(
+            &state.buffers.h_channel,
+            &Scalar::all(state.hsv_thresholds.h_min as f64),
+            &Scalar::all(state.hsv_thresholds.h_max as f64),
+            &mut state.buffers.h_mask,
+        )?;
+        core::in_range(
+            &state.buffers.s_channel,
+            &Scalar::all(state.hsv_thresholds.s_min as f64),
+            &Scalar::all(state.hsv_thresholds.s_max as f64),
+            &mut state.buffers.s_mask,
+        )?;
+        core::in_range(
+            &state.buffers.v_channel,
+            &Scalar::all(state.hsv_thresholds.v_min as f64),
+            &Scalar::all(state.hsv_thresholds.v_max as f64),
+            &mut state.buffers.v_mask,
+        )?;
 
         core::in_range(
-            &self.buffers.h_channel,
-            &Scalar::all(self.hsv_thresholds.h_min as f64),
-            &Scalar::all(self.hsv_thresholds.h_max as f64),
-            &mut self.buffers.h_mask,
-        )?;
-        core::in_range(
-            &self.buffers.s_channel,
-            &Scalar::all(self.hsv_thresholds.s_min as f64),
-            &Scalar::all(self.hsv_thresholds.s_max as f64),
-            &mut self.buffers.s_mask,
-        )?;
-        core::in_range(
-            &self.buffers.v_channel,
-            &Scalar::all(self.hsv_thresholds.v_min as f64),
-            &Scalar::all(self.hsv_thresholds.v_max as f64),
-            &mut self.buffers.v_mask,
+            &state.buffers.hsv,
+            &lower_hsv,
+            &upper_hsv,
+            &mut state.buffers.mask,
         )?;
 
-        core::in_range(
-            &self.buffers.hsv,
-            &self.lower_green,
-            &self.upper_green,
-            &mut self.buffers.mask,
-        )?;
-
-        if self.morph_kernel.rows() <= 1 && self.morph_kernel.cols() <= 1 {
-            std::mem::swap(&mut self.buffers.mask, &mut self.buffers.cleaned_mask);
+        if morph_kernel.rows() <= 1 && morph_kernel.cols() <= 1 {
+            std::mem::swap(&mut state.buffers.mask, &mut state.buffers.cleaned_mask);
         } else {
             imgproc::morphology_ex(
-                &self.buffers.mask,
-                &mut self.buffers.cleaned_mask,
+                &state.buffers.mask,
+                &mut state.buffers.cleaned_mask,
                 MORPH_OPEN,
-                &self.morph_kernel,
+                morph_kernel,
                 Point::new(-1, -1),
                 1,
                 core::BORDER_CONSTANT,
@@ -253,6 +298,19 @@ impl PuckDetector {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct DetectionOutput {
+    pub target_index: usize,
+    pub hsv_thresholds: HsvThresholds,
     pub detection: Option<Point>,
+}
+
+#[derive(Clone)]
+pub struct TargetPreviewOutput {
+    pub target_index: usize,
+    pub hsv_thresholds: HsvThresholds,
+    pub mask: Mat,
+    pub h_mask: Mat,
+    pub s_mask: Mat,
+    pub v_mask: Mat,
 }

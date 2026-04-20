@@ -6,6 +6,7 @@ use opencv::{core::Mat, videoio::VideoCapture};
 
 use crate::puck_detector::{
     DetectionOutput, DetectionPipeline, DetectorSettings, PuckDetector, RuntimeDetectorSettings,
+    TargetPreviewOutput,
 };
 
 pub struct TimedPuckDetector<T> {
@@ -57,7 +58,7 @@ impl TimedPuckDetector<PuckDetector> {
     }
 
     pub fn detect_current_frame(&mut self) -> opencv::Result<Option<TimedFrameProcessing>> {
-        if self.inner.buffers.original.empty() {
+        if self.inner.original.empty() {
             return Ok(None);
         }
 
@@ -65,12 +66,9 @@ impl TimedPuckDetector<PuckDetector> {
         let detect_ms = detect_output.detect_ms;
 
         Ok(Some(TimedFrameProcessing {
-            original: self.inner.buffers.original.clone(),
+            original: self.inner.original.clone(),
             output: detect_output,
-            green_mask: Some(self.inner.buffers.cleaned_mask.clone()),
-            h_mask: Some(self.inner.buffers.h_mask.clone()),
-            s_mask: Some(self.inner.buffers.s_mask.clone()),
-            v_mask: Some(self.inner.buffers.v_mask.clone()),
+            target_previews: self.inner.target_previews(),
             capture_ms: None,
             detect_ms: Some(detect_ms),
         }))
@@ -131,7 +129,7 @@ impl DetectionPipeline for TimedPuckDetector<PuckDetector> {
     ) -> opencv::Result<Option<TimedFrameProcessing>> {
         let capture_output = self.capture(cam)?;
 
-        if self.inner.buffers.original.empty() {
+        if self.inner.original.empty() {
             return Ok(None);
         }
 
@@ -141,12 +139,9 @@ impl DetectionPipeline for TimedPuckDetector<PuckDetector> {
         let detect_ms = detect_output.detect_ms;
 
         Ok(Some(TimedFrameProcessing {
-            original: self.inner.buffers.original.clone(),
+            original: self.inner.original.clone(),
             output: detect_output,
-            green_mask: Some(self.inner.buffers.cleaned_mask.clone()),
-            h_mask: Some(self.inner.buffers.h_mask.clone()),
-            s_mask: Some(self.inner.buffers.s_mask.clone()),
-            v_mask: Some(self.inner.buffers.v_mask.clone()),
+            target_previews: self.inner.target_previews(),
             capture_ms: Some(capture_ms),
             detect_ms: Some(detect_ms),
         }))
@@ -154,7 +149,7 @@ impl DetectionPipeline for TimedPuckDetector<PuckDetector> {
 }
 
 pub struct TimedDetectionOutput {
-    pub inner: Option<DetectionOutput>,
+    pub inner: Option<Vec<DetectionOutput>>,
     detect_ms: f64,
 }
 
@@ -166,10 +161,7 @@ pub struct TimedCaptureOutput {
 pub struct TimedFrameProcessing {
     pub original: Mat,
     pub output: TimedDetectionOutput,
-    pub green_mask: Option<Mat>,
-    pub h_mask: Option<Mat>,
-    pub s_mask: Option<Mat>,
-    pub v_mask: Option<Mat>,
+    pub target_previews: Vec<TargetPreviewOutput>,
     pub capture_ms: Option<f64>,
     pub detect_ms: Option<f64>,
 }

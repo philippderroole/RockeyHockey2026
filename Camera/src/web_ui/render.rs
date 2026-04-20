@@ -15,22 +15,32 @@ pub(super) fn draw_debug_detection(
     let mut output = image.clone();
 
     if let Some(result) = output_data.inner.as_ref() {
-        if result.detection.is_none() {
-            return Ok(output);
+        for detection in result.iter() {
+            if let Some(point) = detection.detection {
+                imgproc::circle(
+                    &mut output,
+                    point,
+                    10,
+                    detection_color(detection.target_index),
+                    2,
+                    LINE_8,
+                    0,
+                )?;
+            }
         }
-
-        imgproc::circle(
-            &mut output,
-            result.detection.unwrap(),
-            10,
-            Scalar::new(0.0, 0.0, 255.0, 0.0),
-            2,
-            LINE_8,
-            0,
-        )?;
     }
 
     Ok(output)
+}
+
+fn detection_color(target_index: usize) -> Scalar {
+    match target_index % 5 {
+        0 => Scalar::new(0.0, 0.0, 255.0, 0.0),
+        1 => Scalar::new(0.0, 255.0, 0.0, 0.0),
+        2 => Scalar::new(255.0, 0.0, 0.0, 0.0),
+        3 => Scalar::new(0.0, 255.0, 255.0, 0.0),
+        _ => Scalar::new(255.0, 0.0, 255.0, 0.0),
+    }
 }
 
 pub(super) fn encode_jpeg(image: &Mat) -> opencv::Result<Vec<u8>> {
