@@ -52,7 +52,7 @@ impl WebUiShared {
         detector.update_runtime_settings(self.settings.get());
     }
 
-    fn publish_processed(&self, processed: &TimedFrameProcessing) -> opencv::Result<()> {
+    fn publish_processed(&self, processed: &TimedFrameProcessing) -> anyhow::Result<()> {
         self.previews.update_from_processed(processed)
     }
 
@@ -62,7 +62,7 @@ impl WebUiShared {
 }
 
 pub trait DetectorRunner {
-    fn run_step(&mut self, cam: &mut VideoCapture) -> opencv::Result<bool>;
+    fn run_step(&mut self, cam: &mut VideoCapture) -> anyhow::Result<bool>;
 }
 
 pub struct PlainDetectorRunner {
@@ -78,7 +78,7 @@ impl PlainDetectorRunner {
 }
 
 impl DetectorRunner for PlainDetectorRunner {
-    fn run_step(&mut self, cam: &mut VideoCapture) -> opencv::Result<bool> {
+    fn run_step(&mut self, cam: &mut VideoCapture) -> anyhow::Result<bool> {
         Ok(self.detector.capture_and_detect(cam)?.is_some())
     }
 }
@@ -94,7 +94,7 @@ impl WebUiDetectorRunner {
     pub(super) fn with_web_ui(
         port: u16,
         runtime_settings: RuntimeDetectorSettings,
-    ) -> opencv::Result<Self> {
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             detector: TimedPuckDetector::with_runtime_settings(runtime_settings),
             web_ui: WebUiShared::from_runtime_settings(port, runtime_settings)?,
@@ -105,7 +105,7 @@ impl WebUiDetectorRunner {
 }
 
 impl DetectorRunner for WebUiDetectorRunner {
-    fn run_step(&mut self, cam: &mut VideoCapture) -> opencv::Result<bool> {
+    fn run_step(&mut self, cam: &mut VideoCapture) -> anyhow::Result<bool> {
         self.web_ui.apply_settings_to(&mut self.detector);
 
         let playback = self.web_ui.playback_snapshot();

@@ -174,7 +174,7 @@ impl SharedPreviewFrames {
         }
     }
 
-    pub fn update_from_processed(&self, processed: &TimedFrameProcessing) -> opencv::Result<()> {
+    pub fn update_from_processed(&self, processed: &TimedFrameProcessing) -> anyhow::Result<()> {
         if processed.original.empty() {
             return Ok(());
         }
