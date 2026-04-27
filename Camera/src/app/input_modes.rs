@@ -1,6 +1,5 @@
-use opencv::Error;
-use opencv::core::StsError;
-use opencv::videoio::{CAP_ANY, VideoCapture, VideoCaptureTraitConst};
+use anyhow::anyhow;
+use opencv::videoio::{CAP_ANY, CAP_GSTREAMER, VideoCapture, VideoCaptureTraitConst};
 
 use super::runner::DetectorRunner;
 
@@ -15,7 +14,7 @@ impl InputSource {
         match self {
             Self::VideoFile(path) => self.open_video_capture(path),
             Self::Camera(index) => self.open_camera_capture(*index),
-            Self::PiCamera => Err(anyhow!("PiCamera input mode not implemented yet",)),
+            Self::PiCamera => self.open_pi_camera_capture(),
         }
     }
 
@@ -31,6 +30,16 @@ impl InputSource {
         let cam = VideoCapture::new(index, CAP_ANY)?; // Open default camera
         if !VideoCapture::is_opened(&cam)? {
             return Err(anyhow!("Could not open camera"));
+        }
+        Ok(cam)
+    }
+
+    fn open_pi_camera_capture(&self) -> anyhow::Result<VideoCapture> {
+        let pipeline = "libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! appsink";
+
+        let cam = VideoCapture::from_file(pipeline, CAP_GSTREAMER)?;
+        if !VideoCapture::is_opened(&cam)? {
+            return Err(anyhow!("Could not open PiCamera with GStreamer pipeline"));
         }
         Ok(cam)
     }

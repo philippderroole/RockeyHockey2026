@@ -1,5 +1,5 @@
-mod input_modes;
-mod runner;
+pub mod input_modes;
+pub mod runner;
 
 use rockey_hockey::puck_detector::RuntimeDetectorSettings;
 
@@ -8,7 +8,7 @@ use crate::app::input_modes::InputSource;
 use self::runner::{DetectorRunner, PlainDetectorRunner, WebUiDetectorRunner};
 
 pub struct RunConfig {
-    pub video_path: Option<String>,
+    pub input_source: InputSource,
     pub web_ui_enabled: bool,
     pub web_ui_port: u16,
 }
@@ -17,12 +17,7 @@ pub fn run(config: RunConfig) -> anyhow::Result<()> {
     let runtime_settings = RuntimeDetectorSettings::default();
 
     let mut runner = create_runner(config.web_ui_enabled, config.web_ui_port, runtime_settings)?;
-
-    if let Some(video_path) = config.video_path {
-        return input_modes::run_capture_loop(&mut *runner, InputSource::VideoFile(video_path));
-    }
-
-    input_modes::run_capture_loop(&mut *runner, InputSource::Camera(0))
+    input_modes::run_capture_loop(&mut *runner, config.input_source)
 }
 
 fn create_runner(
