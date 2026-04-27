@@ -4,43 +4,45 @@ import time
 if __name__ == "__main__":
     
     controller = None
+    # Use "MOCK" for testing without hardware
+    port = "COM3" 
+    baudrate = "115200"
+
+    print(f"--- Starting StepperController Test on {port} ---")
+
     try:
-            controller = StepperController("MOCK", "115200")
-            controller.connect()
-    except Exception as e:
-        print(f"ERROR: Could not connect. {e}")
-        controller = None
-
-    if controller:
-        print("\nStarting Test Sequence")
-        controller.calibrate()
-        time.sleep(1)
+        controller = StepperController(port, baudrate)
         
-        controller.move_to_position(925,100)
-        controller.move_to_position(1000,1700)
-        controller.move_to_position(100,100)
-        controller.move_to_position(300,100)
-        controller.move_to_position(1700,1700)
-        controller.move_to_position(100,1700)
-        controller.move_to_position(1700,100)
-        controller.move_to_position(500,500)
-        time.sleep(1)
-        controller.move_to_position(925,100)
+        print("\n1. Testing connect()...")
+        controller.connect()
+        
+        print("\n2. Testing send_command()...")
+        # Send a harmless command to check communication
+        response = controller.send_command("$I")
+        print(f"Response: {response}")
 
-        print("Test Sequence Complete")
+        print("\n3. Testing calibrate()...")
+        controller.calibrate()
 
+        print("\n4. Testing move_to_position()...")
+        controller.move_to_position(170, 10)
+        controller.move_to_position(180, 350)
+        
+        print("\n5. Testing wait_for_idle()...")
+        controller.wait_for_idle()
+        print("Machine is idle.")
 
-    
-    #print("sadfasdf")
-    #print(moveWorker.set_values("NORMAL", 925, 100))
-    #moveWorker.set_values("NORMAL", 1700, 1700)
-    #moveWorker.set_values("NORMAL", 100, 1700)
-    #moveWorker.set_values("NORMAL", 100, 100)
-    #moveWorker.set_values("NORMAL", 925, 100)
-    
+        print("\n6. Testing cancel_jog()...")
+        controller.move_to_position(10, 10)
+        controller.cancel_jog()
+        print("Jog cancelled.")
 
-    # print(controller.attack(1700,1700))
-    #moveWorker.set_values("ATTACK", 1000, 1000)
-    # controller.move_to_position(925, 100)
-    
-    # controller.attack(1000,1000)
+        print("\n7. Testing disconnect()...")
+        controller.disconnect()
+
+        print("\n--- StepperController methods tested successfully ---")
+
+    except Exception as e:
+        print(f"\nERROR during testing: {e}")
+        if controller:
+            controller.disconnect()

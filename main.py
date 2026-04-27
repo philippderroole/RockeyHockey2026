@@ -1217,9 +1217,6 @@ class MainWindow(QMainWindow):
                                         TABLE_MAX_X,
                                         TABLE_MAX_Y,
                                     )
-                    
-                    if self.stepperController is not None:
-                        self.stepperController.updateRobotPos(newRobotX,newRobotY, self.data.syncRobotPosition)
 
                     frame = self.controller.update(data)
                     self.updatePostCalculationUi(frame)

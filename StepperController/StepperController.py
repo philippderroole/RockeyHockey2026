@@ -116,7 +116,7 @@ class StepperController:
         self.cancel_jog()
         
         # Issue the new Jog command
-        command = f"$J=G90 X{x} Y{y} F{feedrate}"
+        command = f"$J=G21G91X{x}Y{y}F{feedrate}"
         self.send_command(command)
 
     def calibrate(self):
@@ -129,20 +129,6 @@ class StepperController:
         self.send_command("G92 X0 Y0")
         print("Homing complete.")
         return "OK"
-
-    def set_offset(self, x, y):
-        """Uses Relative Coordinates to jog the machine."""
-        command = f"G91\nG0 X{x} Y{y}\nG90"
-        self.send_command(command)
-        self.wait_for_idle()
-
-    def updateRobotPos(self, x, y, syncRobotPosition):
-        moveX = TABLE_MAX_X - x
-        self.camRobotPositionX = int(moveX)    
-        self.camRobotPositionY = int(y)
-        self.syncRobotPosition = syncRobotPosition
-        if syncRobotPosition:
-            print('synchRobotPosition=True')
 
     def disconnect(self):
         if self.connection:
