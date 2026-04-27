@@ -1,5 +1,6 @@
 use clap::Parser;
-use rockey_hockey::pi_camera;
+
+use app::input_modes::InputSource;
 
 mod app;
 
@@ -26,7 +27,13 @@ fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
     app::run(app::RunConfig {
-        video_path: args.video,
+        input_source: if let Some(video_path) = args.video {
+            InputSource::VideoFile(video_path)
+        } else if args.pi_camera {
+            InputSource::PiCamera
+        } else {
+            InputSource::Camera(0)
+        },
         web_ui_enabled: args.web_ui,
         web_ui_port: args.web_ui_port,
     })
