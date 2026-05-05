@@ -30,11 +30,16 @@ app.get("/", (req, res) => {
 function onGoalSensor(pin) {
     rpio.poll(botGoalPin, null);
     rpio.poll(playerGoalPin, null);
+
+    let pointsToAdd = 1;
+    if (eventActive) {
+        pointsToAdd = 2;
+    }
     if (rpio.read(pin)) { // only give points when puck entered light barrier
         if (pin === playerGoalPin)
-            botScore++;
+            botScore += pointsToAdd;
         else if (pin == botGoalPin)
-            playerScore++;
+            playerScore += pointsToAdd;
     }
     
     setTimeout(() => {
@@ -45,6 +50,14 @@ function onGoalSensor(pin) {
     }, 1000);
 }
 
+app.get('/event/start', (req, res) => {
+    eventActive = true;
+    res.send("event started");
+});
+app.get('/event/stop', (req, res) => {
+    eventActive = true;
+    res.send("event stopped");
+});
 app.get('/state', (req, res) => {
     res.json({"playerScore": playerScore, "botScore": botScore});
 });
