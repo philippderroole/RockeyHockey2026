@@ -63,7 +63,7 @@
 
         .board {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 1fr;
             gap: 14px;
         }
 
@@ -73,12 +73,6 @@
             border-radius: var(--radius);
             padding: 12px;
             box-shadow: 0 8px 20px rgba(31, 46, 37, 0.06);
-        }
-
-        .preview-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
         }
 
         .preview-card {
@@ -338,17 +332,7 @@
             background: rgba(255, 255, 255, 0.6);
         }
 
-        @media (max-width: 1050px) {
-            .board {
-                grid-template-columns: 1fr;
-            }
-        }
-
         @media (max-width: 680px) {
-            .preview-grid {
-                grid-template-columns: 1fr;
-            }
-
             .playback {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -364,31 +348,6 @@
         </header>
 
         <section class="board">
-            <section class="panel">
-                <div class="preview-grid">
-                    <article class="preview-card">
-                        <h3>Detection</h3>
-                        <img id="preview-detection" class="preview" alt="Detection preview" />
-                    </article>
-                    <article class="preview-card">
-                        <h3>Mask</h3>
-                        <img id="preview-mask" class="preview" alt="Mask preview" />
-                    </article>
-                    <article class="preview-card">
-                        <h3>Hue Mask</h3>
-                        <img id="preview-h-mask" class="preview" alt="Hue mask preview" />
-                    </article>
-                    <article class="preview-card">
-                        <h3>Saturation Mask</h3>
-                        <img id="preview-s-mask" class="preview" alt="Saturation mask preview" />
-                    </article>
-                    <article class="preview-card">
-                        <h3>Value Mask</h3>
-                        <img id="preview-v-mask" class="preview" alt="Value mask preview" />
-                    </article>
-                </div>
-            </section>
-
             <aside class="stack">
                 <section class="section">
                     <h2>Playback</h2>
@@ -404,8 +363,6 @@
                 <section class="section">
                     <h2>Runtime</h2>
                     <div class="metric-grid">
-                        <span>Detection</span><strong id="log-detection">-</strong>
-                        <span>Virtual XY</span><strong id="log-virtual">-</strong>
                         <span>Capture ms</span><strong id="log-capture">-</strong>
                         <span>Detect ms</span><strong id="log-detect">-</strong>
                         <span>Total ms</span><strong id="log-total">-</strong>
