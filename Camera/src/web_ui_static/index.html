@@ -265,19 +265,32 @@
         .target-list {
             display: grid;
             gap: 12px;
-            max-height: 68vh;
-            overflow: auto;
-            padding-right: 2px;
         }
 
-        .target-card {
+        .target-drawer {
             border: 1px solid var(--line);
             border-radius: 12px;
-            padding: 10px;
             background: #fcfffb;
             box-shadow: 0 6px 16px rgba(31, 46, 37, 0.05);
-            display: grid;
-            gap: 10px;
+            overflow: hidden;
+        }
+
+        .target-drawer summary {
+            padding: 12px 12px 10px;
+            color: #294336;
+            font-size: 0.92rem;
+        }
+
+        .target-drawer .drawer-body {
+            padding: 10px;
+        }
+
+        .target-drawer .drawer-toolbar {
+            align-items: flex-start;
+        }
+
+        .target-drawer .target-summary {
+            margin-top: 4px;
         }
 
         .target-head {
