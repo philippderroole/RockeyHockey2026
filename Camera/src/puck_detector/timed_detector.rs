@@ -28,15 +28,15 @@ impl<T> TimedPuckDetector<T> {
         }
     }
 
-    fn measure_execution_time<F, R>(func: F) -> (R, f64)
+    fn measure_execution_time<F, R>(func: F) -> opencv::Result<(R, f64)>
     where
-        F: FnOnce() -> R,
+        F: FnOnce() -> opencv::Result<R>,
     {
         let start = Instant::now();
         let result = func();
         let elapsed = start.elapsed();
         let elapsed_ms = elapsed.as_secs_f64() * 1000.0;
-        (result, elapsed_ms)
+        Ok((result?, elapsed_ms))
     }
 }
 
@@ -87,15 +87,17 @@ impl DetectionPipeline for TimedPuckDetector<PuckDetector> {
     type CombinedOutput = opencv::Result<Option<TimedFrameProcessing>>;
 
     fn capture(&mut self, cam: &mut VideoCapture) -> opencv::Result<TimedCaptureOutput> {
-        let (_, capture_ms) = Self::measure_execution_time(|| self.inner.capture(cam));
+        let ((), capture_ms) = Self::measure_execution_time(|| self.inner.capture(cam))?;
 
         self.total_capture_ms += capture_ms;
         self.capture_frame_count += 1;
 
         let avg_capture_ms = self.total_capture_ms / self.capture_frame_count as f64;
         info!(
-            "Total: {:.2}ms (Capture: {:.2}ms | Detect: n/a) | Avg: {:.2}ms",
-            self.total_capture_ms, capture_ms, avg_capture_ms
+            "Capture: {capture_ms:.2}ms | Total: {total:.2}ms | Avg: {avg:.2}ms",
+            capture_ms = capture_ms,
+            total = self.total_capture_ms,
+            avg = avg_capture_ms
         );
 
         Ok(TimedCaptureOutput {
@@ -105,7 +107,7 @@ impl DetectionPipeline for TimedPuckDetector<PuckDetector> {
     }
 
     fn detect(&mut self) -> opencv::Result<TimedDetectionOutput> {
-        let (processed, detect_ms) = Self::measure_execution_time(|| self.inner.detect());
+        let (processed_vec, detect_ms) = Self::measure_execution_time(|| self.inner.detect())?;
 
         self.detection_frame_count += 1;
         self.total_detect_ms += detect_ms;
@@ -113,12 +115,14 @@ impl DetectionPipeline for TimedPuckDetector<PuckDetector> {
         let avg_elapsed_ms = self.total_detect_ms / self.detection_frame_count as f64;
 
         info!(
-            "Total: {:.2}ms (Capture: n/a | Detect: {:.2}ms) | Avg: {:.2}ms",
-            self.total_detect_ms, detect_ms, avg_elapsed_ms
+            "Detect: {detect_ms:.2}ms | Total: {total:.2}ms | Avg: {avg:.2}ms",
+            detect_ms = detect_ms,
+            total = self.total_detect_ms,
+            avg = avg_elapsed_ms
         );
 
         Ok(TimedDetectionOutput {
-            inner: Some(processed?),
+            inner: Some(processed_vec),
             detect_ms,
         })
     }

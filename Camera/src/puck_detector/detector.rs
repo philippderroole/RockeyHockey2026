@@ -14,6 +14,7 @@ pub struct PuckDetector {
     pub original: Mat,
     cropped: Mat,
     resized: Mat,
+    frame_buffers: ProcessingBuffers,
     settings: DetectorSettings,
     morph_kernel: Mat,
     pub detector_states: Vec<DetectorState>,
@@ -56,6 +57,7 @@ impl PuckDetector {
             original: Mat::default(),
             cropped: Mat::default(),
             resized: Mat::default(),
+            frame_buffers: ProcessingBuffers::default(),
             settings: runtime_settings.detector,
             morph_kernel: Mat::default(),
             detector_states: Self::build_detector_states(&runtime_settings),
@@ -69,6 +71,7 @@ impl PuckDetector {
 
         if self.settings.quality != old_quality {
             self.morph_kernel = Mat::default();
+            self.frame_buffers = ProcessingBuffers::default();
         }
     }
 
@@ -130,16 +133,40 @@ impl DetectionPipeline for PuckDetector {
         self.resize(quality.resize_interpolation(), scale_factor)?;
         self.ensure_morph_kernel()?;
 
-        let resized = self.resized.clone();
-        let morph_kernel = self.morph_kernel.clone();
+        let morph_kernel = &self.morph_kernel;
         let crop_rect = self
             .settings
             .crop
             .as_rect(self.original.cols(), self.original.rows());
 
+        // Convert resized frame to HSV once and extract channels into frame-level buffers
+        imgproc::cvt_color(
+            &self.resized,
+            &mut self.frame_buffers.hsv,
+            COLOR_BGR2HSV,
+            0,
+            core::AlgorithmHint::ALGO_HINT_DEFAULT,
+        )?;
+
+        core::extract_channel(
+            &self.frame_buffers.hsv,
+            &mut self.frame_buffers.h_channel,
+            0,
+        )?;
+        core::extract_channel(
+            &self.frame_buffers.hsv,
+            &mut self.frame_buffers.s_channel,
+            1,
+        )?;
+        core::extract_channel(
+            &self.frame_buffers.hsv,
+            &mut self.frame_buffers.v_channel,
+            2,
+        )?;
+
         let mut detections = Vec::with_capacity(self.detector_states.len());
         for (target_index, state) in self.detector_states.iter_mut().enumerate() {
-            Self::create_mask(&morph_kernel, &resized, state)?;
+            Self::create_mask(&morph_kernel, &self.frame_buffers, state)?;
 
             let detection = Self::detect_center_in_resized_mask(state)?
                 .map(|center| Self::map_center_to_original(center, scale_factor, crop_rect));
@@ -238,43 +265,32 @@ impl PuckDetector {
 
     fn create_mask(
         morph_kernel: &Mat,
-        resized: &Mat,
+        frame_buffers: &ProcessingBuffers,
         state: &mut DetectorState,
     ) -> opencv::Result<()> {
-        imgproc::cvt_color(
-            resized,
-            &mut state.buffers.hsv,
-            COLOR_BGR2HSV,
-            0,
-            core::AlgorithmHint::ALGO_HINT_DEFAULT,
-        )?;
-
-        core::extract_channel(&state.buffers.hsv, &mut state.buffers.h_channel, 0)?;
-        core::extract_channel(&state.buffers.hsv, &mut state.buffers.s_channel, 1)?;
-        core::extract_channel(&state.buffers.hsv, &mut state.buffers.v_channel, 2)?;
-
         let (lower_hsv, upper_hsv) = state.hsv_thresholds.as_scalars();
+
         core::in_range(
-            &state.buffers.h_channel,
+            &frame_buffers.h_channel,
             &Scalar::all(state.hsv_thresholds.h_min as f64),
             &Scalar::all(state.hsv_thresholds.h_max as f64),
             &mut state.buffers.h_mask,
         )?;
         core::in_range(
-            &state.buffers.s_channel,
+            &frame_buffers.s_channel,
             &Scalar::all(state.hsv_thresholds.s_min as f64),
             &Scalar::all(state.hsv_thresholds.s_max as f64),
             &mut state.buffers.s_mask,
         )?;
         core::in_range(
-            &state.buffers.v_channel,
+            &frame_buffers.v_channel,
             &Scalar::all(state.hsv_thresholds.v_min as f64),
             &Scalar::all(state.hsv_thresholds.v_max as f64),
             &mut state.buffers.v_mask,
         )?;
 
         core::in_range(
-            &state.buffers.hsv,
+            &frame_buffers.hsv,
             &lower_hsv,
             &upper_hsv,
             &mut state.buffers.mask,
