@@ -17,6 +17,14 @@
     width: 100%;
     height: auto;
 }
+#player-image {
+    position: absolute;
+    width:19%;
+    height: auto;
+    left: 550px;
+    top: 100px;
+    z-index: 3;
+}
 
 .background-video {
     position: fixed;
