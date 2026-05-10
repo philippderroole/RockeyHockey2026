@@ -26,6 +26,7 @@
             },
             hsv: createDefaultTarget(),
             additional_hsv_targets: [],
+            target_names: ["Primary target"],
             virtual_coordinates: {
                 enabled: false,
                 x_size: 100,
@@ -55,6 +56,9 @@
         if (!Array.isArray(next.additional_hsv_targets)) {
             next.additional_hsv_targets = [];
         }
+        if (!Array.isArray(next.target_names)) {
+            next.target_names = [];
+        }
         if (!next.virtual_coordinates) {
             next.virtual_coordinates = createDefaultSettings().virtual_coordinates;
         }
@@ -62,7 +66,21 @@
             next.virtual_coordinates.corners = createDefaultSettings().virtual_coordinates.corners;
         }
 
+        const targetCount = 1 + next.additional_hsv_targets.length;
+        next.target_names = Array.from({ length: targetCount }, (_, index) => {
+            const name = next.target_names[index];
+            return typeof name === "string" && name.trim().length > 0
+                ? name.trim()
+                : defaultTargetName(index);
+        });
+
         return next;
+    }
+
+    function defaultTargetName(targetIndex) {
+        return targetIndex === 0
+            ? "Primary target"
+            : `Target ${targetIndex + 1}`;
     }
 
     const elements = {
@@ -107,6 +125,7 @@
             pause: document.getElementById("playback-pause"),
             reprocess: document.getElementById("playback-reprocess"),
             next: document.getElementById("playback-next"),
+            stopMissing: document.getElementById("playback-stop-missing"),
             saveTopLeft: document.getElementById("save-top-left"),
             saveTopRight: document.getElementById("save-top-right"),
             saveBottomLeft: document.getElementById("save-bottom-left"),
@@ -122,6 +141,9 @@
         settings: null,
         previewTargets: [],
         playbackPaused: false,
+        detectionFound: true,
+        stopOnMissingDetection: false,
+        editingTargetSettings: false,
         latestPoint: null,
         lastSyncFailed: false,
         dirtyFromUser: false,
@@ -206,7 +228,7 @@
         `;
     }
 
-    function createTargetCard(target, targetIndex) {
+    function createTargetCard(target, targetIndex, targetName) {
         const card = document.createElement("article");
         card.className = "target-card";
         card.dataset.targetCard = "true";
@@ -219,6 +241,16 @@
             <div class="target-head">
                 <div>
                     <h3>${title}</h3>
+                    <label class="target-name-row">
+                        <span>Name</span>
+                        <input
+                            type="text"
+                            class="target-name-input"
+                            data-target-name="true"
+                            maxlength="48"
+                            value=""
+                        />
+                    </label>
                     <p>${subtitle}</p>
                     <p class="target-summary">${formatTargetSummary(target)}</p>
                 </div>
@@ -242,7 +274,18 @@
             </div>
         `;
 
+        const nameInput = card.querySelector("[data-target-name='true']");
+        if (nameInput) {
+            nameInput.value = targetName || defaultTargetName(targetIndex);
+        }
+
         return card;
+    }
+
+    function readTargetNameFromCard(card, targetIndex) {
+        const input = card.querySelector("[data-target-name='true']");
+        const value = input ? String(input.value || "").trim() : "";
+        return value.length > 0 ? value : defaultTargetName(targetIndex);
     }
 
     function readTargetValue(card, field, fallback) {
@@ -344,12 +387,18 @@
         elements.targets.editor.innerHTML = "";
 
         targets.forEach((target, targetIndex) => {
-            const card = createTargetCard(target, targetIndex);
+            const card = createTargetCard(target, targetIndex, normalized.target_names[targetIndex]);
             elements.targets.editor.appendChild(card);
 
             ["h_min", "h_max", "s_min", "s_max", "v_min", "v_max"].forEach((field) => {
                 bindTargetPair(card, field);
             });
+
+            const nameInput = card.querySelector("[data-target-name='true']");
+            if (nameInput) {
+                nameInput.addEventListener("input", scheduleSettingsUpdate);
+                nameInput.addEventListener("change", scheduleSettingsUpdate);
+            }
 
             const removeButton = card.querySelector('[data-action="remove-target"]');
             if (removeButton) {
@@ -368,11 +417,13 @@
         }
 
         next.additional_hsv_targets.splice(additionalIndex, 1);
-        state.settings = next;
+        next.target_names.splice(targetIndex, 1);
+        const normalized = normalizeSettings(next);
+        state.settings = normalized;
         state.dirtyFromUser = true;
-        renderTargetDrawer(next);
+        renderTargetDrawer(normalized);
 
-        sendCameraEvent("update_settings", { settings: next }).then(() => {
+        sendCameraEvent("update_settings", { settings: normalized }).then(() => {
             state.dirtyFromUser = false;
         }).catch((error) => {
             setStatus(`Failed to update settings: ${error.message}`, true);
@@ -385,11 +436,12 @@
         const source = existingTargets[existingTargets.length - 1] || createDefaultTarget();
 
         next.additional_hsv_targets.push(cloneSettings(source));
-        state.settings = next;
+        const normalized = normalizeSettings(next);
+        state.settings = normalized;
         state.dirtyFromUser = true;
-        renderTargetDrawer(next);
+        renderTargetDrawer(normalized);
 
-        sendCameraEvent("update_settings", { settings: next }).then(() => {
+        sendCameraEvent("update_settings", { settings: normalized }).then(() => {
             state.dirtyFromUser = false;
         }).catch((error) => {
             setStatus(`Failed to update settings: ${error.message}`, true);
@@ -414,7 +466,16 @@
         c.virtualXSize.value = settings.virtual_coordinates.x_size;
         c.virtualYSize.value = settings.virtual_coordinates.y_size;
 
-        renderTargetDrawer(settings);
+        if (!isTargetEditorFocused()) {
+            renderTargetDrawer(settings);
+        }
+    }
+
+    function isTargetEditorFocused() {
+        return Boolean(
+            elements.targets.editor &&
+            elements.targets.editor.contains(doc.activeElement),
+        );
     }
 
     function collectSettingsFromControls() {
@@ -447,6 +508,7 @@
         if (targets.length > 0) {
             next.hsv = readTargetFromCard(targets[0]);
             next.additional_hsv_targets = targets.slice(1).map((card) => readTargetFromCard(card));
+            next.target_names = targets.map((card, index) => readTargetNameFromCard(card, index));
         }
 
         return next;
@@ -482,6 +544,7 @@
     }
 
     function applyRuntimeLog(log) {
+        state.detectionFound = Boolean(log.detection_found);
         state.latestPoint = log.detection_point || null;
         elements.runtime.capture.textContent = formatMs(log.capture_ms);
         elements.runtime.detect.textContent = formatMs(log.detect_ms);
@@ -489,6 +552,33 @@
         elements.runtime.captureAvg.textContent = formatMs(log.avg_capture_ms);
         elements.runtime.detectAvg.textContent = formatMs(log.avg_detect_ms);
         elements.runtime.totalAvg.textContent = formatMs(log.avg_total_ms);
+
+        if (state.stopOnMissingDetection && !state.detectionFound) {
+            stopPlaybackOnMissingDetection();
+        }
+    }
+
+    function updateStopMissingButton() {
+        const button = elements.buttons.stopMissing;
+        if (!button) {
+            return;
+        }
+
+        button.textContent = state.stopOnMissingDetection
+            ? "Stop on Missing (Armed)"
+            : "Stop on Missing";
+        button.classList.toggle("active", state.stopOnMissingDetection);
+    }
+
+    function stopPlaybackOnMissingDetection() {
+        state.stopOnMissingDetection = false;
+        updateStopMissingButton();
+
+        sendCameraEvent("playback", { paused: true }).catch((error) => {
+            setStatus(`Playback update failed: ${error.message}`, true);
+        });
+
+        setStatus("Playback stopped because detection was missing", false);
     }
 
     function applyStreamPayload(payload) {
@@ -698,6 +788,18 @@
             elements.targets.add.addEventListener("click", addTarget);
         }
 
+        if (elements.targets.editor) {
+            elements.targets.editor.addEventListener("focusin", () => {
+                state.editingTargetSettings = true;
+            });
+
+            elements.targets.editor.addEventListener("focusout", () => {
+                window.setTimeout(() => {
+                    state.editingTargetSettings = isTargetEditorFocused();
+                }, 0);
+            });
+        }
+
         b.play.addEventListener("click", () => {
             sendCameraEvent("playback", { paused: false }).catch((error) => {
                 setStatus(`Playback update failed: ${error.message}`, true);
@@ -722,6 +824,25 @@
             });
         });
 
+        if (b.stopMissing) {
+            b.stopMissing.addEventListener("click", () => {
+                state.stopOnMissingDetection = !state.stopOnMissingDetection;
+                updateStopMissingButton();
+
+                if (!state.stopOnMissingDetection) {
+                    setStatus("Auto-stop on missing detection disabled", false);
+                    return;
+                }
+
+                if (!state.detectionFound) {
+                    stopPlaybackOnMissingDetection();
+                    return;
+                }
+
+                setStatus("Auto-stop on missing detection armed", false);
+            });
+        }
+
         b.saveTopLeft.addEventListener("click", withDetectedCorner("Top-left", "top_left"));
         b.saveTopRight.addEventListener("click", withDetectedCorner("Top-right", "top_right"));
         b.saveBottomLeft.addEventListener("click", withDetectedCorner("Bottom-left", "bottom_left"));
@@ -742,6 +863,7 @@
 
     function bootstrap() {
         bindControls();
+        updateStopMissingButton();
         setStatus("Connecting...", false);
         sync();
         runStreamLoop();
