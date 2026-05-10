@@ -13,7 +13,7 @@ FROM alpine:3.22
 
 # OpenCV version comes from the selected Raspberry Pi OS rootfs.
 # To match your Pi, change this image URL/date to a release with the same OpenCV package version.
-ADD https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2024-11-19/2024-11-19-raspios-bookworm-arm64-lite.img.xz /raspios-lite-arm64.img.xz
+ADD https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2026-04-21/2026-04-21-raspios-trixie-arm64-lite.img.xz /raspios-lite-arm64.img.xz
 
 # chmod calls are necessary because 7zip doesn't preserve file permissions during extraction
 RUN set -xeu && \
@@ -56,9 +56,10 @@ RUN set -xeu && \
     symlinks -cr /
 
 # Specify dependencies that you need to have on rpi
+# The Rust OpenCV crate links several contrib modules by default, so install them too.
 RUN set -xeu && \
     apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y libopencv-dev
+    DEBIAN_FRONTEND=noninteractive apt-get install -y libopencv-dev libopencv-contrib-dev
 
 
 # Create the image that will be used for cross-compilation
