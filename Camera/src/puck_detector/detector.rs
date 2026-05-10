@@ -140,6 +140,10 @@ impl DetectionPipeline for PuckDetector {
             .as_rect(self.original.cols(), self.original.rows());
 
         // Convert resized frame to HSV once and extract channels into frame-level buffers
+        #[cfg(any(target_arch = "arm", all(target_arch = "aarch64", target_os = "linux")))]
+        imgproc::cvt_color(&self.resized, &mut self.frame_buffers.hsv, COLOR_BGR2HSV, 0)?;
+
+        #[cfg(not(any(target_arch = "arm", all(target_arch = "aarch64", target_os = "linux"))))]
         imgproc::cvt_color(
             &self.resized,
             &mut self.frame_buffers.hsv,
