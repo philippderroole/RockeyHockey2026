@@ -483,10 +483,6 @@
 
     function applyRuntimeLog(log) {
         state.latestPoint = log.detection_point || null;
-        elements.runtime.detection.textContent = log.detection_found ? "Detected" : "Not found";
-        elements.runtime.virtual.textContent = log.detection_point
-            ? `x=${log.detection_point.x.toFixed(3)} y=${log.detection_point.y.toFixed(3)}`
-            : "-";
         elements.runtime.capture.textContent = formatMs(log.capture_ms);
         elements.runtime.detect.textContent = formatMs(log.detect_ms);
         elements.runtime.total.textContent = formatMs(log.total_ms);
