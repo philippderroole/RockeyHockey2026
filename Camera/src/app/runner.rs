@@ -15,6 +15,8 @@ use rockey_hockey::web_ui::{
     spawn_web_ui_server,
 };
 
+use crate::app::target_output::TargetOutputSender;
+
 #[derive(Clone)]
 struct WebUiShared {
     settings: SharedRuntimeSettings,
@@ -69,25 +71,39 @@ pub trait DetectorRunner {
 
 pub struct PlainDetectorRunner {
     detector: PuckDetector,
+    runtime_settings: RuntimeDetectorSettings,
+    target_output: Option<TargetOutputSender>,
 }
 
 impl PlainDetectorRunner {
-    pub fn new(runtime_settings: RuntimeDetectorSettings) -> Self {
+    pub fn new(
+        runtime_settings: RuntimeDetectorSettings,
+        target_output: Option<TargetOutputSender>,
+    ) -> Self {
         Self {
-            detector: PuckDetector::with_runtime_settings(runtime_settings),
+            detector: PuckDetector::with_runtime_settings(runtime_settings.clone()),
+            runtime_settings,
+            target_output,
         }
     }
 }
 
 impl DetectorRunner for PlainDetectorRunner {
     fn run_step(&mut self, cam: &mut VideoCapture) -> anyhow::Result<bool> {
-        Ok(!self.detector.capture_and_detect(cam)?.is_empty())
+        let detections = self.detector.capture_and_detect(cam)?;
+
+        if let Some(target_output) = &self.target_output {
+            target_output.publish_plain_detections(&self.runtime_settings, &detections)?;
+        }
+
+        Ok(!detections.is_empty())
     }
 }
 
 pub struct WebUiDetectorRunner {
     detector: TimedPuckDetector<PuckDetector>,
     web_ui: WebUiShared,
+    target_output: Option<TargetOutputSender>,
     last_reprocess_generation: u64,
     last_step_generation: u64,
 }
@@ -96,10 +112,12 @@ impl WebUiDetectorRunner {
     pub(super) fn with_web_ui(
         port: u16,
         runtime_settings: RuntimeDetectorSettings,
+        target_output: Option<TargetOutputSender>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
             detector: TimedPuckDetector::with_runtime_settings(runtime_settings.clone()),
             web_ui: WebUiShared::from_runtime_settings(port, runtime_settings)?,
+            target_output,
             last_reprocess_generation: 0,
             last_step_generation: 0,
         })
@@ -117,6 +135,7 @@ impl DetectorRunner for WebUiDetectorRunner {
                 let processed = self.detector.capture_and_detect(cam)?;
 
                 if let Some(processed) = processed.as_ref() {
+                    self.publish_target_output(processed)?;
                     self.web_ui.publish_processed(processed)?;
                 }
 
@@ -132,6 +151,7 @@ impl DetectorRunner for WebUiDetectorRunner {
             let processed = self.detector.detect_current_frame()?;
 
             if let Some(processed) = processed.as_ref() {
+                self.publish_target_output(processed)?;
                 self.web_ui.publish_processed(processed)?;
             }
 
@@ -143,9 +163,20 @@ impl DetectorRunner for WebUiDetectorRunner {
         let processed = self.detector.capture_and_detect(cam)?;
 
         if let Some(processed) = processed.as_ref() {
+            self.publish_target_output(processed)?;
             self.web_ui.publish_processed(processed)?;
         }
 
         Ok(processed.is_some())
+    }
+}
+
+impl WebUiDetectorRunner {
+    fn publish_target_output(&self, processed: &TimedFrameProcessing) -> anyhow::Result<()> {
+        if let Some(target_output) = &self.target_output {
+            target_output.publish_timed_detections(&self.web_ui.settings.get(), processed)?;
+        }
+
+        Ok(())
     }
 }
