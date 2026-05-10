@@ -731,7 +731,26 @@
             return;
         }
 
-        const blob = new Blob([JSON.stringify(state.settings, null, 2)], {
+        // Build an explicit export format that contains a `targets` array
+        // where each item includes the target `name` and its HSV settings.
+        const normalized = normalizeSettings(state.settings);
+        const targets = getDetectorTargets(normalized).map((t, index) => ({
+            name: normalized.target_names && normalized.target_names[index]
+                ? normalized.target_names[index]
+                : defaultTargetName(index),
+            hsv: t,
+        }));
+
+        const exportPayload = Object.assign({}, normalized);
+        // Remove legacy flat hsv fields from the top-level exportPayload so
+        // consumers use the structured `targets` array instead.
+        delete exportPayload.hsv;
+        delete exportPayload.additional_hsv_targets;
+        // `target_names` are now stored inside the `targets` array; do not
+        // include the top-level `target_names` field in exported files.
+        delete exportPayload.target_names;
+
+        const blob = new Blob([JSON.stringify({ settings: exportPayload, targets }, null, 2)], {
             type: "application/json",
         });
         const url = URL.createObjectURL(blob);
@@ -750,7 +769,31 @@
         reader.onload = async function () {
             try {
                 const parsed = JSON.parse(String(reader.result || ""));
-                await sendCameraEvent("update_settings", { settings: parsed });
+
+                // Support two formats:
+                // 1) legacy: the file is the raw settings object
+                // 2) new: { settings: { ... }, targets: [{ name, hsv }, ...] }
+                let nextSettings = null;
+
+                if (parsed && Array.isArray(parsed.targets)) {
+                    // Start with provided settings object if present, otherwise defaults
+                    nextSettings = parsed.settings ? parsed.settings : normalizeSettings(null);
+
+                    const targets = parsed.targets || [];
+                    if (targets.length > 0) {
+                        nextSettings.hsv = targets[0].hsv || nextSettings.hsv;
+                        nextSettings.additional_hsv_targets = targets.slice(1).map(t => t.hsv || {});
+                        nextSettings.target_names = targets.map((t, i) => (t.name || defaultTargetName(i)));
+                    }
+                } else if (parsed && parsed.settings && Array.isArray(parsed.settings.targets)) {
+                    // Backwards-compatible variant where `settings.targets` exists
+                    nextSettings = parsed.settings;
+                } else {
+                    // Legacy format: assume parsed is already the settings object
+                    nextSettings = parsed;
+                }
+
+                await sendCameraEvent("update_settings", { settings: nextSettings });
                 state.dirtyFromUser = false;
                 setStatus("Settings imported", false);
             } catch (error) {
