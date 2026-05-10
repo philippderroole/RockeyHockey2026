@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::net::SocketAddr;
 
 use app::input_modes::InputSource;
 
@@ -20,6 +21,9 @@ struct Args {
     /// Port for browser-based live settings editor
     #[arg(long, default_value_t = 8080)]
     web_ui_port: u16,
+    /// Optional UDP endpoint for detected target coordinates, for example 127.0.0.1:5005
+    #[arg(long)]
+    target_output: Option<SocketAddr>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -36,5 +40,6 @@ fn main() -> anyhow::Result<()> {
         },
         web_ui_enabled: args.web_ui,
         web_ui_port: args.web_ui_port,
+        target_output: args.target_output,
     })
 }
