@@ -229,54 +229,55 @@
     }
 
     function createTargetCard(target, targetIndex, targetName) {
-        const card = document.createElement("article");
-        card.className = "target-card";
+        const card = document.createElement("details");
+        card.className = "drawer target-drawer";
+        card.open = true;
         card.dataset.targetCard = "true";
         card.dataset.targetIndex = String(targetIndex);
 
-        const title = targetIndex === 0 ? "Primary target" : `Target ${targetIndex + 1}`;
         const subtitle = targetIndex === 0 ? "Base HSV profile" : "Additional HSV profile";
+        const name = targetName || defaultTargetName(targetIndex);
 
         card.innerHTML = `
-            <div class="target-head">
-                <div>
-                    <h3>${title}</h3>
-                    <label class="target-name-row">
-                        <span>Name</span>
-                        <input
-                            type="text"
-                            class="target-name-input"
-                            data-target-name="true"
-                            maxlength="48"
-                            value=""
-                        />
-                    </label>
-                    <p>${subtitle}</p>
-                    <p class="target-summary">${formatTargetSummary(target)}</p>
-                </div>
-                <div class="target-actions">
+            <summary>
+                <span>${name}</span>
+                <strong>${formatTargetSummary(target)}</strong>
+            </summary>
+            <div class="drawer-body">
+                <div class="drawer-toolbar">
+                    <p class="drawer-note">${subtitle}</p>
                     <button type="button" data-action="remove-target" ${targetIndex === 0 ? "hidden" : ""}>Remove</button>
                 </div>
-            </div>
-            <div class="target-controls">
-                ${targetRowMarkup("H min", "h_min", 0, 179, target.h_min)}
-                ${targetRowMarkup("H max", "h_max", 0, 179, target.h_max)}
-                ${targetRowMarkup("S min", "s_min", 0, 255, target.s_min)}
-                ${targetRowMarkup("S max", "s_max", 0, 255, target.s_max)}
-                ${targetRowMarkup("V min", "v_min", 0, 255, target.v_min)}
-                ${targetRowMarkup("V max", "v_max", 0, 255, target.v_max)}
-            </div>
-            <div class="target-previews">
-                ${targetPreviewMarkup("mask", "Mask")}
-                ${targetPreviewMarkup("h-mask", "Hue")}
-                ${targetPreviewMarkup("s-mask", "Saturation")}
-                ${targetPreviewMarkup("v-mask", "Value")}
+                <label class="target-name-row">
+                    <span>Name</span>
+                    <input
+                        type="text"
+                        class="target-name-input"
+                        data-target-name="true"
+                        maxlength="48"
+                        value=""
+                    />
+                </label>
+                <div class="target-controls">
+                    ${targetRowMarkup("H min", "h_min", 0, 179, target.h_min)}
+                    ${targetRowMarkup("H max", "h_max", 0, 179, target.h_max)}
+                    ${targetRowMarkup("S min", "s_min", 0, 255, target.s_min)}
+                    ${targetRowMarkup("S max", "s_max", 0, 255, target.s_max)}
+                    ${targetRowMarkup("V min", "v_min", 0, 255, target.v_min)}
+                    ${targetRowMarkup("V max", "v_max", 0, 255, target.v_max)}
+                </div>
+                <div class="target-previews">
+                    ${targetPreviewMarkup("mask", "Mask")}
+                    ${targetPreviewMarkup("h-mask", "Hue")}
+                    ${targetPreviewMarkup("s-mask", "Saturation")}
+                    ${targetPreviewMarkup("v-mask", "Value")}
+                </div>
             </div>
         `;
 
         const nameInput = card.querySelector("[data-target-name='true']");
         if (nameInput) {
-            nameInput.value = targetName || defaultTargetName(targetIndex);
+            nameInput.value = name;
         }
 
         return card;
