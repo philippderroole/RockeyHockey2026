@@ -167,6 +167,12 @@
             background: #e4efe0;
         }
 
+        button.active {
+            background: #d9f0e0;
+            border-color: #7eb48d;
+            color: #19402e;
+        }
+
         .buttons {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -175,7 +181,7 @@
 
         .playback {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 6px;
             margin-top: 8px;
         }
@@ -292,6 +298,21 @@
             font-size: 0.8rem;
         }
 
+        .target-name-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px;
+            align-items: center;
+            margin: 6px 0;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .target-name-input {
+            width: 100%;
+            min-width: 0;
+        }
+
         .target-summary {
             margin: 0;
             color: var(--muted);
@@ -349,6 +370,11 @@
 
         <section class="board">
             <aside class="stack">
+                <section class="preview-card">
+                    <h3>Original Detection View</h3>
+                    <img id="preview-detection" class="preview" alt="Original image with detection circles" />
+                </section>
+
                 <section class="section">
                     <h2>Playback</h2>
                     <div class="playback">
@@ -356,6 +382,7 @@
                         <button id="playback-pause" type="button">Pause</button>
                         <button id="playback-reprocess" type="button">Reprocess</button>
                         <button id="playback-next" type="button">Next</button>
+                        <button id="playback-stop-missing" type="button">Stop on Missing</button>
                     </div>
                     <p id="playback-state">Running</p>
                 </section>
