@@ -53,7 +53,9 @@ impl WebUiShared {
     }
 
     fn publish_processed(&self, processed: &TimedFrameProcessing) -> anyhow::Result<()> {
-        self.previews.update_from_processed(processed)
+        let runtime_settings = self.settings.get();
+        self.previews
+            .update_from_processed(processed, &runtime_settings)
     }
 
     fn playback_snapshot(&self) -> PlaybackControlSnapshot {

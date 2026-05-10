@@ -15,6 +15,9 @@ pub struct RuntimeDetectorSettings {
 
     #[serde(default)]
     pub additional_hsv_targets: Vec<HsvThresholds>,
+
+    #[serde(default)]
+    pub target_names: Vec<String>,
 }
 
 impl Default for RuntimeDetectorSettings {
@@ -32,6 +35,7 @@ impl Default for RuntimeDetectorSettings {
             },
             hsv: HsvThresholds::default(),
             additional_hsv_targets: Vec::new(),
+            target_names: Vec::new(),
         }
     }
 }
@@ -42,6 +46,21 @@ impl RuntimeDetectorSettings {
         targets.push(self.hsv);
         targets.extend(self.additional_hsv_targets.iter().copied());
         targets
+    }
+
+    pub fn target_name(&self, target_index: usize) -> String {
+        let fallback = if target_index == 0 {
+            "Primary target".to_string()
+        } else {
+            format!("Target {}", target_index + 1)
+        };
+
+        self.target_names
+            .get(target_index)
+            .map(|name| name.trim())
+            .filter(|name| !name.is_empty())
+            .map(|name| name.to_string())
+            .unwrap_or(fallback)
     }
 }
 

@@ -190,12 +190,17 @@ impl SharedPreviewFrames {
         }
     }
 
-    pub fn update_from_processed(&self, processed: &TimedFrameProcessing) -> anyhow::Result<()> {
+    pub fn update_from_processed(
+        &self,
+        processed: &TimedFrameProcessing,
+        runtime_settings: &RuntimeDetectorSettings,
+    ) -> anyhow::Result<()> {
         if processed.original.empty() {
             return Ok(());
         }
 
-        let detection_overlay = draw_debug_detection(&processed.original, &processed.output)?;
+        let detection_overlay =
+            draw_debug_detection(&processed.original, &processed.output, runtime_settings)?;
         let detection_jpeg = encode_jpeg(&detection_overlay)?;
         let target_previews = processed
             .target_previews

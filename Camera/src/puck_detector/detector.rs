@@ -47,6 +47,7 @@ impl PuckDetector {
             detector: settings,
             hsv: HsvThresholds::default(),
             additional_hsv_targets: Vec::new(),
+            target_names: Vec::new(),
         })
     }
 
