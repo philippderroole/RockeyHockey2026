@@ -42,7 +42,7 @@ impl WebUiShared {
             ));
         }
 
-        info!("Live settings editor enabled at http://127.0.0.1:{}", port);
+        info!("Live settings editor enabled at http://0.0.0.0:{}", port);
         Ok(Self {
             settings,
             previews,
