@@ -116,7 +116,7 @@ class StepperController:
         self.cancel_jog()
         
         # Issue the new Jog command
-        command = f"$J=G21G91X{x}Y{y}F{feedrate}"
+        command = f"$J=G21G90X{x}Y{y}F{feedrate}"
         self.send_command(command)
 
     def calibrate(self):
