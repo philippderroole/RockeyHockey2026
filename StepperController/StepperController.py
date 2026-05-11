@@ -3,7 +3,6 @@ import time
 from queue import Queue, Empty
 from PyQt5.QtCore import QThread
 from enum import Enum
-from Constants import *
 
 class MockSerial:
     """A fake serial port that pretends to be a GRBL Arduino."""
