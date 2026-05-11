@@ -52,7 +52,7 @@ pub fn spawn_web_ui_server(
                 let web_ui = WebUI::new(config);
                 serve_requests(&web_ui, deps).await;
 
-                info!("Web UI available at http://127.0.0.1:{port}");
+                info!("Web UI available at http://0.0.0.0:{port}");
                 if let Err(err) = web_ui.run().await {
                     error!("web UI server stopped with an error: {err}");
                 }
