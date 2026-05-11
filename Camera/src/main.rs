@@ -15,13 +15,13 @@ struct Args {
     /// Optional flag to use the Raspberry Pi camera instead of a webcam
     #[arg(long)]
     pi_camera: bool,
-    /// Enable browser-based live settings editor at http://127.0.0.1:<web_ui_port>
+    /// Enable browser-based live settings editor at http://0.0.0.0:<web_ui_port>
     #[arg(long)]
     web_ui: bool,
     /// Port for browser-based live settings editor
     #[arg(long, default_value_t = 8080)]
     web_ui_port: u16,
-    /// Optional UDP endpoint for detected target coordinates, for example 127.0.0.1:5005
+    /// Optional UDP endpoint for detected target coordinates, for example 0.0.0.0:5005
     #[arg(long)]
     target_output: Option<SocketAddr>,
 }
