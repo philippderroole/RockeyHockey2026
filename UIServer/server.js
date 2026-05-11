@@ -1,5 +1,10 @@
 const express = require('express');
-const rpio = require('rpio');
+let rpio;
+try {
+  rpio = require('rpio');
+} catch (e) {
+  console.log('rpio disabled (not available on this system)');
+}
 const { spawn } = require('node:child_process');
 
 const app = express();
@@ -14,9 +19,11 @@ let gameRunning = false;
 const botGoalPin    = 5;
 const playerGoalPin = 6;
 
-rpio.init({mapping: 'gpio'});
-rpio.open(botGoalPin, rpio.INPUT);
-rpio.open(playerGoalPin, rpio.INPUT);
+if (rpio){
+    rpio.init({mapping: 'gpio'});
+    rpio.open(botGoalPin, rpio.INPUT);
+    rpio.open(playerGoalPin, rpio.INPUT);
+}
 const ledDriver = spawn('python', ['ledDriver/driver.py'])
 
 app.use("/resources", express.static("resources"));
@@ -27,23 +34,42 @@ app.get("/", (req, res) => {
   res.sendFile("index.html", { root: __dirname });
 });
 
+let eventActive = false; 
+
 function onGoalSensor(pin) {
-    rpio.poll(botGoalPin, null);
-    rpio.poll(playerGoalPin, null);
+    if (rpio) {
+        rpio.poll(botGoalPin, null);
+        rpio.poll(playerGoalPin, null);
+    }
+    let pointsToAdd = 1;
+    if (eventActive) {
+        pointsToAdd = 2;
+    }
     if (rpio.read(pin)) { // only give points when puck entered light barrier
         if (pin === playerGoalPin)
-            botScore++;
+            botScore += pointsToAdd;
         else if (pin == botGoalPin)
-            playerScore++;
+            playerScore += pointsToAdd;
     }
     
     setTimeout(() => {
         if (gameRunning === true) {
-            rpio.poll(botGoalPin, onGoalSensor);
-            rpio.poll(playerGoalPin, onGoalSensor);
+            if (rpio) {
+                rpio.poll(botGoalPin, onGoalSensor);
+                rpio.poll(playerGoalPin, onGoalSensor);
+            }
         }
     }, 1000);
 }
+
+app.get('/event/start', (req, res) => {
+    eventActive = true;
+    res.send("event started");
+});
+app.get('/event/stop', (req, res) => {
+    eventActive = true;
+    res.send("event stopped");
+});
 
 app.get('/state', (req, res) => {
     res.json({"playerScore": playerScore, "botScore": botScore});
