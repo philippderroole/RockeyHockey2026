@@ -21,6 +21,7 @@
         <audio id="countdownAudio" src="resources/sounds/countdown.mp3"></audio>
         <audio id="doublepointsAudio" src="resources/sounds/doublepoints.wav"></audio>
         <audio id="goalAudio" src=""></audio>
+        <audio id ="LastMinuteAudio" src="resources/sounds/Last minute.mp3"></audio>
     </div>
 
     <div>
@@ -41,6 +42,7 @@
     <div id="scale">
         <div id="background-container">
             <img id="background-image" src="resources/imgs/Spielstandanzeige_EM.png" alt="Background Image">
+            <img id="player-image" src="resources/imgs/Kopf_des_Spielers.png">
 
             <input disabled id="countdown" placeholder="10:00">
 
@@ -73,6 +75,19 @@
             <h1>2x Points</h1>
         </div>
     </div>
+
+    <div id="time-warning-overlay">
+        <div class="time-warning-banner">
+            <h1>1 Minute left</h1>
+        </div>
+    </div>
+
+    <div id="halftime-warning-overlay">
+        <div class="halftime-warning-banner">
+            <h1>5 Minutes left</h1>
+        </div>
+    </div>
+
 </body>
 
 </html>

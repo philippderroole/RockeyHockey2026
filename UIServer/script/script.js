@@ -1,4 +1,4 @@
-const gameTime = 600; // 10 Mins
+const gameTime = 310; // 10 Mins
 let gameStopped = true;
 let countdownActive = false;
 let countdownValue = 3;
@@ -124,7 +124,7 @@ async function startGame() {
         console.log("Event wird mit Restzeit forgesetzt: " + (remainingEventTime / 1000) + "s");
         resumeEventTimer(remainingEventTime);
     } else {
-        const randomTime = Math.floor(Math.random() * (600-590)) + 590;
+        const randomTime = Math.floor(Math.random() * (480-240)) + 240;
         const min = Math.floor(randomTime / 60);
         const sec = randomTime % 60;
         const formattedTime = (min < 10 ? "0" : "") + min + ":" + (sec < 10 ? "0" : "") + sec;
@@ -293,6 +293,46 @@ function startTimer(duration) {
 
         countdown.value = minutes + ":" + seconds;
 
+        const time_overlay = document.getElementById("time-warning-overlay");
+        const halftime_overlay = document.getElementById("halftime-warning-overlay");
+        if (remainingTime == 300) {
+            if (halftime_overlay) {
+                halftime_overlay.classList.add('active');
+                const LastMinuteAudio = document.getElementById("LastMinuteAudio");
+                const backgroundAudio = document.getElementById("backgroundAudio");
+                backgroundAudio.volume = 0.5;
+                if (LastMinuteAudio) {
+                    LastMinuteAudio.volume = 1.0;
+                    LastMinuteAudio.play();
+                     LastMinuteAudio.onended = () => {
+                        if (backgroundAudio) backgroundAudio.volume = 1.0;
+                     }
+                }
+
+                setTimeout(() => {
+                    halftime_overlay.classList.remove('active');
+                }, 5000);
+            }
+        }
+        if (remainingTime == 60) {
+            if (time_overlay) {
+                time_overlay.classList.add('active');
+                const LastMinuteAudio = document.getElementById("LastMinuteAudio");
+                const backgroundAudio = document.getElementById("backgroundAudio");
+                backgroundAudio.volume = 0.5;
+                if (LastMinuteAudio) {
+                    LastMinuteAudio.volume = 1.0;
+                    LastMinuteAudio.play();
+                     LastMinuteAudio.onended = () => {
+                        if (backgroundAudio) backgroundAudio.volume = 1.0;
+                     }
+                }
+
+                setTimeout(() => {
+                    time_overlay.classList.remove('active');
+                }, 5000);
+            }
+        }
         if (remainingTime=== 0) {
             finish();
             clearInterval(timerInterval);

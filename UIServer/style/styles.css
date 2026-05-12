@@ -17,10 +17,11 @@
     width: 100%;
     height: auto;
 }
+
 #player-image {
     position: absolute;
     width:19%;
-    height: auto;
+    height: 30%;
     left: 550px;
     top: 100px;
     z-index: 3;
@@ -157,7 +158,6 @@
     height: 45px;
     width: 170px;
 }
-
 .countdown-wrap{
     display: none; 
     position: fixed;
@@ -303,6 +303,92 @@
 #event-logo.active {
     display: flex;
     animation: pulseGlow 1.5s infinite alternate;
+}
+
+#time-warning-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visability 0.4s;
+}
+
+#time-warning-overlay.active{
+    opacity: 1;
+    visibility: visible;
+}
+
+.time-warning-banner{
+    text-align: center;
+    transform: scale(0.5);
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#time-warning-overlay.active .time-warning-banner {
+    transform: scale(1);
+}
+
+.time-warning-banner h1 {
+    font-size: 6rem;
+    margin: 15;
+    color: #339cff;
+    text-shadow: 0 0 5px #fff,
+        0 0 10px #007bff,
+        0 0 25px #007bff,
+        0 0 30px #007bff;
+    font-weight: 650;
+}
+
+#halftime-warning-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visability 0.4s;
+}
+
+#halftime-warning-overlay.active{
+    opacity: 1;
+    visibility: visible;
+}
+
+.halftime-warning-banner{
+    text-align: center;
+    transform: scale(0.5);
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#halftime-warning-overlay.active .time-warning-banner {
+    transform: scale(1);
+}
+
+.halftime-warning-banner h1 {
+    font-size: 6rem;
+    margin: 15;
+    color: #339cff;
+    text-shadow: 0 0 5px #fff,
+        0 0 10px #007bff,
+        0 0 25px #007bff,
+        0 0 30px #007bff;
+    font-weight: 650;
 }
 
 @keyframes pulseGlow {
