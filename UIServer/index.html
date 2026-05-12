@@ -11,6 +11,7 @@
     <link href="style/styles.css" rel="stylesheet">
 
     <script src="script/script.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
 
 <body class="pb-2">
@@ -22,6 +23,7 @@
         <audio id="doublepointsAudio" src="resources/sounds/doublepoints.wav"></audio>
         <audio id="goalAudio" src=""></audio>
         <audio id ="LastMinuteAudio" src="resources/sounds/Last minute.mp3"></audio>
+        <audio id ="victoryMusic" src="resources/sounds/victory.mp3"></audio>
     </div>
 
     <div>
@@ -68,6 +70,12 @@
 
     <div id="gifDisplay">
         <img id="score-gif" src="" alt="Tor-GIF">
+    </div>
+
+    <div id="winnerDisplay">
+        <div id="winnerTitle">WINNER</div>
+        <div id="winnerName"></div>
+        <div id="winnerScore"></div>
     </div>
 
     <div id="event-overlay">

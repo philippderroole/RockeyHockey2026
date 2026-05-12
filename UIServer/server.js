@@ -67,7 +67,7 @@ app.get('/event/start', (req, res) => {
     res.send("event started");
 });
 app.get('/event/stop', (req, res) => {
-    eventActive = true;
+    eventActive = false;
     res.send("event stopped");
 });
 
@@ -115,17 +115,10 @@ app.get('/animation/:color', (req, res) => {
 });
 
 /// Set scores to 0.
-app.get('/resetScores', (req, res) => { playerScore = botScore = 0; res.send("scores reset.") });
+app.get('/resetScores', (req, res) => { playerScore = 1; botScore = 0; res.send("scores reset.") });
 /// Start counting scores.
 app.get('/start', (req, res) => { gameRunning = true; rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); res.send("started."); });
 /// Stop counting scores.
 app.get('/stop' , (req, res) => { gameRunning = false; rpio.poll(botGoalPin, null);         rpio.poll(playerGoalPin, null);         res.send("stopped.");});
-
-/// Set scores to 0.
-app.get('/resetScores', (req, res) => { playerScore = botScore = 0; res.send("scores reset.") });
-/// Start counting scores.
-app.get('/start', (req, res) => { rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); res.send("started."); });
-/// Stop counting scores.
-app.get('/stop' , (req, res) => { rpio.poll(botGoalPin, null);         rpio.poll(playerGoalPin, null);         res.send("stopped.");});
 
 app.listen(PORT, () => console.log("Server listening on port", PORT));

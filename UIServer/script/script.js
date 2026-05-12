@@ -1,4 +1,4 @@
-const gameTime = 310; // 10 Mins
+const gameTime = 600; // 10 Mins
 let gameStopped = true;
 let countdownActive = false;
 let countdownValue = 3;
@@ -259,16 +259,80 @@ async function stopGame() {
     gameStopped = true;
 };
 
+function playGoalAnimation(gifName, soundName) {
+
+
+    if (soundName) {
+        goalAudio.src = soundName;
+        goalAudio.volume = 0.75;
+        goalAudio.play();
+    }
+}
+
 function finish() {
-    const scoreSpieler = document.getElementById("scoreSpieler");
-    const scoreRoboter = document.getElementById("scoreRoboter");
+    const player = document.getElementById("scoreSpieler");
+    const bot = document.getElementById("scoreRoboter");
+
+    const playerScore = Number(player.value) || 0;
+    const botScore = Number(bot.value) || 0;
     const playerLead = scoreSpieler.value - scoreRoboter.value;
     
     stopGame();
+
     if (playerLead > 0)
     	playGoalAnimation(null, "resources/sounds/winner.wav");
     if (playerLead < 0)
     	playGoalAnimation(null, "resources/sounds/lostmatch.wav");
+
+    const winnerDisplay = document.getElementById("winnerDisplay");
+    const winnerName = document.getElementById("winnerName");
+    const winnerScore = document.getElementById("winnerScore");
+    const winnerTitle = document.getElementById("winnerTitle");
+
+    if (playerLead > 0) {
+        winnerTitle.innerText = "GEWINNER";
+        winnerName.innerText = "PROF GEWINNT";
+    } else if (playerLead < 0) {
+        winnerTitle.innerText = "GEWINNER";
+        winnerName.innerText = "RH 2026 GEWINNT";
+    } else {
+        winnerTitle.innerText = "SPIELENDE";
+        winnerName.innerText = "UNENTSCHIEDEN";
+    }
+    winnerScore.innerText = botScore + " : " + playerScore;
+    winnerDisplay.style.display = "flex";
+
+    const victoryMusic = document.getElementById("victoryMusic");
+    victoryMusic.pause();
+    victoryMusic.currentTime = 0;
+    victoryMusic.volume = 0.7;
+
+    victoryMusic.play().catch(function(error) {
+        console.log("Sieger-Musik konnte nicht abgespielt werden:", error);
+    });
+
+    confetti({
+        particleCount: 250,
+        spread: 120,
+        origin: { y: 0.6 },
+        zIndex: 11
+    });
+
+    setTimeout(() => {
+        confetti({
+            particleCount: 200,
+            spread: 140,
+            origin: { x: 0.2, y: 0.6 }
+        });
+    }, 400);
+
+    setTimeout(() => {
+        confetti({
+            particleCount: 200,
+            spread: 140,
+            origin: { x: 0.8, y: 0.6 }
+        });
+    }, 800);
 }
 
 function startTimer(duration) {
@@ -310,7 +374,7 @@ function startTimer(duration) {
                 }
 
                 setTimeout(() => {
-                    halftime_overlay.classList.remove('active');
+                    time_overlay.classList.remove('active');
                 }, 5000);
             }
         }
