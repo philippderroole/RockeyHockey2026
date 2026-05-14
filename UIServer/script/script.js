@@ -10,8 +10,47 @@ let eventStartTime = null;
 let EventDuration = 30000;
 let eventTimeout = null;
 let remainingEventTime = null;
+let requestedAnimation = null;
+let isGoldenGoal = false;
 
 const scoreSoundFileNames = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"].map((name) => "resources/sounds/" + name + ".wav");
+const idleVideo = document.getElementById("idleVideo");
+const leftGoalVideo = document.getElementById("leftGoalVideo");
+const rightGoalVideo = document.getElementById("rightGoalVideo");
+const loadingVideo = document.getElementById("loadingVideo");
+const startButton = document.getElementById("startButton");
+const stopButton = document.getElementById("stopButton");
+const scoreSpieler = document.getElementById("scoreSpieler");
+const scoreRoboter = document.getElementById("scoreRoboter");
+const goalAudio = document.getElementById("goalAudio");
+
+if (idleVideo) {
+    idleVideo.addEventListener("seeking", () => {
+        let goalVideoElement = null;
+        if (requestedAnimation === "right") goalVideoElement = rightGoalVideo;
+        else if (requestedAnimation === "left") goalVideoElement = leftGoalVideo;
+        
+        if (goalVideoElement) {
+            goalVideoElement.style.display = "block";
+            goalVideoElement.play();
+            idleVideo.pause();
+            idleVideo.currentTime = 0;
+            idleVideo.style.display = "none";
+        }
+        requestedAnimation = null;
+    });
+}
+
+function onGoalAnimationEnded(videoElement) {
+    videoElement.currentTime = 0;
+    idleVideo.style.display = "block"; 
+    idleVideo.play();
+    videoElement.style.display = "none";
+    requestedAnimation = null;
+}
+
+leftGoalVideo.addEventListener("ended", (e) => onGoalAnimationEnded(e.srcElement)); 
+rightGoalVideo.addEventListener("ended", (e) => onGoalAnimationEnded(e.srcElement));
 
 class VisualCountdown {
     constructor(duration = 3) {
@@ -91,6 +130,12 @@ async function startGame() {
     let idleVideo = document.getElementById("idleVideo");
     let startButton = document.getElementById("startButton");
     let scaleElement = document.getElementById("scale");
+    
+    isGoldenGoal = false; 
+    const ggOverlay = document.getElementById("golden-goal-overlay");
+    if (ggOverlay) ggOverlay.classList.remove("active");
+    const ggLogo = document.getElementById("golden-goal-logo");
+    if (ggLogo) ggLogo.classList.remove("active");
 
     if (scaleElement) {
         scaleElement.style.display = "none";
@@ -98,6 +143,7 @@ async function startGame() {
     if (startButton) {
         startButton.disabled = true;
     }
+
     const visualCountdown = new VisualCountdown(3);
     await visualCountdown.start();
     
@@ -154,118 +200,60 @@ async function startGame() {
     
     startTimer(remainingTime);
 };
-function resumeEventTimer(remainingMs) {
-    const logo = document.getElementById('event-logo');
-    if (logo) {
-        logo.classList.add('active');
 
-        eventTimeout = setTimeout(() => {
-            logo.classList.remove('active');
-            fetch("event/stop")
-                .then(response => console.log("Event auf Server beendet"));
-            remainingEventTime = null;
-            eventActive = false;
-        }, remainingMs);
-    }
+function fetchUpdate() {
+    fetch('/state')
+        .then(response => response.json())
+        .then(data => {
+            const currentS = parseInt(scoreSpieler.value) || 0; 
+            const currentR = parseInt(scoreRoboter.value) || 0; 
+            const playerIncrement = data.playerScore - currentS; 
+            const botIncrement = data.botScore - currentR; 
+            const playerLead = data.playerScore - data.botScore;
+
+            if (isGoldenGoal && (playerIncrement > 0 || botIncrement > 0)) {
+                scoreSpieler.value = data.playerScore;
+                scoreRoboter.value = data.botScore;
+                
+                if (playerIncrement > 0) {
+                    playGoalAnimation(null, scoreSoundFileNames[data.playerScore]);
+                } else {
+                    // Optional: Ein Sound für den Roboter
+                    playGoalAnimation(null, "resources/sounds/lostmatch.wav"); 
+                }
+                setTimeout(() => finish(), 1000); 
+                return;
+            }
+
+            if (playerIncrement > 0) {
+                animation("blue");
+                requestedAnimation = "left";
+                playGoalAnimation(null, scoreSoundFileNames[data.playerScore]); 
+                
+                if (data.playerScore === 10) setTimeout(() => finish(), 1200);
+                else if (playerLead == 2) setTimeout(() => playGoalAnimation('losingteeth', 'resources/sounds/godlike.wav'), 1200);
+                else if (playerLead == 4) setTimeout(() => playGoalAnimation('dog', 'resources/sounds/godlike.wav'), 1200);
+                else if (playerLead > 5) setTimeout(() => playGoalAnimation('dominance', 'resources/sounds/dominating.wav'), 1200);
+            }
+
+            if (botIncrement > 0) {
+                animation("red");
+                requestedAnimation = "right";
+                if (data.botScore === 10) finish();
+                else if (playerLead == -2) playGoalAnimation('pulp', 'resources/sounds/unstoppable.wav');
+            }
+
+            scoreRoboter.value = data.botScore;
+            scoreSpieler.value = data.playerScore; 
+        });
 }
-function triggerEvent() {
-    eventActive = true;
-    eventStartTime = Date.now();
-
-    fetch("event/start")
-        .then(response => console.log("Event auf Server gestartet"))
-        .catch(err => console.error("Fehler beim Starten des Events:", err));
-
-    const overlay = document.getElementById('event-overlay');
-    const logo = document.getElementById('event-logo');
-
-
-    if (overlay && logo) {
-        overlay.classList.add('active');
-        logo.classList.add('active');
-        const backgroundAudio = document.getElementById("backgroundAudio");
-        backgroundAudio.volume = 0.5;
-        const EventAudio = document.getElementById("doublepointsAudio");
-        if (EventAudio) {
-            EventAudio.volume = 1.0;
-            EventAudio.play();
-
-            eventActive.onended = () => {
-                backgroundAudio.volume = 1.0;
-            };
-        }
-
-        setTimeout(() => {
-            overlay.classList.remove('active');
-        }, 5000);
-
-        let timeToRun = remainingEventTime !== null ? remainingEventTime : EventDuration;
-        eventTimeout = setTimeout(() => {
-            logo.classList.remove('active');
-            fetch("event/stop")
-                .then(response => console.log("Event auf Server beendet"));
-            
-            remainingEventTime = null;
-            eventActive = false;
-        }, timeToRun);
-    }
-}
-async function stopGame() {
-    gameStopped = true;
-    if (eventActive && eventStartTime !== null) {
-        let elapsedTime = Date.now() - eventStartTime;
-        remainingEventTime = EventDuration - elapsedTime;
-
-        if (remainingEventTime < 0) remainingEventTime = 0;
-
-        if (eventTimeout) {
-            clearTimeout(eventTimeout);
-        }
-        console.log("Event pausiert. Verbleibende Eventzeit: " + (remainingEventTime / 1000)+ "s");
-    }
-    fetch("event/stop");
-    clearInterval(updateInterval);
-
-    let stopButton = document.getElementById("stopButton");
-    
-    stopButton.disabled = true;
-    
-    let idleVideo = document.getElementById("idleVideo");
-    idleVideo.pause();
-    idleVideo.style.display = "none";
-    
-    let loadingVideo = document.getElementById("loadingVideo");
-    loadingVideo.style.display = "block";
-    loadingVideo.loop = true;
-    loadingVideo.play();
-
-    await fetch("stop");
-
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
-    
-    let startButton = document.getElementById("startButton");
-    if (startButton && stopButton) {
-        startButton.style.display = "block";
-        stopButton.style.display = "none";
-        startButton.disabled = false;
-    }
-
-    let backgroundAudio = document.getElementById("backgroundAudio");
-    backgroundAudio.pause();
-    backgroundAudio.currentTime = 0;
-    
-    gameStopped = true;
-};
 
 function playGoalAnimation(gifName, soundName) {
-
-
-    if (soundName) {
+    if (gifName) playGIF(gifName); 
+    if (soundName && goalAudio) {
         goalAudio.src = soundName;
-        goalAudio.volume = 0.75;
-        goalAudio.play();
+        goalAudio.volume = 0.75; 
+        goalAudio.play().catch(e => console.warn("Audio Error:", e));
     }
 }
 
@@ -276,7 +264,7 @@ function finish() {
     const playerScore = Number(player.value) || 0;
     const botScore = Number(bot.value) || 0;
     const playerLead = scoreSpieler.value - scoreRoboter.value;
-    
+    document.getElementById("golden-goal-logo").classList.remove("active");
     stopGame();
 
     if (playerLead > 0)
@@ -334,6 +322,55 @@ function finish() {
         });
     }, 800);
 }
+
+async function stopGame() {
+    gameStopped = true;
+    if (eventActive && eventStartTime !== null) {
+        let elapsedTime = Date.now() - eventStartTime;
+        remainingEventTime = EventDuration - elapsedTime;
+
+        if (remainingEventTime < 0) remainingEventTime = 0;
+
+        if (eventTimeout) {
+            clearTimeout(eventTimeout);
+        }
+        console.log("Event pausiert. Verbleibende Eventzeit: " + (remainingEventTime / 1000)+ "s");
+    }
+    fetch("event/stop");
+    clearInterval(updateInterval);
+
+    let stopButton = document.getElementById("stopButton");
+    
+    stopButton.disabled = true;
+    
+    let idleVideo = document.getElementById("idleVideo");
+    idleVideo.pause();
+    idleVideo.style.display = "none";
+    
+    let loadingVideo = document.getElementById("loadingVideo");
+    loadingVideo.style.display = "block";
+    loadingVideo.loop = true;
+    loadingVideo.play();
+
+    await fetch("stop");
+
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
+    let startButton = document.getElementById("startButton");
+    if (startButton && stopButton) {
+        startButton.style.display = "block";
+        stopButton.style.display = "none";
+        startButton.disabled = false;
+    }
+
+    let backgroundAudio = document.getElementById("backgroundAudio");
+    backgroundAudio.pause();
+    backgroundAudio.currentTime = 0;
+    
+    gameStopped = true;
+};
 
 function startTimer(duration) {
     let timer = duration;
@@ -398,8 +435,40 @@ function startTimer(duration) {
             }
         }
         if (remainingTime=== 0) {
-            finish();
-            clearInterval(timerInterval);
+            const s = parseInt(scoreSpieler.value) || 0;
+            const r = parseInt(scoreRoboter.value) || 0;
+
+            if (s === r) {
+                if (!isGoldenGoal) {
+                    isGoldenGoal = true;
+
+                    const goldenGoalAudio = document.getElementById("goldengoalAudio")
+                    if (goldenGoalAudio) {
+                        goldenGoalAudio.volume = 1.0;
+                        goldenGoalAudio.play().catch(e => console.warn("GG Sound Error:", e));
+                    }
+
+                    const ggLogo = document.getElementById("golden-goal-logo");
+                    const ggOverlay = document.getElementById("golden-goal-overlay")
+
+                    if (ggLogo) {
+                        ggLogo.classList.add('active'); 
+                    }
+                    if (ggOverlay) {
+                        ggOverlay.classList.add("active");
+                    }
+                    setTimeout(() => {
+                        if (ggOverlay) {
+                            ggOverlay.classList.remove("active");
+                        }
+                    }, 5000);
+
+                    clearInterval(timerInterval);
+                } 
+            }else {
+                    finsish();
+                    clearInterval(timerInterval);
+                }
         } else {
             remainingTime--;
         }
@@ -408,6 +477,73 @@ function startTimer(duration) {
             clearInterval(timerInterval);
         }
     }, 1000);
+}
+
+function resumeEventTimer(remainingMs) {
+    const logo = document.getElementById('event-logo');
+    if (logo) {
+        logo.classList.add('active');
+
+        eventTimeout = setTimeout(() => {
+            logo.classList.remove('active');
+            fetch("event/stop")
+                .then(response => console.log("Event auf Server beendet"));
+            remainingEventTime = null;
+            eventActive = false;
+        }, remainingMs);
+    }
+}
+
+function triggerEvent() {
+    eventActive = true;
+    eventStartTime = Date.now();
+
+    fetch("event/start")
+        .then(response => console.log("Event auf Server gestartet"))
+        .catch(err => console.error("Fehler beim Starten des Events:", err));
+
+    const overlay = document.getElementById('event-overlay');
+    const logo = document.getElementById('event-logo');
+
+
+    if (overlay && logo) {
+        overlay.classList.add('active');
+        logo.classList.add('active');
+        const backgroundAudio = document.getElementById("backgroundAudio");
+        backgroundAudio.volume = 0.5;
+        const EventAudio = document.getElementById("doublepointsAudio");
+        if (EventAudio) {
+            EventAudio.volume = 1.0;
+            EventAudio.play();
+
+            eventActive.onended = () => {
+                backgroundAudio.volume = 1.0;
+            };
+        }
+
+        setTimeout(() => {
+            overlay.classList.remove('active');
+        }, 5000);
+
+        let timeToRun = remainingEventTime !== null ? remainingEventTime : EventDuration;
+        eventTimeout = setTimeout(() => {
+            logo.classList.remove('active');
+            fetch("event/stop")
+                .then(response => console.log("Event auf Server beendet"));
+            
+            remainingEventTime = null;
+            eventActive = false;
+        }, timeToRun);
+    }
+}
+
+function onGoalAnimationEnded(videoElement) {
+    videoElement.currentTime = 0;
+    idleVideo.style.display = "block";
+    idleVideo.play();
+    videoElement.style.display = "none";
+    
+    requestedAnimation = null;
 }
 
 function playGIF(gifName) {
@@ -421,16 +557,6 @@ function playGIF(gifName) {
         gifElement.src = '';
     }, 3000);
 }
-
 function animation(color) {
     fetch("animation/" + color);
-}
-
-function fetchUpdate() {
-    fetch('/state')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById("scoreRoboter").value = data.botScore;
-            document.getElementById("scoreSpieler").value = data.playerScore;
-        })
 }

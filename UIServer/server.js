@@ -115,7 +115,7 @@ app.get('/animation/:color', (req, res) => {
 });
 
 /// Set scores to 0.
-app.get('/resetScores', (req, res) => { playerScore = 1; botScore = 0; res.send("scores reset.") });
+app.get('/resetScores', (req, res) => { playerScore = 0; botScore = 0; res.send("scores reset.") });
 /// Start counting scores.
 app.get('/start', (req, res) => { gameRunning = true; rpio.poll(botGoalPin, onGoalSensor); rpio.poll(playerGoalPin, onGoalSensor); res.send("started."); });
 /// Stop counting scores.
