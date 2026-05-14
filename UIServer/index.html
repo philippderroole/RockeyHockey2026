@@ -24,6 +24,7 @@
         <audio id="goldengoalAudio" src="resources/sounds/goldgoal.wav"></audio>
         <audio id ="LastMinuteAudio" src="resources/sounds/Last minute.mp3"></audio>
         <audio id ="victoryMusic" src="resources/sounds/victory.mp3"></audio>
+        <audio id="goalAudio" src=""></audio>
     </div>
 
     <div>
@@ -85,8 +86,14 @@
 
     <div id="winnerDisplay">
         <div id="winnerTitle">WINNER</div>
+        <div id="winner-image-container">
+            <img id="winner-img-prof" src="resources/imgs/WinningPlayer.png">
+            <img id="winner-img-bot" src="resources/imgs/WinningBot.png">
+        </div>
         <div id="winnerName"></div>
         <div id="winnerScore"></div>
+
+        <button id="restartButton" onclick="location.reload()" class="btn btn-light fs-1" style="display: none;"><strong>Start new game</strong></button>
     </div>
 
     <div id="event-overlay">

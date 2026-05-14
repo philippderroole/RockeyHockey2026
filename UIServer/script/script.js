@@ -264,25 +264,31 @@ function finish() {
     const playerScore = Number(player.value) || 0;
     const botScore = Number(bot.value) || 0;
     const playerLead = scoreSpieler.value - scoreRoboter.value;
+
     document.getElementById("golden-goal-logo").classList.remove("active");
     stopGame();
-
-    if (playerLead > 0)
-    	playGoalAnimation(null, "resources/sounds/winner.wav");
-    if (playerLead < 0)
-    	playGoalAnimation(null, "resources/sounds/lostmatch.wav");
 
     const winnerDisplay = document.getElementById("winnerDisplay");
     const winnerName = document.getElementById("winnerName");
     const winnerScore = document.getElementById("winnerScore");
     const winnerTitle = document.getElementById("winnerTitle");
 
+    const imgProf = document.getElementById("winner-img-prof");
+    const imgBot = document.getElementById("winner-img-bot");
+
+    imgProf.style.display = "none";
+    imgBot.style.display = "none";
+
     if (playerLead > 0) {
         winnerTitle.innerText = "GEWINNER";
         winnerName.innerText = "PROF GEWINNT";
+        imgProf.style.display = "block";
+        playGoalAnimation(null, "resources/sounds/winner.wav");
     } else if (playerLead < 0) {
         winnerTitle.innerText = "GEWINNER";
         winnerName.innerText = "RH 2026 GEWINNT";
+        imgBot.style.display = "block";
+        playGoalAnimation(null, "resources/sounds/Mission_complete.mp3");
     } else {
         winnerTitle.innerText = "SPIELENDE";
         winnerName.innerText = "UNENTSCHIEDEN";
@@ -291,36 +297,43 @@ function finish() {
     winnerDisplay.style.display = "flex";
 
     const victoryMusic = document.getElementById("victoryMusic");
-    victoryMusic.pause();
-    victoryMusic.currentTime = 0;
-    victoryMusic.volume = 0.7;
+    const goalAudio = document.getElementById("goalAudio");
+    goalAudio.onended = function() {
+        victoryMusic.currentTime = 0;
+        victoryMusic.volume = 0.7;
+        victoryMusic.loop = true;
 
-    victoryMusic.play().catch(function(error) {
+        victoryMusic.play().catch(function(error) {
         console.log("Sieger-Musik konnte nicht abgespielt werden:", error);
-    });
+        });
+    };
 
-    confetti({
+    const restartButton = document.getElementById("restartButton");
+    if (restartButton) {
+        restartButton.style.display = "none";
+    }
+    const confettiduration = Infinity;
+    const confettiInterval = setInterval(() => {
+        confetti({
         particleCount: 250,
         spread: 120,
-        origin: { y: 0.6 },
+        origin: { x: 0, y: 0.6 },
         zIndex: 11
-    });
+        });
+
+        confetti({
+            particleCount: 250,
+            spread: 120,
+            origin: { x: 1, y: 0.6 },
+            zIndex: 11
+        });
+    }, 2000);
 
     setTimeout(() => {
-        confetti({
-            particleCount: 200,
-            spread: 140,
-            origin: { x: 0.2, y: 0.6 }
-        });
-    }, 400);
-
-    setTimeout(() => {
-        confetti({
-            particleCount: 200,
-            spread: 140,
-            origin: { x: 0.8, y: 0.6 }
-        });
-    }, 800);
+        if (restartButton) {
+            restartButton.style.display = "block";
+        }
+    }, 8000);
 }
 
 async function stopGame() {
@@ -466,7 +479,7 @@ function startTimer(duration) {
                     clearInterval(timerInterval);
                 } 
             }else {
-                    finsish();
+                    finish();
                     clearInterval(timerInterval);
                 }
         } else {
