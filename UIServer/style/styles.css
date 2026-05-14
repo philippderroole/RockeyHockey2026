@@ -305,6 +305,141 @@
     animation: pulseGlow 1.5s infinite alternate;
 }
 
+#goldenGoalOverlay {
+    position: absolute; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    border-radius: 10px;
+}
+
+#goldenGoalText {
+    color: #FFD700;
+    font-size: 80px;
+    font-weight: bold;
+    text-shadow: 0 0 20px #FFD700;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+#golden-goal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s;
+}
+
+#golden-goal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.golden-banner {
+    text-align: center;
+    transform: scale(0.5);
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#golden-goal-overlay.active .golden-banner {
+    transform: scale(1);
+}
+
+.golden-banner h1 {
+    font-size: 5rem;
+    margin: 15;
+    color: #FFD700; 
+    text-shadow: 0 0 5px #fff,
+                 0 0 10px #FFD700,
+                 0 0 25px #FF8C00,
+                 0 0 30px #FF8C00;
+    font-weight: 650;
+    animation: shake 0.2s infinite alternate;
+}
+
+#golden-goal-logo {
+    position: absolute;
+    top: 150px;
+    left: -105px; 
+    transform: translateX(-50%) scale(0.6);
+    width: 250px;
+    height: 250px;
+    background: rgba(20, 20, 20, 0.9);
+    border-radius: 50%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 4px solid #FFD700;
+    box-shadow: 0 0 4px #fff,
+                0 0 15px #FFD700;
+    line-height: 0.9;
+    font-weight: 700;
+    z-index: 1000;
+}
+
+#golden-goal-logo.active {
+    display: flex;
+    animation: pulseGold 1.5s infinite alternate;
+}
+
+#golden-goal-logo h1 {
+    font-size: 4.0rem;
+    margin: 0;
+    color: #FFD700;
+    text-shadow: 
+        0 0 4px #fff,
+        0 0 8px ,
+        0 0 18px ;
+    line-height: 0.9;
+    font-weight: 700;
+}
+
+#golden-goal-logo p {
+    font-size: 2.5rem;
+    color: #fff;
+    margin: 0;
+    text-shadow: 
+        0 0 3px #fff,
+        0 0 8px ,
+        0 0 20px ;
+    letter-spacing: 1.5px;
+    margin: 0;
+    font-weight: 750;
+    text-transform: uppercase;
+}
+
+@keyframes pulseGold {
+    from {
+        transform: translateX(-50%) scale(0.6);
+        box-shadow: 0 0 10px #FFD700; 
+    }
+    to { 
+        transform: translateX(-50%) scale(0.65);
+        box-shadow: 0 0 30px #FFD700;
+    }
+}
+
 #time-warning-overlay {
     position: fixed;
     top: 0;
@@ -427,129 +562,11 @@
 
 @keyframes pulseGlow {
     from {
-        box-shadow: 0 0 20px rgba(0, 123, 255, 0.6), inset 0 0 15px rgba(231, 15, 15, 0.3);
+        transform: translateX(-50%) scale(0.6);
+        box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
     }
     to {
-        box-shadow: 0 0 35px rgba(0, 123, 255, 0.8), inset 0 0 20px rgba(231, 15, 15, 0.5);
+        transform: translateX(-50%) scale(0.65);
+        box-shadow: 0 0 30px rgba(0, 123, 255, 0.8);
     }
-}
-
-#goldenGoalOverlay {
-    position: absolute; /* Innerhalb des background-containers */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.85);
-    display: none; /* Standardmäßig aus */
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-    border-radius: 10px;
-}
-
-#goldenGoalText {
-    color: #FFD700;
-    font-size: 80px;
-    font-weight: bold;
-    text-shadow: 0 0 20px #FFD700;
-    animation: blink 1s infinite;
-}
-
-@keyframes blink {
-    0% { opacity: 1; }
-    50% { opacity: 0.4; }
-    100% { opacity: 1; }
-}
-#golden-goal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.4s ease, visibility 0.4s;
-}
-
-#golden-goal-overlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-.golden-banner {
-    text-align: center;
-    transform: scale(0.5);
-    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-#golden-goal-overlay.active .golden-banner {
-    transform: scale(1);
-}
-
-/* Der große Text in Gold */
-.golden-banner h1 {
-    font-size: 6rem;
-    margin: 15;
-    color: #FFD700; /* Gold */
-    text-shadow: 0 0 5px #fff,
-                 0 0 10px #FFD700,
-                 0 0 25px #FF8C00,
-                 0 0 30px #FF8C00;
-    font-weight: 650;
-    animation: shake 0.2s infinite alternate;
-}
-
-/* Das kleine Logo an der Seite */
-#golden-goal-logo {
-    position: absolute;
-    top: 150px;
-    left: -200px; /* Position links am Rand */
-    transform: translateX(-50%) scale(0.6);
-    width: 250px;
-    height: 250px;
-    background: rgba(20, 20, 20, 0.9);
-    border-radius: 50%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    border: 4px solid #FFD700;
-    box-shadow: 0 0 4px #fff,
-                0 0 15px #FFD700;
-    line-height: 0.9;
-    font-weight: 700;
-    z-index: 1000;
-}
-
-#golden-goal-logo.active {
-    display: flex;
-    animation: pulseGold 1.5s infinite alternate;
-}
-
-#golden-goal-logo h1 {
-    font-size: 5.5rem;
-    margin: 0;
-    color: #FFD700;
-    text-shadow: 0 0 8px #FF8C00;
-}
-
-#golden-goal-logo p {
-    font-size: 1.8rem;
-    color: #fff;
-    margin: 0;
-    text-transform: uppercase;
-}
-
-/* Goldene Puls-Animation */
-@keyframes pulseGold {
-    from { box-shadow: 0 0 10px #FFD700; transform: scale(0.6); }
-    to { box-shadow: 0 0 30px #FFD700; transform: scale(0.65); }
 }
