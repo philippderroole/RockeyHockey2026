@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::thread;
 
 use anyhow::Context;
@@ -6,6 +5,7 @@ use log::{error, info};
 use tokio::runtime::Builder;
 use web_ui::{WebUI, WebUIConfig};
 
+mod embedded_static;
 mod http;
 mod render;
 mod state;
@@ -22,7 +22,7 @@ pub fn spawn_web_ui_server(
     playback: SharedPlaybackControl,
     port: u16,
 ) -> anyhow::Result<()> {
-    let static_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/web_ui_static");
+    let static_dir = embedded_static::prepare_embedded_static_dir()?;
     let static_dir_str = static_dir.to_string_lossy().to_string();
 
     thread::Builder::new()

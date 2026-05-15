@@ -21,7 +21,7 @@ struct Args {
     /// Port for browser-based live settings editor
     #[arg(long, default_value_t = 8080)]
     web_ui_port: u16,
-    /// Optional UDP endpoint for detected target coordinates, for example 0.0.0.0:5005
+    /// Optional UDP interface for detected target coordinates, for example 0.0.0.0:5005
     #[arg(long)]
     target_output: Option<SocketAddr>,
 }

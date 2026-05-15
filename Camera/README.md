@@ -12,11 +12,11 @@
 Im Projektordner:
 
 ```bash
-cargo run -- --web-ui --target-output 127.0.0.1:5005
+cargo run -- --web-ui --target-output 0.0.0.0:5005
 ```
 
 - `--web-ui` startet den integrierten Webserver zur Konfiguration der Detektionsziele.
-- `--target-output <ip:port>` sendet erkannte Ziele per UDP an die angegebene Adresse.
+- `--target-output <ip:port>` bindet eine UDP-Interface, an das sich ein Client mit einem Subscribe-Paket anmelden kann. Danach sendet der Detector die Zielpositionen an diesen Client.
 
 Weitere Optionen sehen Sie mit:
 

@@ -1,4 +1,6 @@
 use std::net::{SocketAddr, UdpSocket};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 use anyhow::Context;
 use opencv::core::Point;
@@ -22,19 +24,50 @@ struct TargetCoordinate {
 }
 
 pub struct TargetOutputSender {
-    socket: UdpSocket,
-    target_addr: SocketAddr,
+    socket: Arc<UdpSocket>,
+    client_addr: Arc<Mutex<Option<SocketAddr>>>,
 }
 
 impl TargetOutputSender {
-    pub fn new(target_addr: SocketAddr) -> anyhow::Result<Self> {
-        let socket =
-            UdpSocket::bind("0.0.0.0:0").context("Failed to bind UDP socket for target output")?;
+    pub fn new(listen_addr: SocketAddr) -> anyhow::Result<Self> {
+        let socket = Arc::new(
+            UdpSocket::bind(listen_addr).context("Failed to bind UDP socket for target output")?,
+        );
+        let client_addr = Arc::new(Mutex::new(None));
+
+        Self::spawn_subscription_listener(Arc::clone(&socket), Arc::clone(&client_addr));
 
         Ok(Self {
             socket,
-            target_addr,
+            client_addr,
         })
+    }
+
+    fn spawn_subscription_listener(
+        socket: Arc<UdpSocket>,
+        client_addr: Arc<Mutex<Option<SocketAddr>>>,
+    ) {
+        thread::spawn(move || {
+            let mut buffer = [0_u8; 1024];
+
+            loop {
+                match socket.recv_from(&mut buffer) {
+                    Ok((_, sender_addr)) => {
+                        if let Ok(mut client) = client_addr.lock() {
+                            *client = Some(sender_addr);
+                        }
+                    }
+                    Err(err) => {
+                        if err.kind() == std::io::ErrorKind::Interrupted {
+                            continue;
+                        }
+
+                        log::warn!("Target output subscription listener stopped: {err}");
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     pub fn publish_plain_detections(
@@ -80,7 +113,18 @@ impl TargetOutputSender {
         }
 
         let payload = serde_json::to_vec(&packet).context("Failed to serialize target packet")?;
-        let _ = self.socket.send_to(&payload, self.target_addr);
+
+        let Some(target_addr) = *self
+            .client_addr
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Target output client lock was poisoned"))?
+        else {
+            return Ok(());
+        };
+
+        self.socket
+            .send_to(&payload, target_addr)
+            .context("Failed to send target packet")?;
 
         Ok(())
     }

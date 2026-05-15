@@ -35,7 +35,7 @@ impl InputSource {
     }
 
     fn open_pi_camera_capture(&self) -> anyhow::Result<VideoCapture> {
-        let pipeline = "libcamerasrc ! video/x-raw,width=640,height=480,framerate=30/1 ! videoconvert ! appsink";
+        let pipeline = "libcamerasrc ! video/x-raw,format=NV12,width=640,height=480,framerate=60/1 ! videoconvert ! appsink drop=true max-buffers=1 sync=false";
 
         let cam = VideoCapture::from_file(pipeline, CAP_GSTREAMER)?;
         if !VideoCapture::is_opened(&cam)? {
