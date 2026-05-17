@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
             self.isAtZero = True
             time.sleep(3)
             self.logTextbox.append("Move home")
-            self.stepperController.move_to_position(942, 101)
+            self.stepperController.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
             # self.sendMoveValues((TABLE_MAX_X / 2), DEFENSIVE_LINE, "Calibration")
         else:
             self.logTextbox.append(
@@ -1217,9 +1217,6 @@ class MainWindow(QMainWindow):
                                         TABLE_MAX_X,
                                         TABLE_MAX_Y,
                                     )
-                    
-                    if self.stepperController is not None:
-                        self.stepperController.updateRobotPos(newRobotX,newRobotY, self.data.syncRobotPosition)
 
                     frame = self.controller.update(data)
                     self.updatePostCalculationUi(frame)
