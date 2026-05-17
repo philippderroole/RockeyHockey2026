@@ -7,24 +7,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UIRockyHockey</title>
 
-    <!-- Styles -->
     <link href="style/bootstrap.min.css" rel="stylesheet">
     <link href="style/styles.css" rel="stylesheet">
 
-    <!-- Script -->
     <script src="script/script.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
 
 <body class="pb-2">
 
-    <!-- Audios -->
     <div>
         <audio id="backgroundAudio" src="resources/sounds/backgroundsound.wav" loop autoplay></audio>
         <audio id="startAudio" src="resources/sounds/prepare.wav"></audio>
+        <audio id="countdownAudio" src="resources/sounds/countdown.mp3"></audio>
+        <audio id="doublepointsAudio" src="resources/sounds/doublepoints.wav"></audio>
+        <audio id="goldengoalAudio" src="resources/sounds/goldgoal.wav"></audio>
+        <audio id ="LastMinuteAudio" src="resources/sounds/Last minute.mp3"></audio>
+        <audio id ="victoryMusic" src="resources/sounds/victory.mp3"></audio>
         <audio id="goalAudio" src=""></audio>
     </div>
 
-    <!-- Videos -->
     <div>
         <video id="idleVideo"      class="background-video" src="resources/videos/background.mp4" preload="auto" muted style="display:none"></video>
         <video id="leftGoalVideo"  class="background-video" src="resources/videos/left.mp4" preload="auto" muted style="display:none"></video>
@@ -32,30 +34,86 @@
         <video id="loadingVideo"   class="background-video" src="resources/videos/loading.mp4" loop autoplay muted></video>
     </div>
 
-    <!-- Spielstandanzeige mit allen Elementen -->
+    <div class="countdown-wrap" id="countdownContainer">
+        <div id="number">3</div>
+        <svg id="countdownSvg" width="150" height="150">
+            <circle id="circle-bg" cx="150"cy="150" r="120"></circle>
+            <circle id="circle" cx="150"cy="150" r="120"></circle>
+        </svg>
+    </div>
+
     <div id="scale">
         <div id="background-container">
             <img id="background-image" src="resources/imgs/Spielstandanzeige_EM.png" alt="Background Image">
+            <img id="player-image" src="resources/imgs/Kopf_des_Spielers.png">
 
             <input disabled id="countdown" placeholder="10:00">
 
             <input disabled id="scoreRoboter">
             <input disabled id="scoreSpieler">
 
+            <div id="golden-goal-logo">
+                <h1>Golden</h1>
+                <p>Goal</p>
+            </div>
+
+            <div id="event-logo" class="event-circle">
+                <h1>2x</h1>
+                <p>Points</p>
+            </div>
+
             <button id="startButton" onclick="startGame()" type="button"
                 class="btn btn-light start-stop-button fs-1"><strong>Start</strong></button>
+
             <button id="stopButton" onclick="stopGame()" type="button"
                 class="btn btn-light start-stop-button fs-1"><strong>Stop</strong></button>
 
-            <label id="robot-label">RH 2025</label>
+            <label id="robot-label">RH 2026</label>
             <label id="prof-label">PROF</label>
+
         </div>
     </div>
 
-    <!-- GIF -->
+    <div id="golden-goal-overlay">
+        <div class="golden-banner">
+            <h1>GOLDEN GOAL</h1>
+        </div>
+    </div>
+
     <div id="gifDisplay">
         <img id="score-gif" src="" alt="Tor-GIF">
     </div>
+
+    <div id="winnerDisplay">
+        <div id="winnerTitle">WINNER</div>
+        <div id="winner-image-container">
+            <img id="winner-img-prof" src="resources/imgs/WinningPlayer.png">
+            <img id="winner-img-bot" src="resources/imgs/WinningBot.png">
+        </div>
+        <div id="winnerName"></div>
+        <div id="winnerScore"></div>
+
+        <button id="restartButton" onclick="location.reload()" class="btn btn-light fs-1" style="display: none;"><strong>Start new game</strong></button>
+    </div>
+
+    <div id="event-overlay">
+        <div class="event-banner">
+            <h1>2x Points</h1>
+        </div>
+    </div>
+
+    <div id="time-warning-overlay">
+        <div class="time-warning-banner">
+            <h1>1 Minute left</h1>
+        </div>
+    </div>
+
+    <div id="halftime-warning-overlay">
+        <div class="halftime-warning-banner">
+            <h1>5 Minutes left</h1>
+        </div>
+    </div>
+
 </body>
 
 </html>
