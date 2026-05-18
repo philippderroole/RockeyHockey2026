@@ -27,13 +27,18 @@ class MockSerial:
             print(f"[MOCK HARDWARE] Received Command: {command}")
 
         if command == "?":
-            # If the script asks for status, tell it we are Idle and finished moving
             self.response_queue.append(b"<Idle|MPos:0.000,0.000,0.000|FS:0,0>\n")
+        elif command == "$$":
+            self.response_queue.append(b"$0=10\n$1=25\n$2=0\n$3=0\n$4=0\n$5=0\n$6=0\n$10=1\n$11=0.010\n$12=0.002\n$13=0\n$20=0\n$21=0\n$22=1\n$23=0\n$24=25.000\n$25=500.000\n$26=250\n$27=1.000\n$30=1000\n$31=0\n$32=0\n$100=800.000\n$101=800.000\n$102=800.000\n$110=20000.000\n$111=20000.000\n$112=500.000\n$120=1000.000\n$121=1000.000\n$122=100.000\n$130=200.000\n$131=200.000\n$132=200.000\nok\n")
+        elif command == "$G":
+            self.response_queue.append(b"[GC:G0 G54 G17 G21 G90 G94 M5 M9 T0 F0 S0]\nok\n")
+        elif command == "$I":
+            self.response_queue.append(b"[VER:1.1f MOCK.20190825:]\n[OPT:V,15,128]\nok\n")
+        elif command == "$#":
+            self.response_queue.append(b"[G54:0.000,0.000,0.000]\n[G55:0.000,0.000,0.000]\n[G56:0.000,0.000,0.000]\n[G57:0.000,0.000,0.000]\n[G58:0.000,0.000,0.000]\n[G59:0.000,0.000,0.000]\n[G28:0.000,0.000,0.000]\n[G30:0.000,0.000,0.000]\n[G92:0.000,0.000,0.000]\n[TLO:0.000]\n[PRB:0.000,0.000,0.000:0]\nok\n")
         elif command in ["$X", "$H"] or command.startswith("G") or command.startswith("$J"):
-            # Reply 'ok' to moves, homing, unlocks, and jogs
             self.response_queue.append(b"ok\n")
         elif command == "":
-            # Handle the wake-up carriage returns
             self.response_queue.append(b"ok\n")
 
     def readline(self):
@@ -41,6 +46,13 @@ class MockSerial:
         if self.response_queue:
             return self.response_queue.pop(0)
         return b"" # Simulate a timeout if no response is queued
+
+    @property
+    def in_waiting(self):
+        total = 0
+        for item in self.response_queue:
+            total += len(item)
+        return total
 
     def reset_input_buffer(self):
         self.response_queue = []
@@ -106,14 +118,14 @@ class StepperController:
         if self.connection:
             self.connection.write(b'\x85')
 
-    def move_to_position(self, x, y, feedrate=20000):
+    def move_to_position(self, x, y, feedrate=25000):
         """
         Streams a jog movement command to GRBL without blocking.
         Allows immediate retargeting mid-movement.
         """
         # Abort any currently executing movement first
         self.cancel_jog()
-        
+
         # Issue the new Jog command
         command = f"$J=G21G90X{x}Y{y}F{feedrate}"
         self.send_command(command)
@@ -123,11 +135,26 @@ class StepperController:
         print("Homing machine...")
         self.send_command("$H")
         self.wait_for_idle()
-
-        # After homing, set this position as Absolute Zero (0,0)
-        self.send_command("G92 X0 Y0")
         print("Homing complete.")
         return "OK"
+
+    def read_output(self, command=None, timeout=0.5):
+        if self.connection is None:
+            print("[read_output] Not connected.")
+            return
+
+        if command is not None:
+            print(f"[read_output] Sending: {command}")
+            self.connection.write((command + '\n').encode('utf-8'))
+
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self.connection.in_waiting > 0:
+                line = self.connection.readline().decode('utf-8').strip()
+                if line:
+                    print(f"[GRBL] {line}")
+            else:
+                time.sleep(0.01)
 
     def disconnect(self):
         if self.connection:

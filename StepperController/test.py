@@ -23,10 +23,18 @@ if __name__ == "__main__":
 
         print("\n3. Testing calibrate()...")
         controller.calibrate()
+        controller.move_to_position(20, 180)     
+
 
         print("\n4. Testing move_to_position()...")
         controller.move_to_position(170, 10)
         controller.move_to_position(180, 350)
+        controller.move_to_position(250, 100)
+        controller.move_to_position(20, 0)
+        controller.move_to_position(200, 300)
+        controller.cancel_jog()
+        controller.move_to_position(180, 100)
+        controller.move_to_position(20, 180)
         
         print("\n5. Testing wait_for_idle()...")
         controller.wait_for_idle()

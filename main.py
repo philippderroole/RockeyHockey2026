@@ -59,6 +59,8 @@ class MainWindow(QMainWindow):
                 STEPPER_COM_PORT, STEPPER_BAUDRATE
             )
             self.stepperController.connect()
+            self.stepperController.calibrate()
+            self.stepperController.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
         except Exception:
             self.logTextbox.append(
                 "ERROR: No Arduino found on " + STEPPER_COM_PORT + "."
@@ -547,8 +549,6 @@ class MainWindow(QMainWindow):
             self.logTextbox.append("Calibrating...")
             self.stepperController.calibrate()
             # self.moveWorker.set_values(MoveType.CALIBRATE, 0, 0)
-            self.isAtZero = True
-            time.sleep(3)
             self.logTextbox.append("Move home")
             self.stepperController.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
             # self.sendMoveValues((TABLE_MAX_X / 2), DEFENSIVE_LINE, "Calibration")
@@ -574,7 +574,7 @@ class MainWindow(QMainWindow):
                 x = int(self.xCoordTextBox.toPlainText())
                 y = int(self.yCoordTextBox.toPlainText())
                 self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
-                self.sendMoveValues(x, y)
+                self.stepperController.move_to_position(x, y)
             except ValueError:
                 self.logTextbox.append(
                     "ERROR: X and/or Y value is not an integer. Cannot move to position."
