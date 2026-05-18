@@ -517,41 +517,23 @@ class MainWindow(QMainWindow):
             )
             self.sendMoveValues(moveX, moveY)
 
-    def sendMoveValues(self, x, y, type = None):
-        if (
-            abs(x - self.data.lastMovePosition[0]) < 35
-            and abs(y - self.data.lastMovePosition[1]) < 35
-            and type != "Homing"
-        ):
-            return
-        count = 0
-        if type == 'Homing':
-            count = count+1
+    def sendMoveValues(self, x, y, type = None, label = None):
+        if isinstance(type, MoveType):
+            move_type = type
         else:
-            count = 0
-            
-        if count > 200:
-            self.data.syncRobotPosition = True
-        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Type: {type}")
+            move_type = MoveType.NORMAL
+        if label is None:
+            label = "Unknown"
+        self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Label: {label}, \t\tMove Type: {move_type.name}")
         self.data.lastMovePosition = (x, y)
+        self.moveWorker.set_values(move_type, x, y)
 
-        # if self.botActivated:
-        self.data.positionsSent += 1
-        # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
-        response = self.stepperController.move_to_position(x, y)
-        self.data.syncRobotPosition = False
-        #print(f"{x},{y}")
-        #print(response)
 
     def calibrate(self):
-        # Add your calibration code here
         if self.stepperController is not None:
-            self.logTextbox.append("Calibrating...")
-            self.stepperController.calibrate()
-            # self.moveWorker.set_values(MoveType.CALIBRATE, 0, 0)
-            self.logTextbox.append("Move home")
-            self.stepperController.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
-            # self.sendMoveValues((TABLE_MAX_X / 2), DEFENSIVE_LINE, "Calibration")
+            self.moveWorker.clear_queue()
+            self.logTextbox.append("Calibrating and moving home...")
+            self.moveWorker.set_values(MoveType.CALIBRATE, HOME_POSITION_X, HOME_POSITION_Y)
         else:
             self.logTextbox.append(
                 "ERROR: Cannot calibrate. No Arduino found on " + STEPPER_COM_PORT + "."
@@ -574,7 +556,7 @@ class MainWindow(QMainWindow):
                 x = int(self.xCoordTextBox.toPlainText())
                 y = int(self.yCoordTextBox.toPlainText())
                 self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
-                self.stepperController.move_to_position(x, y)
+                self.sendMoveValues(x, y, MoveType.IMMEDIATE)
             except ValueError:
                 self.logTextbox.append(
                     "ERROR: X and/or Y value is not an integer. Cannot move to position."

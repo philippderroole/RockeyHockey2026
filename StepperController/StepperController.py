@@ -3,6 +3,7 @@ import time
 from queue import Queue, Empty
 from PyQt5.QtCore import QThread
 from enum import Enum
+from Constants import *
 
 class MockSerial:
     """A fake serial port that pretends to be a GRBL Arduino."""
@@ -120,15 +121,19 @@ class StepperController:
 
     def move_to_position(self, x, y, feedrate=25000):
         """
-        Streams a jog movement command to GRBL without blocking.
-        Allows immediate retargeting mid-movement.
+        Streams a jog movement command to GRBL.
+        GRBL will finish any current move before starting this one.
+        Send cancel_jog() first for immediate move
         """
-        # Abort any currently executing movement first
-        self.cancel_jog()
-
         # Issue the new Jog command
         command = f"$J=G21G90X{x}Y{y}F{feedrate}"
         self.send_command(command)
+
+    def move_to_home(self):
+        self.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
+
+    def print_current_position(self):
+        self.read_output("?")
 
     def calibrate(self):
         """Triggers GRBL's built-in homing cycle."""
@@ -162,7 +167,8 @@ class StepperController:
 
 class MoveType(Enum):
     NORMAL = 1
-    CALIBRATE = 2
+    IMMEDIATE = 2
+    CALIBRATE = 3
 
 class MoveWorker(QThread):
     def __init__(self, stepperController, parent=None):
@@ -186,8 +192,21 @@ class MoveWorker(QThread):
             if self.stepperController is not None:
                 if type == MoveType.NORMAL:
                     self.stepperController.move_to_position(int(x), int(y))
+                elif type == MoveType.IMMEDIATE:
+                    self.stepperController.cancel_jog()
+                    self.stepperController.move_to_position(int(x), int(y))
                 elif type == MoveType.CALIBRATE:
                     self.stepperController.calibrate()
+                    self.stepperController.cancel_jog()
+                    self.stepperController.move_to_position(int(x), int(y))
 
     def set_values(self, type, x, y):
         self.queue.put((type, x, y))
+
+    def clear_queue(self):
+        """Remove all pending items from the queue."""
+        while True:
+            try: 
+                self.queue.get_nowait()
+            except Empty:
+                break
