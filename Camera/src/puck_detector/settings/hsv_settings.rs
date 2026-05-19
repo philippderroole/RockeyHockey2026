@@ -15,10 +15,10 @@ impl Default for HsvThresholds {
     fn default() -> Self {
         Self {
             h_min: 36,
-            s_min: 91,
-            v_min: 100,
             h_max: 47,
+            s_min: 91,
             s_max: 255,
+            v_min: 100,
             v_max: 209,
         }
     }
@@ -26,10 +26,10 @@ impl Default for HsvThresholds {
 
 impl HsvThresholds {
     pub fn normalized(self) -> Self {
-        let h_min = self.h_min.clamp(0, 179);
+        let h_min = self.h_min.clamp(0, 255);
         let s_min = self.s_min.clamp(0, 255);
         let v_min = self.v_min.clamp(0, 255);
-        let h_max = self.h_max.clamp(h_min, 179);
+        let h_max = self.h_max.clamp(h_min, 255);
         let s_max = self.s_max.clamp(s_min, 255);
         let v_max = self.v_max.clamp(v_min, 255);
 
