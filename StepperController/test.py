@@ -5,7 +5,7 @@ if __name__ == "__main__":
     
     controller = None
     # Use "MOCK" for testing without hardware
-    port = "COM3" 
+    port = "MOCK" 
     baudrate = "115200"
 
     print(f"--- Starting StepperController Test on {port} ---")

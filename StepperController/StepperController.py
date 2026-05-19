@@ -15,6 +15,13 @@ class MockSerial:
         self.response_queue = []
         print(f"\n[MOCK HARDWARE] Virtual Arduino connected on {port}")
 
+    def _add_response(self, data):
+        lines = data.split(b'\n')
+        for i, line in enumerate(lines):
+            if i == len(lines) - 1 and not line:
+                break
+            self.response_queue.append(line + b'\n')
+
     def write(self, data):
         # Intercept real-time commands like Jog Cancel (0x85)
         if b'\x85' in data:
@@ -28,19 +35,19 @@ class MockSerial:
             print(f"[MOCK HARDWARE] Received Command: {command}")
 
         if command == "?":
-            self.response_queue.append(b"<Idle|MPos:0.000,0.000,0.000|FS:0,0>\n")
+            self._add_response(b"<Idle|MPos:0.000,0.000,0.000|FS:0,0>\n")
         elif command == "$$":
-            self.response_queue.append(b"$0=10\n$1=25\n$2=0\n$3=0\n$4=0\n$5=0\n$6=0\n$10=1\n$11=0.010\n$12=0.002\n$13=0\n$20=0\n$21=0\n$22=1\n$23=0\n$24=25.000\n$25=500.000\n$26=250\n$27=1.000\n$30=1000\n$31=0\n$32=0\n$100=800.000\n$101=800.000\n$102=800.000\n$110=20000.000\n$111=20000.000\n$112=500.000\n$120=1000.000\n$121=1000.000\n$122=100.000\n$130=200.000\n$131=200.000\n$132=200.000\nok\n")
+            self._add_response(b"$0=10\n$1=25\n$2=0\n$3=0\n$4=0\n$5=0\n$6=0\n$10=1\n$11=0.010\n$12=0.002\n$13=0\n$20=0\n$21=0\n$22=1\n$23=0\n$24=25.000\n$25=500.000\n$26=250\n$27=1.000\n$30=1000\n$31=0\n$32=0\n$100=800.000\n$101=800.000\n$102=800.000\n$110=20000.000\n$111=20000.000\n$112=500.000\n$120=1000.000\n$121=1000.000\n$122=100.000\n$130=200.000\n$131=200.000\n$132=200.000\nok\n")
         elif command == "$G":
-            self.response_queue.append(b"[GC:G0 G54 G17 G21 G90 G94 M5 M9 T0 F0 S0]\nok\n")
+            self._add_response(b"[GC:G0 G54 G17 G21 G90 G94 M5 M9 T0 F0 S0]\nok\n")
         elif command == "$I":
-            self.response_queue.append(b"[VER:1.1f MOCK.20190825:]\n[OPT:V,15,128]\nok\n")
+            self._add_response(b"[VER:1.1f MOCK.20190825:]\n[OPT:V,15,128]\nok\n")
         elif command == "$#":
-            self.response_queue.append(b"[G54:0.000,0.000,0.000]\n[G55:0.000,0.000,0.000]\n[G56:0.000,0.000,0.000]\n[G57:0.000,0.000,0.000]\n[G58:0.000,0.000,0.000]\n[G59:0.000,0.000,0.000]\n[G28:0.000,0.000,0.000]\n[G30:0.000,0.000,0.000]\n[G92:0.000,0.000,0.000]\n[TLO:0.000]\n[PRB:0.000,0.000,0.000:0]\nok\n")
+            self._add_response(b"[G54:0.000,0.000,0.000]\n[G55:0.000,0.000,0.000]\n[G56:0.000,0.000,0.000]\n[G57:0.000,0.000,0.000]\n[G58:0.000,0.000,0.000]\n[G59:0.000,0.000,0.000]\n[G28:0.000,0.000,0.000]\n[G30:0.000,0.000,0.000]\n[G92:0.000,0.000,0.000]\n[TLO:0.000]\n[PRB:0.000,0.000,0.000:0]\nok\n")
         elif command in ["$X", "$H"] or command.startswith("G") or command.startswith("$J"):
-            self.response_queue.append(b"ok\n")
+            self._add_response(b"ok\n")
         elif command == "":
-            self.response_queue.append(b"ok\n")
+            self._add_response(b"ok\n")
 
     def readline(self):
         # Send the faked response back to the Python script
@@ -92,24 +99,35 @@ class StepperController:
         self.connection.write((command + '\n').encode('utf-8'))
 
         # Wait for the "ok" response from GRBL indicating it entered the buffer
-        while True:
+        start_time = time.time()
+        timeout = 2.0  # 2 seconds max timeout
+        while time.time() - start_time < timeout:
             response = self.connection.readline().decode('utf-8').strip()
             if response == 'ok':
                 return response
             elif response.startswith('error'):
                 print(f"GRBL Error: {response}")
                 return response
+            
+            # Avoid 100% CPU spin in mock mode
+            time.sleep(0.002)
+            
+        print(f"GRBL Timeout: No 'ok' or 'error' received for: {command}")
+        return "TIMEOUT"
 
     def wait_for_idle(self):
-        """Polls GRBL until the motors physically finish moving. ONLY used for calibration."""
+        """Polls GRBL until the motors physically finish moving or enter alarm."""
         while True:
-            self.connection.write(b"?") # '?' gets real-time status
+            self.connection.write(b"?")
             response = self.connection.readline().decode('utf-8').strip()
 
-            # If GRBL reports it is idle, the movement is completely finished
             if response.startswith("<Idle"):
                 break
-            time.sleep(0.05) # Check again in 50ms
+            elif response.startswith("<Alarm"):
+                print("GRBL Entered ALARM State during wait!")
+                break
+            
+            time.sleep(0.01) # Check again in 10ms
 
     def cancel_jog(self):
         """
@@ -135,6 +153,10 @@ class StepperController:
     def print_current_position(self):
         self.read_output("?")
 
+    def get_maxima(self):
+        """Returns the configured max travel bounds for X and Y."""
+        return TABLE_MAX_X, TABLE_MAX_Y
+
     def calibrate(self):
         """Triggers GRBL's built-in homing cycle."""
         print("Homing machine...")
@@ -150,7 +172,11 @@ class StepperController:
 
         if command is not None:
             print(f"[read_output] Sending: {command}")
-            self.connection.write((command + '\n').encode('utf-8'))
+            # If it's a real-time query, write without newline to prevent empty-line 'ok' responses
+            if len(command) == 1 and command in ['?', '!', '~', '\x85']:
+                self.connection.write(command.encode('utf-8'))
+            else:
+                self.connection.write((command + '\n').encode('utf-8'))
 
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -194,10 +220,10 @@ class MoveWorker(QThread):
                     self.stepperController.move_to_position(int(x), int(y))
                 elif type == MoveType.IMMEDIATE:
                     self.stepperController.cancel_jog()
+                    self.stepperController.wait_for_idle()
                     self.stepperController.move_to_position(int(x), int(y))
                 elif type == MoveType.CALIBRATE:
                     self.stepperController.calibrate()
-                    self.stepperController.cancel_jog()
                     self.stepperController.move_to_position(int(x), int(y))
 
     def set_values(self, type, x, y):

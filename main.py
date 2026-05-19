@@ -59,8 +59,6 @@ class MainWindow(QMainWindow):
                 STEPPER_COM_PORT, STEPPER_BAUDRATE
             )
             self.stepperController.connect()
-            self.stepperController.calibrate()
-            self.stepperController.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
         except Exception:
             self.logTextbox.append(
                 "ERROR: No Arduino found on " + STEPPER_COM_PORT + "."
@@ -69,6 +67,10 @@ class MainWindow(QMainWindow):
         # Thread for communication with the arduino so the UI does not hang.
         self.moveWorker = MoveWorker(self.stepperController)
         self.moveWorker.start()
+        
+        # Trigger homing/calibration asynchronously on the background thread
+        if self.stepperController is not None:
+            self.calibrate()
         self.data = model
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -468,6 +470,8 @@ class MainWindow(QMainWindow):
     def exitApp(self):
         self.timer.stop()
         self.camera.stop()
+        if self.stepperController is not None:
+            self.stepperController.disconnect()
         sys.exit()
 
     def setBotState(self):
@@ -520,8 +524,12 @@ class MainWindow(QMainWindow):
     def sendMoveValues(self, x, y, type = None, label = None):
         if isinstance(type, MoveType):
             move_type = type
+        elif isinstance(type, str):
+            move_type = MoveType.NORMAL
+            label = type
         else:
             move_type = MoveType.NORMAL
+            
         if label is None:
             label = "Unknown"
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Label: {label}, \t\tMove Type: {move_type.name}")
