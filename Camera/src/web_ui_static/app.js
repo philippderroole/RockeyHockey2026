@@ -259,8 +259,8 @@
                     />
                 </label>
                 <div class="target-controls">
-                    ${targetRowMarkup("H min", "h_min", 0, 179, target.h_min)}
-                    ${targetRowMarkup("H max", "h_max", 0, 179, target.h_max)}
+                    ${targetRowMarkup("H min", "h_min", 0, 255, target.h_min)}
+                    ${targetRowMarkup("H max", "h_max", 0, 255, target.h_max)}
                     ${targetRowMarkup("S min", "s_min", 0, 255, target.s_min)}
                     ${targetRowMarkup("S max", "s_max", 0, 255, target.s_max)}
                     ${targetRowMarkup("V min", "v_min", 0, 255, target.v_min)}
@@ -300,7 +300,7 @@
             h_min: readTargetValue(card, "h_min", 0),
             s_min: readTargetValue(card, "s_min", 0),
             v_min: readTargetValue(card, "v_min", 0),
-            h_max: readTargetValue(card, "h_max", 179),
+            h_max: readTargetValue(card, "h_max", 255),
             s_max: readTargetValue(card, "s_max", 255),
             v_max: readTargetValue(card, "v_max", 255),
         };
