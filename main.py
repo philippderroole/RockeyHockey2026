@@ -59,6 +59,8 @@ class MainWindow(QMainWindow):
                 STEPPER_COM_PORT, STEPPER_BAUDRATE
             )
             self.stepperController.connect()
+            self.stepperController.calibrate()
+            self.stepperController.move_to_position(HOME_POSITION_X, HOME_POSITION_Y)
         except Exception:
             self.logTextbox.append(
                 "ERROR: No Arduino found on " + STEPPER_COM_PORT + "."
