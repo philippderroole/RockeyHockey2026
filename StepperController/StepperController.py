@@ -160,8 +160,9 @@ class StepperController:
     def calibrate(self):
         """Triggers GRBL's built-in homing cycle."""
         print("Homing machine...")
-        self.send_command("$H")
+        self.connection.write(b"$H\n")
         self.wait_for_idle()
+        self.send_command("$X")
         print("Homing complete.")
         return "OK"
 

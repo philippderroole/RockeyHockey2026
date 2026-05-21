@@ -564,7 +564,7 @@ class MainWindow(QMainWindow):
                 x = int(self.xCoordTextBox.toPlainText())
                 y = int(self.yCoordTextBox.toPlainText())
                 self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
-                self.sendMoveValues(x, y, MoveType.IMMEDIATE)
+                self.sendMoveValues(x, y, MoveType.IMMEDIATE, "UI Manual Move")
             except ValueError:
                 self.logTextbox.append(
                     "ERROR: X and/or Y value is not an integer. Cannot move to position."
