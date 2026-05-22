@@ -22,7 +22,7 @@ CAMERA_ROBOT_MAX_RADIUS = 30
 
 CAMERA_INDEX=0
 # Change the URL to "virtual" if you want to simulate the Camera using a pre-recorded video
-CAMERA_STREAM_URL =  "virtual"  
+CAMERA_STREAM_URL =  "http://10.0.0.2:5000/video_feed"  
 CAMERA_FRAME_WIDTH = 640
 CAMERA_FRAME_HEIGHT = 480
 CAMERA_FRAME_ROBOT_MAX_Y = 270
@@ -31,7 +31,7 @@ CAMERA_FOCUS = 1
 CAMERA_BUFFERSIZE = 2
 
 # Change to VIRTUAL_CAM = True, if you want to simulate the Camera using a pre-recorded video
-VIRTUAL_CAM = True
+VIRTUAL_CAM = False
 # If True the VideoStream gets recorded and saved
 RECORD_VIDEO = False
 
