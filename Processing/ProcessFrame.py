@@ -97,12 +97,15 @@ boundaries = [
     if axisLeftX != -1 and axisRightX != -1:
         cv2.line(frame, (int(axisLeftX), int(axisLeftY)), (int(axisRightX), int(axisRightY)), (200, 0, 200), 2)
     
-    # mark right and left Axis
-    cv2.circle(frame, (int(axisRightX), int(axisRightY)), 4, (255, 0, 255), -1)
-    cv2.circle(frame, (int(axisLeftX), int(axisLeftY)), 4, (0, 255, 255), -1)    
+        # mark right and left Axis
+    if axisRightX != -1 and axisRightY != -1:
+        cv2.circle(frame, (int(axisRightX), int(axisRightY)), 4, (255, 0, 255), -1)
+
+    if axisLeftX != -1 and axisLeftY != -1:
+        cv2.circle(frame, (int(axisLeftX), int(axisLeftY)), 4, (0, 255, 255), -1)   
     
     
-    return x, y, radius, robotX, robotY, robotRadius, axisRightY, axisLeftY
+    return x, y, radius, robotX, robotY, robotRadius, axisRightX, axisRightY, axisLeftX, axisLeftY
 
 
 def detectPuckCustomizeable(filteredFrame, boundaries, resizeFrame=False, useBlur=True, useUMat=False, detectRobot=True):

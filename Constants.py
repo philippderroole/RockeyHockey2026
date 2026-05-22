@@ -22,7 +22,7 @@ CAMERA_ROBOT_MAX_RADIUS = 30
 
 CAMERA_INDEX=0
 # Change the URL to "virtual" if you want to simulate the Camera using a pre-recorded video
-CAMERA_STREAM_URL =  "http://10.0.0.2:5000/video_feed" #"virtual"  
+CAMERA_STREAM_URL =  "virtual"  
 CAMERA_FRAME_WIDTH = 640
 CAMERA_FRAME_HEIGHT = 480
 CAMERA_FRAME_ROBOT_MAX_Y = 270
@@ -31,7 +31,7 @@ CAMERA_FOCUS = 1
 CAMERA_BUFFERSIZE = 2
 
 # Change to VIRTUAL_CAM = True, if you want to simulate the Camera using a pre-recorded video
-VIRTUAL_CAM = False
+VIRTUAL_CAM = True
 # If True the VideoStream gets recorded and saved
 RECORD_VIDEO = False
 
@@ -62,6 +62,14 @@ TABLE_CORNER_BOTTOM_LEFT_X = 27
 TABLE_CORNER_BOTTOM_LEFT_Y = 623
 
 DEFENSIVE_LINE = 20
+# Roboter-Positionen:
+# Home = Ruheposition
+# Defend = nach vorne zum Abwehren
+# Mitte = Kamerazentrum
+ROBOT_HOME_Y = 70
+ROBOT_DEFEND_Y = 110
+ROBOT_HOME_X_CAM = CAMERA_FRAME_HEIGHT / 2
+
 GORIGHT_MAX = TABLE_CORNER_BOTTOM_RIGHT_X - 70
 GOLEFT_MAX = 70
 GOFORWARD_MAX = 150

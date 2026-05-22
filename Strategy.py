@@ -27,12 +27,17 @@ class RobotController:
         self.updatePreCalculationUi = updatePreCalculationUi
         self.camera = camera
         self.atHome = True
+        self.debugTargetCam = None
+        self.debugStartLocked = False
+        self.debugInitialized = False
+        self.lastPlaybackMove = None
+        self.playbackDeadzone = 120
 
 
     def update(self, calcData: dict = None):
         start_time = time.time()
         if calcData:
-            global radius
+            
             x, y, radius, self.data.robotX, self.data.robotY, self.data.robotRadius, frame = (
                 calcData["x"],
                 calcData["y"],
@@ -55,36 +60,41 @@ class RobotController:
         if x < 0 or y < 0:
             return frame
 
-        self._resetPrediction()
-        self._makePrediction(frame)
         self.data.puckSpeed = self._calculateSpeed()
+        self._resetPrediction()
+        self._makePrediction(radius)
         self.isPuckGoingToRobot = self._isGoingToRobot()
+        print("STATE:", self.state, "isGoing:", self.isPuckGoingToRobot)
+        print("isPuckGoingToRobot:", self.isPuckGoingToRobot)
 
         if self.state == State.IDLE:
+            self.debugTargetCam = (int(ROBOT_HOME_X_CAM), int(ROBOT_HOME_Y))
+
             if self.isPuckGoingToRobot:
-                #print("Changed State from IDLE to DEFENDING")
                 self.state = State.DEFENDING
-            elif self._isAbleToAttack():
-                #print("Changed State from IDLE to PLAYING_BACK")
-                self.state = State.PLAYING_BACK
+                self._moveToPredicted()
 
         elif self.state == State.DEFENDING:
             self._moveToPredicted()
+
             if not self.isPuckGoingToRobot:
-                #print("Changed State from DEFENDING to HOMING")
                 self.state = State.HOMING
 
         elif self.state == State.HOMING:
+            self.debugTargetCam = (int(ROBOT_HOME_X_CAM), int(ROBOT_HOME_Y))
             self._goHome()
+
             if self._atHome():
-                #print("Changed State from HOMING to IDLE")
                 self.state = State.IDLE
-                self.atHome = False
 
         elif self.state == State.PLAYING_BACK:
+            self.debugTargetCam = (
+                int(self.data.currentPosition[0]),
+                int(self.data.currentPosition[1])
+            )
             self._playBack()
+
             if self._playedBack():
-                #print("Changed State from PLAYING_BACK to HOMING")
                 self.state = State.HOMING
 
         self._saveState()
@@ -96,20 +106,34 @@ class RobotController:
     def _calculateSpeed(self):
         dx = self.data.currentPosition[0] - self.data.lastPosition[0]
         dy = self.data.currentPosition[1] - self.data.lastPosition[1]
-        delta = (self.data.currentFrameTimestamp - self.data.lastFrameTimestamp).total_seconds()
-        if not delta == 0:
-            return math.sqrt(dx ** 2 + dy ** 2) / delta
+
+        try:
+            delta = self.data.currentFrameTimestamp - self.data.lastFrameTimestamp
+
+            # Falls datetime → convert
+            if hasattr(delta, "total_seconds"):
+                delta = delta.total_seconds()
+
+        except Exception:
+            delta = 0
+
+        if delta != 0:
+            return math.sqrt(dx ** 2 + dy ** 2) / abs(delta)
+
         return math.sqrt(dx ** 2 + dy ** 2)
         
         
 
     def _isGoingToRobot(self):
-        return self.data.currentPosition[1] < self.data.lastPosition[1] and self.data.puckSpeed >= 3
+        return (
+            self.data.currentPosition[1] < self.data.lastPosition[1]
+            and abs(self.data.currentPosition[1] - self.data.lastPosition[1]) > 2
+        )
 
     def _isAbleToAttack(self):
         # logik falls puck sich im Bereich des Roboters befindet und sich so bewegt, dass Roboter angreifen kann
         # check if Puck is staying in own half
-        return self.data.puckSpeed < 3 and self.data.currentPosition[1] < 250
+        return False
 
     def _resetPrediction(self):
         self.data.predictionMade = False
@@ -117,7 +141,7 @@ class RobotController:
         self.data.predictedPoints = []
         self.data.collisionPoints = []
 
-    def _makePrediction(self, frame):
+    def _makePrediction(self, radius):
         # Vorhersagelogik (gekürzt/eingekapselt)
         # Setze self.predictedPoint etc.
         # check if new prediciton is needed (because reflection has taken place)
@@ -153,7 +177,7 @@ class RobotController:
                 #print(self.data.predictionLine.get_m())
                 #print(self.data.currentPosition[1])
                 #print(self.data.puckSpeed)
-                if self.data.puckSpeed > 4 and self.data.predictionLine.get_m():
+                if self.data.puckSpeed > 1.5 and self.data.predictionLine.get_m() is not None:
                     # time.sleep(3)
                     loopCounter = 0
                     while loopCounter < 2:
@@ -210,8 +234,8 @@ class RobotController:
                                    #f"Reflection line m={self.data.reflectionLine.get_m()}"
                                 #)
                             self.data.predictedPoint = (
-                                self.data.reflectionLine.get_x(DEFENSIVE_LINE),
-                                DEFENSIVE_LINE,
+                                self.data.reflectionLine.get_x(ROBOT_DEFEND_Y),
+                                ROBOT_DEFEND_Y,
                             )
                             self.data.predictionMade = True
                             #print(f"{self.data.currentPosition[1]} warum?")
@@ -236,10 +260,10 @@ class RobotController:
                             else:
                                 self.data.predictedPoint = (
                                     self.data.predictionLine.get_x(
-                                        DEFENSIVE_LINE
+                                        ROBOT_DEFEND_Y
                                     ),
-                                    DEFENSIVE_LINE,
-                                )
+                                    ROBOT_DEFEND_Y,
+                                    )
                             self.data.predictionMade = True
                             self.data.wentBackToGoal = False
                             self.data.attacked = False
@@ -253,31 +277,49 @@ class RobotController:
                         loopCounter += 1
 
             except Exception as e:
-                #print("in Exception, kp warum")
-                #print(e)
-                time.sleep(10)
+                print("Prediction error:", e)
                 pass
         return True 
 
 
     def _moveToPredicted(self):
-        if self.data.botActivated:
-            moveX, moveY = self.mapCoordinates(
-                self.data.predictedPoint[0],
-                self.data.predictedPoint[1],
-                CAMERA_FRAME_HEIGHT,
-                CAMERA_FRAME_ROBOT_MAX_Y,
-                TABLE_MAX_X,
-                TABLE_MAX_Y,
-            )
-            moveX = TABLE_MAX_X - moveX
-            self.moveIfPossible(moveX, moveY, "Defense")
+        targetX = self.data.currentPosition[0]
+        targetY = self.data.currentPosition[1]
+
+        if hasattr(self.data, "predictedPoint") and self.data.predictedPoint:
+            if self.data.predictedPoint[0] is not None and self.data.predictedPoint[1] is not None:
+                targetX = self.data.predictedPoint[0]
+                targetY = self.data.predictedPoint[1]
+
+        targetX = max(40, min(CAMERA_FRAME_HEIGHT - 40, targetX))
+        targetY = max(ROBOT_HOME_Y - 10, min(ROBOT_HOME_Y + 140, targetY))
+
+        self.debugTargetCam = (int(targetX), int(targetY))
+
+        if not self.data.botActivated:
+            return
+        
+        # Geschwindigkeitsfilter: Verhindert unnötige Befehle bei Tracking-Fehlern
+        if self.data.puckSpeed > 20:
+            return
+
+        moveX, moveY = self.mapCoordinates(
+            targetX,
+            targetY,
+            CAMERA_FRAME_HEIGHT,
+            CAMERA_FRAME_ROBOT_MAX_Y,
+            TABLE_MAX_X,
+            TABLE_MAX_Y,
+        )
+        moveX = TABLE_MAX_X - moveX
+        self.moveIfPossible(moveX, moveY, "Defense")
 
     def _goHome(self):
+        self.lastPlaybackMove = None
         if self.data.botActivated:
             moveX, moveY = self.mapCoordinates(
-                (CAMERA_FRAME_HEIGHT / 2),
-                DEFENSIVE_LINE,
+                ROBOT_HOME_X_CAM,
+                ROBOT_HOME_Y,
                 CAMERA_FRAME_HEIGHT,
                 CAMERA_FRAME_ROBOT_MAX_Y,
                 TABLE_MAX_X,
@@ -285,18 +327,20 @@ class RobotController:
             )
             moveX = TABLE_MAX_X - moveX
 
-            #print("_goHome")
             self.moveIfPossible(moveX, moveY, "Homing")
             self.atHome = True
 
     def _playBack(self):
         # Playback-Logik bei langsamem Puck in eigenem Feld
-        if not self.data.botActivated: return
+        if not self.data.botActivated:
+            return
+
         offsetX = 0
         if self.data.currentPosition[0] < 120:
             offsetX = -20
         if self.data.currentPosition[0] > 280:
             offsetX = 20
+
         moveX, moveY = self.mapCoordinates(
             self.data.currentPosition[0] + offsetX,
             self.data.currentPosition[1] + 10,
@@ -306,11 +350,18 @@ class RobotController:
             TABLE_MAX_Y,
         )
         moveX = TABLE_MAX_X - moveX
-        #moveX = self.data.currentPosition[0]
-        #moveY = self.data.currentPosition[1]
+
+        if self.lastPlaybackMove is not None:
+            lastX, lastY = self.lastPlaybackMove
+            if abs(moveX - lastX) < self.playbackDeadzone and abs(moveY - lastY) < self.playbackDeadzone:
+                return
+
         self.moveIfPossible(moveX, moveY, "Play Back")
+        self.lastPlaybackMove = (moveX, moveY)
         self.data.attackedPoint = self.data.currentPosition
-        print(f"Attacking: {self.data.currentPosition[0]}, {self.data.currentPosition[1]}")
+        # Nur ausgeben wenn Puck sich in Richtung Roboter bewegt
+        if self.data.currentPosition[1] < self.data.lastPosition[1]:
+            print(f"Attacking: {self.data.currentPosition[0]}, {self.data.currentPosition[1]}")
 
 
     def _playedBack(self):
@@ -321,13 +372,14 @@ class RobotController:
         return is_near
 
     def _atHome(self):
-        if abs(CAMERA_FRAME_HEIGHT / 2 - self.data.robotX) > 40 or abs(DEFENSIVE_LINE - self.data.robotY) > 40:
+        if abs(ROBOT_HOME_X_CAM - self.data.robotX) > 40 or abs(ROBOT_HOME_Y - self.data.robotY) > 40:
             return False
         return True
 
     def _saveState(self):
-        self.data.wasPuckGoingToRobot = self.data.isPuckGoingToRobot
+        self.data.wasPuckGoingToRobot = self.isPuckGoingToRobot
         self.data.lastPosition = self.data.currentPosition
+        self.data.lastFrameTimestamp = self.data.currentFrameTimestamp
 
     def mapCoordinates(
         self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo

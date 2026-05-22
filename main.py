@@ -22,6 +22,8 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QSlider,
+    QTabWidget,
+    QSpinBox,
 )
 from Constants import *
 from Camera import Camera
@@ -35,7 +37,7 @@ from DataModel import model
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()  # ruft QMainWindow.__init__ auf
-        self.setWindowTitle("Rocky Hockey 2023")
+        self.setWindowTitle("Rocky Hockey 2026")
         self.setWindowIcon(QIcon("RockyHockey2023Logo.png"))
         self.setupUI()
         # Create a timer to continuously update and process the camera image.
@@ -81,27 +83,35 @@ class MainWindow(QMainWindow):
         self.cameraImageLabel = QLabel(self)
         self.cameraImageLabel.setAlignment(Qt.AlignTop)
         self.cameraImageLabel.mousePressEvent = self.getImageClickPos
+        
         # Create a log textbox.
         self.logTextbox = QTextEdit(self)
         self.logTextbox.setReadOnly(True)
-        # Create the "Exit" button.
+        
+        # Create the buttons and inputs.
         self.exitButton = QPushButton("Exit", self)
         self.exitButton.clicked.connect(self.exitApp)
-        # Create the "Calibrate" button.
         self.calibrateButton = QPushButton("Calibrate", self)
         self.calibrateButton.clicked.connect(self.calibrate)
-        # Create the "Move To Position" button.
         self.moveToPositionButton = QPushButton("Move To Position", self)
         self.moveToPositionButton.clicked.connect(self.moveToPosition)
-        # Create the "Maxima" button.
         self.getMaximaButton = QPushButton("Get Maxima", self)
         self.getMaximaButton.clicked.connect(self.getMaxima)
-        self.xCoordTextBox = QTextEdit()
+        
+        # X-Koordinate mit Pfeiltasten
+        self.xCoordTextBox = QSpinBox()
+        self.xCoordTextBox.setRange(0, 2000) # Bereich anpassen (Tisch-Breite)
+        self.xCoordTextBox.setSingleStep(10) # Wie viel pro Klick?
         self.xCoordTextBox.setFixedHeight(25)
-        self.xCoordTextBox.setText("0")
-        self.yCoordTextBox = QTextEdit()
+        self.xCoordTextBox.setStyleSheet("color: white; background-color: #333; border: 1px solid #555;")
+        
+        # Y-Koordinate mit Pfeiltasten
+        self.yCoordTextBox = QSpinBox()
+        self.yCoordTextBox.setRange(0, 2000) # Bereich anpassen (Tisch-Höhe)
+        self.yCoordTextBox.setSingleStep(10)
         self.yCoordTextBox.setFixedHeight(25)
-        self.yCoordTextBox.setText("0")
+        self.yCoordTextBox.setStyleSheet("color: white; background-color: #333; border: 1px solid #555;")
+        
         self.controlHorizontalBox = QHBoxLayout()
         self.controlHorizontalBox.addWidget(self.calibrateButton)
         self.controlHorizontalBox.addWidget(self.getMaximaButton)
@@ -110,14 +120,29 @@ class MainWindow(QMainWindow):
         self.controlHorizontalBox.addWidget(self.xCoordTextBox)
         self.controlHorizontalBox.addWidget(QLabel(text="Y"))
         self.controlHorizontalBox.addWidget(self.yCoordTextBox)
+        
+        # Setup the filter UIs (this creates self.filterVbox and self.filterRobotVbox)
         self.setupPuckFilterUI()
         self.setupRobotFilterUI()
-        # Create the right vertical box.
-        self.vboxRight = QVBoxLayout()
-        self.hboxImages = QHBoxLayout()
-        self.hboxImages.addWidget(self.cameraImageLabel)
-        self.vboxRight.addLayout(self.hboxImages)
-        # Puck values.
+
+        # Corner setting & Bot setting
+        self.cornersHBox = QHBoxLayout()
+        self.cornersApplyButton = QPushButton("Apply Corners", self)
+        self.cornersApplyButton.clicked.connect(self.applyCorners)
+        self.cornersResetButton = QPushButton("Reset Corners", self)
+        self.cornersResetButton.clicked.connect(self.resetCorners)
+        self.cornersHBox.addWidget(self.cornersApplyButton)
+        self.cornersHBox.addWidget(self.cornersResetButton)
+        
+        self.botSettingsHBox = QHBoxLayout()
+        self.activateBotCheckBox = QCheckBox("Bot Active")
+        self.activateBotCheckBox.clicked.connect(self.setBotState)
+        self.activateBotCheckBox.setCheckState(Qt.CheckState.Unchecked)
+        self.frameTimeLabel = QLabel("Frame Time: 0ms")
+        self.botSettingsHBox.addWidget(self.activateBotCheckBox)
+        self.botSettingsHBox.addWidget(self.frameTimeLabel)
+
+        # Values
         self.puckValuesHbox = QHBoxLayout()
         self.puckXLabel = QLabel(text="X: 0")
         self.puckYLabel = QLabel(text="Y: 0")
@@ -128,6 +153,7 @@ class MainWindow(QMainWindow):
         self.puckValuesHbox.addWidget(self.puckYLabel)
         self.puckValuesHbox.addWidget(self.puckRadiusLabel)
         self.puckValuesHbox.addWidget(self.puckSpeedLabel)
+        
         self.robotValuesHBox = QHBoxLayout()
         self.robotXLabel = QLabel(text="X: 0")
         self.robotYLabel = QLabel(text="Y: 0")
@@ -136,41 +162,59 @@ class MainWindow(QMainWindow):
         self.robotValuesHBox.addWidget(self.robotXLabel)
         self.robotValuesHBox.addWidget(self.robotYLabel)
         self.robotValuesHBox.addWidget(self.robotRadiusLabel)
-        # Corner setting.
-        self.cornersHBox = QHBoxLayout()
-        self.cornersApplyButton = QPushButton("Apply Corners", self)
-        self.cornersApplyButton.clicked.connect(self.applyCorners)
-        self.cornersResetButton = QPushButton("Reset Corners", self)
-        self.cornersResetButton.clicked.connect(self.resetCorners)
-        self.cornersHBox.addWidget(self.cornersApplyButton)
-        self.cornersHBox.addWidget(self.cornersResetButton)
-        self.botSettingsHBox = QHBoxLayout()
-        self.activateBotCheckBox = QCheckBox("Bot Active")
-        self.botSettingsHBox.addWidget(self.activateBotCheckBox)
-        self.activateBotCheckBox.clicked.connect(self.setBotState)
-        self.activateBotCheckBox.setCheckState(Qt.CheckState.Unchecked)
-        self.frameTimeLabel = QLabel("Frame Time: 0ms")
-        self.botSettingsHBox.addWidget(self.frameTimeLabel)
-        # Create the left vertical box.
+
+        self.tabs = QTabWidget()
+        self.tabs.setStyleSheet("""
+            QTabWidget::pane { border: 1px solid #444; background: #222; }
+            QTabBar::tab { background: #333; color: #ddd; padding: 10px; border: 1px solid #444; }
+            QTabBar::tab:selected { background: #555; color: white; border-bottom: none; }
+            QWidget { background-color: #222; color: #eee; }
+        """)
+
+        # Tab 1: Controls & Info
+        self.tabControls = QWidget()
+        self.tabControlsLayout = QVBoxLayout()
+        self.tabControlsLayout.addLayout(self.controlHorizontalBox)
+        self.tabControlsLayout.addLayout(self.puckValuesHbox)
+        self.tabControlsLayout.addLayout(self.robotValuesHBox)
+        self.tabControlsLayout.addLayout(self.cornersHBox)
+        self.tabControlsLayout.addLayout(self.botSettingsHBox)
+        self.tabControlsLayout.addWidget(self.logTextbox)
+        self.tabControlsLayout.addWidget(self.exitButton)
+        self.tabControls.setLayout(self.tabControlsLayout)
+
+        # Tab 2: Puck Filter
+        self.tabPuck = QWidget()
+        self.tabPuck.setLayout(self.filterVbox)
+
+        # Tab 3: Robot Filter
+        self.tabRobot = QWidget()
+        self.tabRobot.setLayout(self.filterRobotVbox)
+
+        # Tabs zum Tab-Widget hinzufügen
+        self.tabs.addTab(self.tabControls, "Controls & Log")
+        self.tabs.addTab(self.tabPuck, "Puck Settings")
+        self.tabs.addTab(self.tabRobot, "Robot Settings")
+
+        # Create the left vertical box (Now much cleaner!)
         self.vboxLeft = QVBoxLayout()
-        self.vboxLeft.addLayout(self.controlHorizontalBox)
-        self.vboxLeft.addLayout(self.puckValuesHbox)
-        self.vboxLeft.addLayout(self.filterVbox)
-        self.vboxLeft.addLayout(self.robotValuesHBox)
-        self.vboxLeft.addLayout(self.filterRobotVbox)
-        self.vboxLeft.addLayout(self.cornersHBox)
-        self.vboxLeft.addLayout(self.botSettingsHBox)
-        self.vboxLeft.addWidget(self.logTextbox)
-        self.vboxLeft.addWidget(self.exitButton)
+        self.vboxLeft.addWidget(self.tabs)
+
+        # Create the right vertical box.
+        self.vboxRight = QVBoxLayout()
+        self.hboxImages = QHBoxLayout()
+        self.hboxImages.addWidget(self.cameraImageLabel)
+        self.vboxRight.addLayout(self.hboxImages)
+
+        # Set central widget
         self.hboxMain = QHBoxLayout()
-        # Create a central widget to hold the layouts
         self.CentralWidget = QWidget()
         self.CentralWidget.setLayout(self.hboxMain)
-
-        # Set the central widget and add the horizontal layout to the bottom
         self.setCentralWidget(self.CentralWidget)
-        self.hboxMain.addLayout(self.vboxLeft)
-        self.hboxMain.addLayout(self.vboxRight)
+        
+        # Add to Main Layout
+        self.hboxMain.addLayout(self.vboxLeft, stretch=1) # Tab widget takes left side
+        self.hboxMain.addLayout(self.vboxRight, stretch=1) # Video takes right side
 
     def setupRobotFilterUI(self):
         # Create the sliders for adjusting the filters.
@@ -536,8 +580,15 @@ class MainWindow(QMainWindow):
             label = "Unknown"
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Label: {label}, \t\tMove Type: {move_type.name}")
         self.data.lastMovePosition = (x, y)
-        self.moveWorker.set_values(move_type, x, y)
 
+        # if self.botActivated:
+        self.data.positionsSent += 1
+        # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
+        if self.stepperController is not None:
+            response = self.stepperController.move_to_position(x, y)
+        self.data.syncRobotPosition = False
+        #print(f"{x},{y}")
+        #print(response)
 
     def calibrate(self):
         if self.stepperController is not None:
@@ -563,8 +614,8 @@ class MainWindow(QMainWindow):
     def moveToPosition(self):
         if self.stepperController is not None:
             try:
-                x = int(self.xCoordTextBox.toPlainText())
-                y = int(self.yCoordTextBox.toPlainText())
+                x = self.xCoordTextBox.value()
+                y = self.yCoordTextBox.value()
                 self.logTextbox.append("Moving to X=" + str(x) + ",Y=" + str(y))
                 self.sendMoveValues(x, y, MoveType.IMMEDIATE, "UI Manual Move")
             except ValueError:
@@ -598,7 +649,7 @@ class MainWindow(QMainWindow):
             frame, frame_timestamp = self.camera.get_current_frame_with_timestamp()
             frame = self.apply_perspective_correction(frame)
             if frame is not None:
-                x, y, radius, robotX, robotY, robotRadius, axisright,axisleft = processFrame(frame, self)
+                x, y, radius, robotX, robotY, robotRadius, axisRightX, axisRightY, axisLeftX, axisLeftY = processFrame(frame, self)
 
                 # TODO: Robot detection is not that stable
                 # Check detected robot radius (if robot was not recognised correctly set invalid values)
@@ -613,7 +664,7 @@ class MainWindow(QMainWindow):
                 self.puckSpeed = math.sqrt(
                     (self.currentPosition[0] - self.lastPosition[0]) ** 2
                     + (self.currentPosition[1] - self.lastPosition[1]) ** 2
-                ) / (self.data.currentFrameTimestamp - self.data.lastFrameTimestamp)
+                ) / (self.data.currentFrameTimestamp - self.data.lastFrameTimestamp).total_seconds()
 
                 frame = self.updatePreCalculationUi(
                     frame, x, y, radius, robotX, robotY, robotRadius
@@ -983,92 +1034,61 @@ class MainWindow(QMainWindow):
 
 
     def updatePostCalculationUi(self, frame):
+        # Hilfsfunktion für perfekt sichtbare Pfeile (schwarzer Rand + farbiger Kern)
+        def draw_arrow(img, pt1, pt2, color):
+            # Schwarzer Hintergrund-Pfeil (Outline)
+            cv2.arrowedLine(img, pt1, pt2, (0, 0, 0), thickness=5, tipLength=0.03)
+            # Farbiger Vordergrund-Pfeil
+            cv2.arrowedLine(img, pt1, pt2, color, thickness=2, tipLength=0.03)
+
         if self.data.predictionMade and self.data.predictionLine.get_m() is not None:
             if self.data.showDebugImages:
-                # Draw predicted and current puck position
-                cv2.circle(
-                    frame,
-                    (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])),
-                    5,
-                    (255, 0, 255),
-                    -1,
-                )
-                cv2.circle(
-                    frame,
-                    (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])),
-                    5,
-                    (0, 0, 0),
-                    -1,
-                )
+                # Draw predicted and saved puck positions
+                cv2.circle(frame, (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])), 6, (0, 0, 0), -1)
+                cv2.circle(frame, (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])), 4, (255, 0, 255), -1)
+                
+                cv2.circle(frame, (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])), 6, (255, 255, 255), -1)
+                cv2.circle(frame, (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])), 4, (0, 0, 0), -1)
 
-                # Draw predicted line
-                # in welchem Fall ist das puckCollides True UND currentPosition gesetzt?
+                # Direkter Schuss (ohne Wandkollision)
                 if not self.data.puckCollides:
-                    cv2.line(
+                    draw_arrow(
                         frame,
                         (int(self.data.currentPosition[0]), int(self.data.currentPosition[1])),
                         (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])),
-                        (255, 0, 0),
-                        thickness=2,
-                        lineType=4,
+                        (0, 200, 255) # Gelb-Orange
                     )
-                    cv2.line(
-                        frame,
-                        (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])),
-                        (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])),
-                        (0, 255, 0),
-                        thickness=2,
-                        lineType=4,
-                    )
-                    #print(self.data.savedPoint)
-                    #print(self.data.predictedPoint)
-                    #time.sleep(3)
 
-            # Draw prediction line before collision
-            cv2.line(
-                frame,
-                (int(self.data.savedPoints[0][0]), int(self.data.savedPoints[0][1])),
-                (int(self.data.collisionPoints[0][0]), int(self.data.collisionPoints[0][1])),
-                (255, 0, 0),
-                thickness=2,
-                lineType=4,
-            )
             # Executed if the puck collides with a wall
             if self.data.puckCollides:
                 if len(self.data.collisionPoints) > 0:
-                    #print(len(self.data.collisionPoints))
-                    #if(len(self.data.predictedPoints)>0):
-                        #print(len(self.data.predictedPoints)) # 5!!!!
-                        #print(self.data.predictedPoints)
-                        #print(self.data.predictedPoints)
-                        #stime.sleep(3)
+                    # Draw pre-collision prediction arrow
+                    draw_arrow(
+                        frame,
+                        (int(self.data.savedPoints[0][0]), int(self.data.savedPoints[0][1])),
+                        (int(self.data.collisionPoints[0][0]), int(self.data.collisionPoints[0][1])),
+                        (0, 150, 255) # Orange
+                    )
 
                     for i in range(len(self.data.predictedPoints)):
-                        # Draw collision point
+                        # Draw collision point clearly
                         cv2.circle(
                             frame,
-                            (
-                                int(self.data.collisionPoints[i][0]),
-                                int(self.data.collisionPoints[i][1]),
-                            ),
-                            10,
-                            (255, 255, 255),
-                            -1,
+                            (int(self.data.collisionPoints[i][0]), int(self.data.collisionPoints[i][1])),
+                            8, (0, 0, 0), -1
                         )
-                        # Draw reflection line after collision
-                        cv2.line(
+                        cv2.circle(
                             frame,
-                            (
-                                int(self.data.collisionPoints[i][0]),
-                                int(self.data.collisionPoints[i][1]),
-                            ),
-                            (
-                                int(self.data.predictedPoints[i][0]),
-                                int(self.data.predictedPoints[i][1]),
-                            ),
-                            (255, 255, 0),
-                            thickness=2,
-                            lineType=4,
+                            (int(self.data.collisionPoints[i][0]), int(self.data.collisionPoints[i][1])),
+                            5, (255, 255, 255), -1
+                        )
+
+                        # Draw post-collision reflection arrow
+                        draw_arrow(
+                            frame,
+                            (int(self.data.collisionPoints[i][0]), int(self.data.collisionPoints[i][1])),
+                            (int(self.data.predictedPoints[i][0]), int(self.data.predictedPoints[i][1])),
+                            (0, 255, 255) # Cyan
                         )
 
         if self.data.showDebugImages:
@@ -1114,6 +1134,50 @@ class MainWindow(QMainWindow):
         self.robotXLabel.setText(str(f"X: {robotX:.0f}, {tempXroobot:.0f} (table)"))
         self.robotYLabel.setText(str(f"Y: {robotY:.0f}, {tempYrobot:.0f} (table)"))
         self.robotRadiusLabel.setText(str(f"Radius: {robotRadius:.0f}"))
+
+        return frame
+    
+    def updateAxisAngle(self, frame, axisRightX, axisRightY, axisLeftX, axisLeftY):
+        self.data.axisRightX = axisRightX
+        self.data.axisRightY = axisRightY
+        self.data.axisLeftX = axisLeftX
+        self.data.axisLeftY = axisLeftY
+
+        if axisRightX == -1 or axisRightY == -1 or axisLeftX == -1 or axisLeftY == -1:
+            cv2.putText(
+                frame,
+                "Axis markers not detected",
+                (20, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 0, 255),
+                2,
+            )
+            return frame
+
+        dx = axisRightX - axisLeftX
+        dy = axisRightY - axisLeftY
+
+        if dx == 0 and dy == 0:
+            return frame
+
+        angle_rad = math.atan2(dy, dx)
+        angle_deg = math.degrees(angle_rad)
+
+        self.data.rawAxisAngleDeg = angle_deg
+        self.data.axisAngleHistory.append(angle_deg)
+        self.data.filteredAxisAngleDeg = float(np.median(self.data.axisAngleHistory))
+
+        if abs(self.data.filteredAxisAngleDeg) < 0.5:
+            self.data.filteredAxisAngleDeg = 0.0
+
+        offset = int(self.data.filteredAxisAngleDeg * 5)
+        offset = max(-10, min(10, offset))
+        self.data.axisCorrectionOffset = offset
+
+        cv2.putText(frame, f"Axis angle raw: {self.data.rawAxisAngleDeg:.2f} deg", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(frame, f"Axis angle filtered: {self.data.filteredAxisAngleDeg:.2f} deg", (20, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.putText(frame, f"Axis offset: {self.data.axisCorrectionOffset}", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
         return frame
    
@@ -1172,50 +1236,92 @@ class MainWindow(QMainWindow):
         image.setPixmap(pixmap)
 
     def preUpdate(self):
-            if self.camera.stopped:
-                #print("Warning: Kamera neustarten...")
-                self.camera = Camera(
-                    CAMERA_INDEX,
-                    CAMERA_FRAME_WIDTH,
+        if self.camera.stopped:
+            self.camera = Camera(
+                CAMERA_INDEX,
+                CAMERA_FRAME_WIDTH,
+                CAMERA_FRAME_HEIGHT,
+                CAMERA_FOCUS,
+                CAMERA_BUFFERSIZE,
+                CAMERA_FRAMERATE,
+                CAMERA_STREAM_URL,
+            ).start()
+
+        if self.camera.new_frame:
+            start_time = time.time()
+            frame, frame_timestamp = self.camera.get_current_frame_with_timestamp()
+            # Speichert den aktuellen Frame-Zeitstempel für genauere Berechnungen
+            self.data.currentFrameTimestamp = frame_timestamp
+
+            frame = self.apply_perspective_correction(frame)
+            if frame is not None:
+                x, y, radius, robotX, robotY, robotRadius, axisRightX, axisRightY, axisLeftX, axisLeftY = processFrame(frame, self)
+
+                frame = self.updateAxisAngle(
+                    frame,
+                    axisRightX,
+                    axisRightY,
+                    axisLeftX,
+                    axisLeftY,
+                )
+
+                data = {
+                    "x": x,
+                    "y": y,
+                    "radius": radius,
+                    "robotX": robotX,
+                    "robotY": robotY,
+                    "robotRadius": robotRadius,
+                    "frame": frame
+                }
+
+                newRobotX, newRobotY = self.mapCoordinates(
+                    robotX,
+                    robotY,
                     CAMERA_FRAME_HEIGHT,
-                    CAMERA_FOCUS,
-                    CAMERA_BUFFERSIZE,
-                    CAMERA_FRAMERATE,
-                    CAMERA_STREAM_URL,
-                ).start()
+                    CAMERA_FRAME_ROBOT_MAX_Y,
+                    TABLE_MAX_X,
+                    TABLE_MAX_Y,
+                )
 
-            if self.camera.new_frame:
-                start_time = time.time()
-                frame, frame_timestamp = self.camera.get_current_frame_with_timestamp()
-                frame = self.apply_perspective_correction(frame)
-                if frame is not None:
-                    x, y, radius, robotX, robotY, robotRadius, axisRightY, axisLeftY = processFrame(frame, self)
-                    x_tats = 1.07793*robotX-20.1572
-                    data = {
-                        "x": x,
-                        "y": y,
-                        "radius": radius,
-                        "robotX": x_tats,
-                        "robotY": robotY,
-                        "robotRadius": robotRadius,
-                        "frame": frame
-                    }
+                if self.stepperController is not None:
+                    self.stepperController.updateRobotPos(
+                        newRobotX,
+                        newRobotY,
+                        self.data.syncRobotPosition
+                    )
 
-                    newRobotX, newRobotY = self.mapCoordinates(
-                                        robotX,
-                                        robotY,
-                                        CAMERA_FRAME_HEIGHT,
-                                        CAMERA_FRAME_ROBOT_MAX_Y,
-                                        TABLE_MAX_X,
-                                        TABLE_MAX_Y,
-                                    )
+                if self.data.botActivated:
+                    if self.data.axisCorrectionOffset != self.data.lastAxisCorrectionOffset:
+                        try:
+                                self.stepperController.set_offset(0, self.data.axisCorrectionOffset)
+                                self.data.lastAxisCorrectionOffset = self.data.axisCorrectionOffset
+                        except Exception as e:
+                                print(f"Axis offset error: {e}")
 
-                    frame = self.controller.update(data)
-                    self.updatePostCalculationUi(frame)
-                    self.updateFrameTime()
-                    end_time = time.time()
-                    zeit = end_time - start_time
-                    #print(f"Benötigte Zeit: {zeit}")
+                frame = self.controller.update(data)
+                if frame is None:
+                    return
+                
+                # Debug-Anzeige:
+                # Holt die Zielposition aus der Strategie und zeigt sie als pinken Kreis
+                if not hasattr(self.controller, "debugTargetCam") or self.controller.debugTargetCam is None:
+                    debugX = int(CAMERA_FRAME_HEIGHT / 2)
+                    debugY = int(DEFENSIVE_LINE)
+                else:
+                    debugX, debugY = self.controller.debugTargetCam
+
+                debugX = max(20, min(CAMERA_FRAME_HEIGHT - 20, debugX))
+                debugY = max(20, min(CAMERA_FRAME_WIDTH - 20, debugY))
+
+                cv2.circle(frame, (debugX, debugY), 22, (255, 0, 255), 4)
+
+                self.updatePostCalculationUi(frame)
+                self.updateFrameTime()
+
+                end_time = time.time()
+                zeit = end_time - start_time
+                # print(f"Benötigte Zeit: {zeit}")
 
 
 

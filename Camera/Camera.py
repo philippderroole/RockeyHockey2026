@@ -20,7 +20,7 @@ class Camera:
         if (VIRTUAL_CAM != True):
             self.stream = cv2.VideoCapture(camera_stream_url)
         else:
-            self.stream = cv2.VideoCapture('Camera/VirtualCamVideos/video1.avi')
+            self.stream = cv2.VideoCapture('Camera/VirtualCamVideos/Video1.avi')
             self.fps = self.stream.get(cv2.CAP_PROP_FPS)
       
         # Only needed to capture new video for virtual cam
