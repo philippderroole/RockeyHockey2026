@@ -24,7 +24,7 @@ impl Default for RuntimeDetectorSettings {
     fn default() -> Self {
         Self {
             detector: DetectorSettings {
-                quality: ProcessingQuality::UltraLow,
+                quality: ProcessingQuality::Medium,
                 crop: CropSettings {
                     enabled: true,
                     left_pct: 0.0,
@@ -33,9 +33,24 @@ impl Default for RuntimeDetectorSettings {
                     height_pct: 1.0,
                 },
             },
-            hsv: HsvThresholds::default(),
-            additional_hsv_targets: Vec::new(),
-            target_names: Vec::new(),
+            hsv: HsvThresholds {
+                h_min: 39,
+                h_max: 85,
+                s_min: 91,
+                s_max: 255,
+                v_min: 100,
+                v_max: 239,
+            },
+            additional_hsv_targets: [HsvThresholds {
+                h_min: 110,
+                h_max: 120,
+                s_min: 98,
+                s_max: 132,
+                v_min: 80,
+                v_max: 121,
+            }]
+            .to_vec(),
+            target_names: ["Puck".to_string(), "Robot".to_string()].to_vec(),
         }
     }
 }
