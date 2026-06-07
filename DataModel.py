@@ -4,7 +4,6 @@ import math
 from collections import deque
 from Processing.Line import Line
 from datetime import datetime
-from PyQt5.QtCore import Qt, QTimer, QFile, QIODevice, QTextStream
 class DataModel: 
     def __init__(self):
         self.skippedPositions = 0
@@ -77,21 +76,6 @@ class DataModel:
         self.frameTimes = deque(maxlen=100)
         self.robotX = -1
         self.robotY = -1
-        self.robotRadius = -1
         self.attackedPoint = (0,0)
-        self.last_timestamp_to_measure_processed_frames = datetime.now()
-        # Axis / angle analysis
-        self.axisRightX = -1
-        self.axisRightY = -1
-        self.axisLeftX = -1
-        self.axisLeftY = -1
-
-        self.rawAxisAngleDeg = 0.0
-        self.filteredAxisAngleDeg = 0.0
-        self.axisAngleHistory = deque(maxlen=5)
-
-        self.axisCorrectionOffset = 0
-        self.lastAxisCorrectionOffset = 0
-        self.syncRobotPosition = False
 
 model = DataModel()

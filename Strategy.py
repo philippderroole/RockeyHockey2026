@@ -1,13 +1,9 @@
 from DataModel import model
-from Camera import Camera
 from Constants import *
 from datetime import datetime
-import numpy as np
-import cv2
 import math
 import time
 from Processing.Line import Line
-from Processing.ProcessFrame import processFrame
 
 
 class State:
@@ -20,12 +16,10 @@ class State:
 
 
 class RobotController:
-    def __init__(self, sendMoveValues, updatePreCalculationUi, camera):
+    def __init__(self, sendMoveValues):
         self.data = model
         self.state = State.IDLE
         self.sendMoveValues = sendMoveValues
-        self.updatePreCalculationUi = updatePreCalculationUi
-        self.camera = camera
         self.atHome = True
         self.debugTargetCam = None
         self.debugStartLocked = False
@@ -35,37 +29,23 @@ class RobotController:
 
 
     def update(self, calcData: dict = None):
-        start_time = time.time()
         if calcData:
-            
-            x, y, radius, self.data.robotX, self.data.robotY, self.data.robotRadius, frame = (
+            x, y, self.data.robotX, self.data.robotY = (
                 calcData["x"],
                 calcData["y"],
-                calcData["radius"],
                 calcData["robotX"],
                 calcData["robotY"],
-                calcData["robotRadius"],
-                calcData["frame"]
             )
 
-        if self.data.robotRadius < 10 or self.data.robotRadius > 50:
-            self.data.robotX, self.data.robotY, self.data.robotRadius = -1, -1, -1
-
-        #print(f"STATE: {self.state}")
         self.data.currentPosition = (x, y)
 
-        frame = self.updatePreCalculationUi(
-            frame, x, y, radius, self.data.robotX, self.data.robotY, self.data.robotRadius
-        )
         if x < 0 or y < 0:
-            return frame
+            return
 
         self.data.puckSpeed = self._calculateSpeed()
         self._resetPrediction()
-        self._makePrediction(radius)
+        self._makePrediction()
         self.isPuckGoingToRobot = self._isGoingToRobot()
-        print("STATE:", self.state, "isGoing:", self.isPuckGoingToRobot)
-        print("isPuckGoingToRobot:", self.isPuckGoingToRobot)
 
         if self.state == State.IDLE:
             self.debugTargetCam = (int(ROBOT_HOME_X_CAM), int(ROBOT_HOME_Y))
@@ -98,10 +78,6 @@ class RobotController:
                 self.state = State.HOMING
 
         self._saveState()
-        end_time = time.time()
-        zeit = end_time - start_time
-        #print(f"Benötigte Zeit: {zeit}")
-        return frame
 
     def _calculateSpeed(self):
         dx = self.data.currentPosition[0] - self.data.lastPosition[0]
@@ -141,7 +117,7 @@ class RobotController:
         self.data.predictedPoints = []
         self.data.collisionPoints = []
 
-    def _makePrediction(self, radius):
+    def _makePrediction(self):
         # Vorhersagelogik (gekürzt/eingekapselt)
         # Setze self.predictedPoint etc.
         # check if new prediciton is needed (because reflection has taken place)
@@ -186,15 +162,15 @@ class RobotController:
                             self.data.predictionLine.get_angle() >= 0
                         ):  # left edge
                             self.data.collisionPoint = (
-                                0 + (radius / 2),
-                                self.data.predictionLine.get_y(0 + (radius / 2)),
+                                0 + (PUCK_RADIUS / 2),
+                                self.data.predictionLine.get_y(0 + (PUCK_RADIUS / 2)),
                             )
                             self.data.puckCollides = True
                         else:  # right edge
                             self.data.collisionPoint = (
-                                CAMERA_FRAME_HEIGHT - (radius / 2),
+                                CAMERA_FRAME_HEIGHT - (PUCK_RADIUS / 2),
                                 self.data.predictionLine.get_y(
-                                    CAMERA_FRAME_HEIGHT - (radius / 2)
+                                    CAMERA_FRAME_HEIGHT - (PUCK_RADIUS / 2)
                                 ),
                             )
                             self.data.puckCollides = True
