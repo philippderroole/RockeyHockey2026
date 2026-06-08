@@ -580,15 +580,7 @@ class MainWindow(QMainWindow):
             label = "Unknown"
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Label: {label}, \t\tMove Type: {move_type.name}")
         self.data.lastMovePosition = (x, y)
-
-        # if self.botActivated:
-        self.data.positionsSent += 1
-        # print(f"Sending {self.positionsSent} (X:{int(x)}, Y:{int(y)})")
-        if self.stepperController is not None:
-            response = self.stepperController.move_to_position(x, y)
-        self.data.syncRobotPosition = False
-        #print(f"{x},{y}")
-        #print(response)
+        self.moveWorker.set_values(move_type, x, y)
 
     def calibrate(self):
         if self.stepperController is not None:
