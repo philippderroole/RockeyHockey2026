@@ -1,0 +1,45 @@
+use clap::Parser;
+use std::net::SocketAddr;
+
+use app::input_modes::InputSource;
+
+mod app;
+
+#[derive(Parser, Debug)]
+#[command(name = "RockeyHockey")]
+#[command(about = "Puck detection system for hockey", long_about = None)]
+struct Args {
+    /// Optional path to a recorded video file instead of webcam input
+    #[arg(long)]
+    video: Option<String>,
+    /// Optional flag to use the Raspberry Pi camera instead of a webcam
+    #[arg(long)]
+    pi_camera: bool,
+    /// Enable browser-based live settings editor at http://0.0.0.0:<web_ui_port>
+    #[arg(long)]
+    web_ui: bool,
+    /// Port for browser-based live settings editor
+    #[arg(long, default_value_t = 8080)]
+    web_ui_port: u16,
+    /// Optional UDP interface for detected target coordinates, for example 0.0.0.0:5005
+    #[arg(long)]
+    target_output: Option<SocketAddr>,
+}
+
+fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
+    let args = Args::parse();
+    app::run(app::RunConfig {
+        input_source: if let Some(video_path) = args.video {
+            InputSource::VideoFile(video_path)
+        } else if args.pi_camera {
+            InputSource::PiCamera
+        } else {
+            InputSource::Camera(0)
+        },
+        web_ui_enabled: args.web_ui,
+        web_ui_port: args.web_ui_port,
+        target_output: args.target_output,
+    })
+}
