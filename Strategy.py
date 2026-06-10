@@ -26,6 +26,8 @@ class RobotController:
         self.debugInitialized = False
         self.lastPlaybackMove = None
         self.playbackDeadzone = 120
+        self.lastSentTarget = None
+        self.isPuckGoingToRobot = False
 
 
     def update(self, calcData: dict = None):
@@ -40,6 +42,11 @@ class RobotController:
         self.data.currentPosition = (x, y)
 
         if x < 0 or y < 0:
+            self.data.puckSpeed = 0
+            self._resetPrediction()
+            self.state = State.HOMING
+            self._goHome()
+            self._saveState()
             return
 
         self.data.puckSpeed = self._calculateSpeed()
@@ -113,6 +120,7 @@ class RobotController:
 
     def _resetPrediction(self):
         self.data.predictionMade = False
+        self.data.predictedPoint = None
         self.data.savedPoints = []
         self.data.predictedPoints = []
         self.data.collisionPoints = []
@@ -262,7 +270,11 @@ class RobotController:
         targetX = self.data.currentPosition[0]
         targetY = self.data.currentPosition[1]
 
-        if hasattr(self.data, "predictedPoint") and self.data.predictedPoint:
+        if (
+            self.data.predictionMade
+            and hasattr(self.data, "predictedPoint")
+            and self.data.predictedPoint is not None
+        ):
             if self.data.predictedPoint[0] is not None and self.data.predictedPoint[1] is not None:
                 targetX = self.data.predictedPoint[0]
                 targetY = self.data.predictedPoint[1]
@@ -372,10 +384,22 @@ class RobotController:
         if self.data.robotY == -1:
             return False
 
+        if self.data.currentPosition[0] < 0 or self.data.currentPosition[1] < 0:
+            return False
+
         return self.data.robotY > self.data.currentPosition[1] and self.data.currentPosition[0] - CAMERA_FRAME_WIDTH/6 < self.data.robotX < self.data.currentPosition[0] + CAMERA_FRAME_WIDTH/6
+
+    def _should_send_target(self, x, y, move_type):
+        target = (int(x), int(y), move_type)
+        if self.lastSentTarget == target:
+            return False
+        self.lastSentTarget = target
+        return True
 
     def moveIfPossible(self, x, y, type):
         if self.isPuckBehindRobot():
+            return
+        if not self._should_send_target(x, y, type):
             return
         self.sendMoveValues(int(x), int(y), type)
 
