@@ -122,8 +122,6 @@ class MainWindow(QMainWindow):
         except Exception:
             self.logTextbox.append("ERROR: No Arduino found on " + STEPPER_COM_PORT + ".")
             self.stepperController = None
-        self.moveWorker = MoveWorker(self.stepperController)
-        self.moveWorker.start()
         if self.stepperController is not None:
             self.calibrate()
         self.data = model
@@ -249,27 +247,28 @@ class MainWindow(QMainWindow):
             self.logTextbox.append(f"Clicked on {x},{y} in image, moving to {int(moveX)},{int(moveY)}.")
             self.sendMoveValues(moveX, moveY)
 
-    def sendMoveValues(self, x, y, type=None, label=None):
+    def sendMoveValues(self, x, y, type=MoveType.IMMEDIATE, label=None):
         if isinstance(type, MoveType):
             move_type = type
         elif isinstance(type, str):
-            move_type = MoveType.NORMAL
+            move_type = MoveType.IMMEDIATE
             label = type
         else:
-            move_type = MoveType.NORMAL
+            move_type = MoveType.IMMEDIATE
         if label is None:
             label = "Unknown"
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Label: {label}, \t\tMove Type: {move_type.name}")
         self.data.lastMovePosition = (x, y)
         self.data.positionsSent += 1
         if self.stepperController is not None:
+            #self.stepperController.cancel_jog()
+            self.stepperController.wait_for_idle()
             self.stepperController.move_to_position(x, y)
 
     def calibrate(self):
         if self.stepperController is not None:
-            self.moveWorker.clear_queue()
             self.logTextbox.append("Calibrating and moving home...")
-            self.moveWorker.set_values(MoveType.CALIBRATE, 0, 0)
+            self.stepperController.calibrate()
         else:
             self.logTextbox.append("ERROR: Cannot calibrate. No Arduino found on " + STEPPER_COM_PORT + ".")
 
@@ -304,12 +303,13 @@ class MainWindow(QMainWindow):
             cv2.arrowedLine(img, pt1, pt2, (0, 0, 0), thickness=5, tipLength=0.03)
             cv2.arrowedLine(img, pt1, pt2, color, thickness=2, tipLength=0.03)
 
+        cv2.circle(frame, (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])), 6, (255, 255, 255), -1)
+        cv2.circle(frame, (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])), 4, (0, 0, 0), -1)
+
         if self.data.predictionMade and self.data.predictionLine.get_m() is not None:
             if self.data.showDebugImages:
                 cv2.circle(frame, (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])), 6, (0, 0, 0), -1)
                 cv2.circle(frame, (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])), 4, (255, 0, 255), -1)
-                cv2.circle(frame, (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])), 6, (255, 255, 255), -1)
-                cv2.circle(frame, (int(self.data.savedPoint[0]), int(self.data.savedPoint[1])), 4, (0, 0, 0), -1)
 
                 if not self.data.puckCollides:
                     draw_arrow(

@@ -38,6 +38,7 @@ class DataModel:
         ]
         self.lastPosition = (0, 0)
         self.currentPosition = (0, 0)
+        self.velocity = (0, 0)
         self.frameCounter = 0
         self.moveForward = True
         self.lastRobotPosition = (0, 0)

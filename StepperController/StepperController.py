@@ -208,6 +208,8 @@ class MoveWorker(QThread):
 
     def run(self):
         while True:
+            print("queue:", self.queue.qsize())
+
             # Block until at least one target is added to the queue
             item = self.queue.get()
 
