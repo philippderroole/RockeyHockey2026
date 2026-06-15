@@ -3,11 +3,8 @@ import socket
 import json
 import threading
 import cv2
-import math
 import numpy as np
-import time
 from datetime import datetime
-from collections import deque
 from PyQt5.QtCore import Qt, QTimer, QFile, QIODevice, QTextStream
 from PyQt5.QtGui import QImage, QPixmap, QIcon, QFont
 from PyQt5.QtWidgets import (
@@ -26,7 +23,6 @@ from PyQt5.QtWidgets import (
 )
 from Constants import *
 from StepperController import *
-from Processing.Line import Line
 from Strategy import RobotController
 from DataModel import model
 
