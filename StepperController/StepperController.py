@@ -138,6 +138,9 @@ class StepperController:
             self.connection.write(b'\x85')
 
     def move_to_position(self, x, y, feedrate=25000):
+        x = max(0, min(x, TABLE_MAX_X))
+        y = max(0, min(y, TABLE_MAX_Y))
+
         """
         Streams a jog movement command to GRBL.
         GRBL will finish any current move before starting this one.
@@ -225,7 +228,6 @@ class MoveWorker(QThread):
                     self.stepperController.move_to_position(int(x), int(y))
                 elif type == MoveType.CALIBRATE:
                     self.stepperController.calibrate()
-                    self.stepperController.move_to_position(int(x), int(y))
 
     def set_values(self, type, x, y):
         self.queue.put((type, x, y))

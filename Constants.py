@@ -44,7 +44,7 @@ RECORD_VIDEO = False
 # The camera can be used to detect the robot every x frames.
 CAMERA_ROBOT_DETECTION_FREQUENCY = 1
 
-STEPPER_COM_PORT = "COM3"
+STEPPER_COM_PORT = "/dev/cu.usbmodem11301"
 STEPPER_BAUDRATE = 115200
 
 TABLE_MAX_X = 350
@@ -71,9 +71,9 @@ DEFENSIVE_LINE = 20
 # Home = Ruheposition
 # Defend = nach vorne zum Abwehren
 # Mitte = Kamerazentrum
-ROBOT_HOME_Y = 70
 ROBOT_DEFEND_Y = 110
-ROBOT_HOME_X_CAM = CAMERA_FRAME_HEIGHT / 2
+ROBOT_HOME_X_CAM = 20
+ROBOT_HOME_Y = 180
 
 GORIGHT_MAX = TABLE_CORNER_BOTTOM_RIGHT_X - 70
 GOLEFT_MAX = 70

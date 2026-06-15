@@ -64,9 +64,11 @@ class CameraReceiver(threading.Thread):
                     if name == "Puck":
                         puck_x = detection["x"]
                         puck_y = detection["y"]
+                        puck_x, puck_y = self.map_camera_coordinates(puck_x, puck_y)
                     elif name == "Robot":
                         robot_x = detection["x"]
                         robot_y = detection["y"]
+                        robot_x, robot_y = self.map_camera_coordinates(robot_x, robot_y)
                 with self._lock:
                     self._latest = {
                         "puck_x": puck_x,
@@ -81,6 +83,23 @@ class CameraReceiver(threading.Thread):
             except Exception as e:
                 print(f"Camera receiver error: {e}")
 
+    def map_camera_coordinates(self, cam_x, cam_y):
+        try:
+            self.cam_x_offset = -32
+            self.cam_y_offset = -95
+
+            cam_x = cam_x + self.cam_x_offset
+            cam_y = cam_y + self.cam_y_offset
+
+            cam_x = self.map_range(cam_x, 0, 269, 0, TABLE_MAX_X)
+            cam_y = self.map_range(cam_y, 0, 326, 0, TABLE_MAX_Y)
+
+            return cam_x, cam_y
+        except Exception as e:
+            print(f"Camera receiver error: {e}")
+
+    def map_range(self,value, from_min, from_max, to_min, to_max):
+        return (value - from_min) / (from_max - from_min) * (to_max - to_min) + to_min
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -225,9 +244,7 @@ class MainWindow(QMainWindow):
         x = event.pos().x()
         y = event.pos().y()
         if event.button() == 2:
-            moveX, moveY = self.mapCoordinates(
-                x, y, CAMERA_FRAME_HEIGHT, CAMERA_FRAME_ROBOT_MAX_Y, TABLE_MAX_X, TABLE_MAX_Y
-            )
+            moveX, moveY = x, y
             moveX = TABLE_MAX_X - moveX
             self.logTextbox.append(f"Clicked on {x},{y} in image, moving to {int(moveX)},{int(moveY)}.")
             self.sendMoveValues(moveX, moveY)
@@ -252,7 +269,7 @@ class MainWindow(QMainWindow):
         if self.stepperController is not None:
             self.moveWorker.clear_queue()
             self.logTextbox.append("Calibrating and moving home...")
-            self.moveWorker.set_values(MoveType.CALIBRATE, HOME_POSITION_X, HOME_POSITION_Y)
+            self.moveWorker.set_values(MoveType.CALIBRATE, 0, 0)
         else:
             self.logTextbox.append("ERROR: Cannot calibrate. No Arduino found on " + STEPPER_COM_PORT + ".")
 
@@ -275,21 +292,12 @@ class MainWindow(QMainWindow):
         else:
             self.logTextbox.append("ERROR: Cannot move to position. No Arduino found on " + STEPPER_COM_PORT + ".")
 
-    def mapCoordinates(self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo):
-        xScale = maxWidthTo / maxWidthFrom
-        yScale = maxHeightTo / maxHeightFrom
-        return x * xScale, y * yScale
-
     def updatePreCalculationUi(self, x, y, robotX, robotY):
         self.puckXLabel.setText(f"X: {x:.0f}")
         self.puckYLabel.setText(f"Y: {y:.0f}")
         self.puckSpeedLabel.setText(f"Speed: {self.data.puckSpeed:.1f}")
-        tempXrobot, tempYrobot = self.mapCoordinates(
-            robotX, robotY, CAMERA_FRAME_HEIGHT, CAMERA_FRAME_ROBOT_MAX_Y, TABLE_MAX_X, TABLE_MAX_Y
-        )
-        tempXrobot = TABLE_MAX_X - tempXrobot
-        self.robotXLabel.setText(f"X: {robotX:.0f}, {tempXrobot:.0f} (table)")
-        self.robotYLabel.setText(f"Y: {robotY:.0f}, {tempYrobot:.0f} (table)")
+        self.robotXLabel.setText(f"X: {robotX:.0f}")
+        self.robotYLabel.setText(f"Y: {robotY:.0f}")
 
     def updatePostCalculationUi(self, frame):
         def draw_arrow(img, pt1, pt2, color):

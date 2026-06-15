@@ -20,7 +20,6 @@ class RobotController:
         self.data = model
         self.state = State.IDLE
         self.sendMoveValues = sendMoveValues
-        self.atHome = True
         self.debugTargetCam = None
         self.debugStartLocked = False
         self.debugInitialized = False
@@ -31,6 +30,7 @@ class RobotController:
 
 
     def update(self, calcData: dict = None):
+        print("Current State:", self.state)
         if calcData:
             x, y, self.data.robotX, self.data.robotY = (
                 calcData["x"],
@@ -279,8 +279,6 @@ class RobotController:
                 targetX = self.data.predictedPoint[0]
                 targetY = self.data.predictedPoint[1]
 
-        targetX = max(40, min(CAMERA_FRAME_HEIGHT - 40, targetX))
-        targetY = max(ROBOT_HOME_Y - 10, min(ROBOT_HOME_Y + 140, targetY))
 
         self.debugTargetCam = (int(targetX), int(targetY))
 
@@ -291,32 +289,17 @@ class RobotController:
         if self.data.puckSpeed > 20:
             return
 
-        moveX, moveY = self.mapCoordinates(
-            targetX,
-            targetY,
-            CAMERA_FRAME_HEIGHT,
-            CAMERA_FRAME_ROBOT_MAX_Y,
-            TABLE_MAX_X,
-            TABLE_MAX_Y,
-        )
-        moveX = TABLE_MAX_X - moveX
+        moveX, moveY = targetX, targetY
+        #moveX = TABLE_MAX_X - moveX
         self.moveIfPossible(moveX, moveY, "Defense")
 
     def _goHome(self):
         self.lastPlaybackMove = None
         if self.data.botActivated:
-            moveX, moveY = self.mapCoordinates(
-                ROBOT_HOME_X_CAM,
-                ROBOT_HOME_Y,
-                CAMERA_FRAME_HEIGHT,
-                CAMERA_FRAME_ROBOT_MAX_Y,
-                TABLE_MAX_X,
-                TABLE_MAX_Y,
-            )
-            moveX = TABLE_MAX_X - moveX
+            moveX, moveY = ROBOT_HOME_X_CAM, ROBOT_HOME_Y
+            #moveX = TABLE_MAX_X - moveX
 
             self.moveIfPossible(moveX, moveY, "Homing")
-            self.atHome = True
 
     def _playBack(self):
         # Playback-Logik bei langsamem Puck in eigenem Feld
@@ -329,15 +312,8 @@ class RobotController:
         if self.data.currentPosition[0] > 280:
             offsetX = 20
 
-        moveX, moveY = self.mapCoordinates(
-            self.data.currentPosition[0] + offsetX,
-            self.data.currentPosition[1] + 10,
-            CAMERA_FRAME_HEIGHT,
-            CAMERA_FRAME_ROBOT_MAX_Y,
-            TABLE_MAX_X,
-            TABLE_MAX_Y,
-        )
-        moveX = TABLE_MAX_X - moveX
+        moveX, moveY = self.data.currentPosition[0] + offsetX, self.data.currentPosition[1] + 10
+        #moveX = TABLE_MAX_X - moveX
 
         if self.lastPlaybackMove is not None:
             lastX, lastY = self.lastPlaybackMove
@@ -368,16 +344,6 @@ class RobotController:
         self.data.wasPuckGoingToRobot = self.isPuckGoingToRobot
         self.data.lastPosition = self.data.currentPosition
         self.data.lastFrameTimestamp = self.data.currentFrameTimestamp
-
-    def mapCoordinates(
-        self, x, y, maxWidthFrom, maxHeightFrom, maxWidthTo, maxHeightTo
-    ):
-        # Scale so it fits the other coordinate system
-        xScale = maxWidthTo / maxWidthFrom
-        yScale = maxHeightTo / maxHeightFrom
-        x = x * xScale
-        y = y * yScale
-        return x, y
     
     def isPuckBehindRobot(self):
         # Robot was not detected
@@ -402,17 +368,3 @@ class RobotController:
         if not self._should_send_target(x, y, type):
             return
         self.sendMoveValues(int(x), int(y), type)
-
-
-"""# schauen ob das so compiliert
-def a():
-    return True
-
-def b():
-    return True
-
-# zum testen
-controller = RobotController(a, b)
-print(controller.state)
-print(controller.data.targetPoint)
-"""
