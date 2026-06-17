@@ -4,7 +4,7 @@ import json
 import threading
 import cv2
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from PyQt5.QtCore import Qt, QTimer, QFile, QIODevice, QTextStream
 from PyQt5.QtGui import QImage, QPixmap, QIcon, QFont
 from PyQt5.QtWidgets import (
@@ -109,6 +109,14 @@ class MainWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.preUpdate)
         self.timer.start(1)
+        self.command_ttl = timedelta(milliseconds=60)
+        self.camera_stale_timeout = timedelta(milliseconds=120)
+        self.move_deadband = ROBOT_MOVE_DEADBAND_MM
+        self.target_smoothing_alpha = ROBOT_TARGET_SMOOTHING_ALPHA
+        self.smoothedMovePosition = None
+        self.last_command_timestamp = None
+        self.last_camera_packet_timestamp = None
+        self.motion_stopped_due_to_stale_camera = False
         self.stepperController = None
         try:
             self.stepperController = StepperController(STEPPER_COM_PORT, STEPPER_BAUDRATE)
@@ -253,12 +261,45 @@ class MainWindow(QMainWindow):
             move_type = MoveType.IMMEDIATE
         if label is None:
             label = "Unknown"
+
+        x = max(0, min(float(x), TABLE_MAX_X))
+        y = max(0, min(float(y), TABLE_MAX_Y))
+
+        # Keep manual commands responsive and exact, smooth only autonomous target updates.
+        should_smooth = not label.startswith("UI Manual Move")
+        if should_smooth:
+            if self.smoothedMovePosition is None:
+                smoothed_x, smoothed_y = x, y
+            else:
+                prev_x, prev_y = self.smoothedMovePosition
+                alpha = self.target_smoothing_alpha
+                smoothed_x = prev_x + alpha * (x - prev_x)
+                smoothed_y = prev_y + alpha * (y - prev_y)
+            self.smoothedMovePosition = (smoothed_x, smoothed_y)
+            x, y = smoothed_x, smoothed_y
+        else:
+            self.smoothedMovePosition = (x, y)
+
+        now = datetime.now()
+        if self.data.currentFrameTimestamp is not None:
+            command_age = now - self.data.currentFrameTimestamp
+            if command_age > self.command_ttl:
+                self.logTextbox.append(
+                    f"Dropped stale move ({int(command_age.total_seconds() * 1000)}ms): {label}"
+                )
+                return
+
+        last_x, last_y = self.data.lastMovePosition
+        if np.hypot(x - last_x, y - last_y) < self.move_deadband:
+            return
+
         self.logTextbox.append(f"Move To: X={x:.0f}, Y={y:.0f}, \t\tMove Label: {label}, \t\tMove Type: {move_type.name}")
         self.data.lastMovePosition = (x, y)
         self.data.positionsSent += 1
+        self.last_command_timestamp = now
         if self.stepperController is not None:
-            #self.stepperController.cancel_jog()
-            self.stepperController.wait_for_idle()
+            if move_type == MoveType.IMMEDIATE:
+                self.stepperController.cancel_jog()
             self.stepperController.move_to_position(x, y)
 
     def calibrate(self):
@@ -310,7 +351,7 @@ class MainWindow(QMainWindow):
                 if not self.data.puckCollides:
                     draw_arrow(
                         frame,
-                        (int(self.data.currentPosition[0]), int(self.data.currentPosition[1])),
+                        (int(self.data.puckPosition[0]), int(self.data.puckPosition[1])),
                         (int(self.data.predictedPoint[0]), int(self.data.predictedPoint[1])),
                         (0, 200, 255),
                     )
@@ -355,9 +396,20 @@ class MainWindow(QMainWindow):
 
     def preUpdate(self):
         if not self.cameraReceiver.new_data:
+            if (
+                self.stepperController is not None
+                and self.last_camera_packet_timestamp is not None
+                and not self.motion_stopped_due_to_stale_camera
+                and datetime.now() - self.last_camera_packet_timestamp > self.camera_stale_timeout
+            ):
+                self.stepperController.cancel_jog()
+                self.motion_stopped_due_to_stale_camera = True
+                self.logTextbox.append("Camera timeout: stopped motion to avoid executing obsolete moves.")
             return
 
         cam_data = self.cameraReceiver.get_latest()
+        self.last_camera_packet_timestamp = datetime.now()
+        self.motion_stopped_due_to_stale_camera = False
         x = float(cam_data["puck_x"])
         y = float(cam_data["puck_y"])
         robot_x = float(cam_data["robot_x"])

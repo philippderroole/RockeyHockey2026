@@ -137,7 +137,7 @@ class StepperController:
         if self.connection:
             self.connection.write(b'\x85')
 
-    def move_to_position(self, x, y, feedrate=25000):
+    def move_to_position(self, x, y, feedrate=ROBOT_MOVE_FEEDRATE):
         x = max(0, min(x, TABLE_MAX_X))
         y = max(0, min(y, TABLE_MAX_Y))
 

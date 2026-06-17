@@ -15,14 +15,8 @@ class RobotController:
         self.sendMoveValues = sendMoveValues
         self.debugTargetCam = None
         self.lastPlaybackMove = None
-        self.playbackDeadzone = 120
 
     def update(self, calcData: dict = None):
-        print("Current State:", self.state)
-        print("velocity:", self.data.velocity)
-        print(self.data.predictedPoint)
-        print(self.data.predictedPoints)
-
         if not calcData:
             return
 
@@ -33,7 +27,8 @@ class RobotController:
             calcData["robotY"],
         )
 
-        self.data.currentPosition = (x, y)
+        self.data.puckPosition = (x, y)
+        self.data.robotPosition = (self.data.robotX, self.data.robotY)
 
         if x < 0 or y < 0:
             self._resetPrediction()
@@ -48,25 +43,44 @@ class RobotController:
         self._makePrediction()
 
         self.debugTargetCam = (
-            int(self.data.currentPosition[0]),
-            int(self.data.currentPosition[1]),
+            int(self.data.puckPosition[0]),
+            int(self.data.puckPosition[1]),
         )
 
         if self.state == State.DEFENDING:
-            if self.data.currentPosition[0] < 350 and np.linalg.norm(self.data.velocity) < 0.5:
+            if (
+                self.data.puckPosition[0] < STATE_PLAYBACK_X_THRESHOLD
+                and self._speed() < STATE_TRANSITION_SPEED_THRESHOLD
+            ):
                 self.state = State.PLAYING_BACK
 
             self.defend()
 
         elif self.state == State.PLAYING_BACK:
-            if self.data.currentPosition[0] > 350 or np.linalg.norm(self.data.velocity) > 0.5:
+            if (
+                self.data.puckPosition[0] > STATE_PLAYBACK_X_THRESHOLD
+                or self._speed() > STATE_TRANSITION_SPEED_THRESHOLD
+            ):
                 self.state = State.DEFENDING
-            self._playBack()
+            self.playBack()
 
         self._saveState()
 
     def _calculateVelocity(self):
-        self.data.velocity = (self.data.currentPosition[0] - self.data.lastPosition[0], self.data.currentPosition[1] - self.data.lastPosition[1])
+        # Calculate time delta in seconds
+        time_delta = (self.data.currentFrameTimestamp - self.data.lastFrameTimestamp).total_seconds()
+        
+        # Avoid division by zero
+        if time_delta <= 0:
+            self.data.velocity = (0, 0)
+            return
+        
+        # Calculate position change
+        dx = self.data.puckPosition[0] - self.data.lastPosition[0]
+        dy = self.data.puckPosition[1] - self.data.lastPosition[1]
+        
+        # Calculate velocity as distance per second
+        self.data.velocity = (dx / time_delta, dy / time_delta)
 
 
     def _resetPrediction(self):
@@ -76,122 +90,96 @@ class RobotController:
         self.data.predictedPoints = []
         self.data.collisionPoints = []
 
+    def _speed(self):
+        return np.linalg.norm(self.data.velocity)
+
+    def _collision_point_from_line(self, line):
+        if line.get_angle() >= 0:
+            wall_x = 0 + (PUCK_RADIUS / 2)
+        else:
+            wall_x = CAMERA_FRAME_HEIGHT - (PUCK_RADIUS / 2)
+
+        wall_y = line.get_y(wall_x)
+        if wall_y is None:
+            return None
+
+        return (wall_x, wall_y)
+
+    def _build_reflection_line(self, collision_point, source_line, speed):
+        multiplier = (
+            REFLECTION_FAST_MULTIPLIER
+            if speed > REFLECTION_FAST_SPEED_THRESHOLD
+            else REFLECTION_NORMAL_MULTIPLIER
+        )
+        return Line(collision_point, None, (-1 * source_line.get_m() * multiplier))
+
+    def _defensive_target_from_line(self, line, speed):
+        attack_y = DEFENSIVE_LINE + GOFORWARD_MAX
+        attack_x = line.get_x(attack_y)
+
+        if GOLEFT_MAX < attack_x < GORIGHT_MAX and speed < ATTACK_LANE_SPEED_MAX:
+            return (attack_x, attack_y)
+
+        return (line.get_x(ROBOT_DEFEND_Y), ROBOT_DEFEND_Y)
+
+    def _set_prediction(self, predicted_point):
+        self.data.predictedPoint = predicted_point
+        self.data.predictionMade = True
+        self.data.wentBackToGoal = False
+        self.data.attacked = False
+
     def _makePrediction(self):
-        if (
-            len(self.data.predictedPoints) >= 1
-            and self.data.lastPosition[1] < self.data.collisionPoints[0][1]
-        ):
-            self.data.predictionMade = False
+        self.data.puckCollides = False
+        self.data.lastCollisionPoint = self.data.puckPosition
+        self.data.savedPoints = []
+        self.data.predictedPoints = []
+        self.data.collisionPoints = []
 
-        if not self.data.predictionMade:
-            self.data.puckCollides = False
+        speed = self._speed()
+        self.data.predictionLine = Line(self.data.lastPosition, self.data.puckPosition)
+        self.data.savedPoint = self.data.puckPosition
 
-            if len(self.data.collisionPoints) >= 1:
-                self.data.lastCollisionPoint = self.data.collisionPoints[0]
-            else:
-                self.data.lastCollisionPoint = self.data.currentPosition
+        try:
+            if speed <= PREDICTION_MIN_SPEED or self.data.predictionLine.get_m() is None:
+                return False
 
-            self.data.savedPoints = []
-            self.data.predictedPoints = []
-            self.data.collisionPoints = []
+            current_line = self.data.predictionLine
+            for _ in range(PREDICTION_MAX_BOUNCES):
+                collision_point = self._collision_point_from_line(current_line)
+                if collision_point is None:
+                    break
 
-            self.data.predictionLine = Line(
-                self.data.lastPosition, self.data.currentPosition
-            )
+                self.data.collisionPoint = collision_point
+                self.data.lastCollisionPoint = collision_point
+                self.data.puckCollides = True
+                self.data.savedPoints.append(self.data.savedPoint)
+                self.data.collisionPoints.append(collision_point)
 
-            self.data.savedPoint = self.data.currentPosition
+                if collision_point[1] <= 0:
+                    predicted_point = self._defensive_target_from_line(current_line, speed)
+                    self._set_prediction(predicted_point)
+                    break
 
-            try:
-                if np.linalg.norm(self.data.velocity) > 0.5 and self.data.predictionLine.get_m() is not None:
-                    loopCounter = 0
-                    while loopCounter < 2:
-                        if self.data.predictionLine.get_angle() >= 0:
-                            self.data.collisionPoint = (
-                                0 + (PUCK_RADIUS / 2),
-                                self.data.predictionLine.get_y(0 + (PUCK_RADIUS / 2)),
-                            )
-                            self.data.puckCollides = True
-                        else:
-                            self.data.collisionPoint = (
-                                CAMERA_FRAME_HEIGHT - (PUCK_RADIUS / 2),
-                                self.data.predictionLine.get_y(
-                                    CAMERA_FRAME_HEIGHT - (PUCK_RADIUS / 2)
-                                ),
-                            )
-                            self.data.puckCollides = True
+                self.data.reflectionLine = self._build_reflection_line(
+                    collision_point, current_line, speed
+                )
+                predicted_point = (
+                    self.data.reflectionLine.get_x(ROBOT_DEFEND_Y),
+                    ROBOT_DEFEND_Y,
+                )
+                self._set_prediction(predicted_point)
+                self.data.predictedPoints.append(predicted_point)
 
-                        self.data.savedPoints.append(self.data.savedPoint)
-                        self.data.collisionPoints.append(self.data.collisionPoint)
+                current_line = self.data.reflectionLine
+                self.data.predictionLine = current_line
 
-                        if self.data.puckCollides and self.data.collisionPoint[1] > 0:
-                            if np.linalg.norm(self.data.velocity) > 28:
-                                self.data.reflectionLine = Line(
-                                    self.data.collisionPoint,
-                                    None,
-                                    (
-                                        -1
-                                        * self.data.predictionLine.get_m()
-                                        * 2.5
-                                    ),
-                                )
-                            else:
-                                self.data.reflectionLine = Line(
-                                    self.data.collisionPoint,
-                                    None,
-                                    (
-                                        -1
-                                        * self.data.predictionLine.get_m()
-                                        * 1.7
-                                    ),
-                                )
-
-                            self.data.predictedPoint = (
-                                self.data.reflectionLine.get_x(ROBOT_DEFEND_Y),
-                                ROBOT_DEFEND_Y,
-                            )
-                            self.data.predictionMade = True
-                            self.data.wentBackToGoal = False
-                            self.data.attacked = False
-                        else:
-                            if (
-                                GOLEFT_MAX
-                                < self.data.predictionLine.get_x(
-                                    DEFENSIVE_LINE + GOFORWARD_MAX
-                                )
-                                < GORIGHT_MAX
-                                and np.linalg.norm(self.data.velocity) < 15
-                            ):
-                                self.data.predictedPoint = (
-                                    self.data.predictionLine.get_x(
-                                        DEFENSIVE_LINE + GOFORWARD_MAX
-                                    ),
-                                    DEFENSIVE_LINE + GOFORWARD_MAX,
-                                )
-                            else:
-                                self.data.predictedPoint = (
-                                    self.data.predictionLine.get_x(
-                                        ROBOT_DEFEND_Y
-                                    ),
-                                    ROBOT_DEFEND_Y,
-                                )
-                            self.data.predictionMade = True
-                            self.data.wentBackToGoal = False
-                            self.data.attacked = False
-                            break
-
-                        self.data.predictedPoints.append(self.data.predictedPoint)
-
-                        self.data.predictionLine = self.data.reflectionLine
-                        self.data.savedPoint = self.data.currentPosition
-                        loopCounter += 1
-
-            except Exception as e:
-                print("Prediction error:", e)
-
-        return True
+            return self.data.predictionMade
+        except Exception as e:
+            print("Prediction error:", e)
+            return False
 
     def _get_target_from_prediction(self):
-        target_x, target_y = self.data.currentPosition
+        target_x, target_y = self.data.puckPosition
         predicted = getattr(self.data, "predictedPoint", None)
 
         if self.data.predictionMade and predicted is not None:
@@ -207,56 +195,45 @@ class RobotController:
         targetX, targetY = self._get_target_from_prediction()
         self.debugTargetCam = (int(targetX), int(targetY))
 
-        if np.linalg.norm(self.data.velocity) > 20:
+        # At very high puck speed, prediction can be noisy. Track the current puck Y
+        # on the defensive line instead of doing nothing.
+        if self._speed() > SPEED_THRESHOLD:
+            fastTargetY = max(0, min(self.data.puckPosition[1], TABLE_MAX_Y))
+            self.debugTargetCam = (int(DEFENSIVE_LINE), int(fastTargetY))
+            self.moveIfPossible(DEFENSIVE_LINE, fastTargetY, "Defense Fast")
             return
 
-        self.moveIfPossible(20, targetY, "Defense")
+        self.moveIfPossible(DEFENSIVE_LINE, targetY, "Defense")
 
     def _goHome(self):
         self.lastPlaybackMove = None
         if self.data.botActivated:
             self.moveIfPossible(ROBOT_HOME_X_CAM, ROBOT_HOME_Y, "Homing")
 
-    def _playBack(self):
+    def playBack(self):
         if not self.data.botActivated:
             return
 
-        offsetX = 0
-        if self.data.currentPosition[0] < 120:
-            offsetX = -20
-        if self.data.currentPosition[0] > 280:
-            offsetX = 20
-
-        moveX, moveY = self.data.currentPosition[0] + offsetX, self.data.currentPosition[1] + 10
-
-        if self.lastPlaybackMove is not None:
-            lastX, lastY = self.lastPlaybackMove
-            if abs(moveX - lastX) < self.playbackDeadzone and abs(moveY - lastY) < self.playbackDeadzone:
-                return
+        moveX, moveY = self.data.puckPosition[0], self.data.puckPosition[1]
 
         self.moveIfPossible(moveX, moveY, "Play Back")
-        self.lastPlaybackMove = (moveX, moveY)
-        self.data.attackedPoint = self.data.currentPosition
-
-        if self.data.currentPosition[1] < self.data.lastPosition[1]:
-            print(f"Attacking: {self.data.currentPosition[0]}, {self.data.currentPosition[1]}")
 
     def _saveState(self):
         self.data.wasPuckGoingToRobot = self.data.velocity[0] < 0
-        self.data.lastPosition = self.data.currentPosition
+        self.data.lastPosition = self.data.puckPosition
         self.data.lastFrameTimestamp = self.data.currentFrameTimestamp
 
     def isPuckBehindRobot(self):
-        if self.data.robotY == -1:
+        if self.data.robotPosition[1] == -1:
             return False
 
-        if self.data.currentPosition[0] < 0 or self.data.currentPosition[1] < 0:
+        if self.data.puckPosition[0] < 0 or self.data.puckPosition[1] < 0:
             return False
 
-        return self.data.robotY > self.data.currentPosition[1] and self.data.currentPosition[0] - CAMERA_FRAME_WIDTH/6 < self.data.robotX < self.data.currentPosition[0] + CAMERA_FRAME_WIDTH/6
+        return self.data.robotPosition[1] > self.data.puckPosition[1] and self.data.puckPosition[0] - CAMERA_FRAME_WIDTH/6 < self.data.robotPosition[0] < self.data.puckPosition[0] + CAMERA_FRAME_WIDTH/6
 
-    def moveIfPossible(self, x, y, type):
+    def moveIfPossible(self, x, y, move_label):
         if self.isPuckBehindRobot():
             return
 
-        self.sendMoveValues(int(x), int(y), type)
+        self.sendMoveValues(int(x), int(y), move_label)

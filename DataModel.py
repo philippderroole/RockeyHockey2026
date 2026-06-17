@@ -37,7 +37,7 @@ class DataModel:
             (CAMERA_FRAME_WIDTH, CAMERA_FRAME_HEIGHT),
         ]
         self.lastPosition = (0, 0)
-        self.currentPosition = (0, 0)
+        self.puckPosition = (0, 0)
         self.velocity = (0, 0)
         self.frameCounter = 0
         self.moveForward = True
@@ -69,14 +69,13 @@ class DataModel:
         self.lastMovePosition = (0, 0)
         self.wentBackToGoal = False
         self.attacked = False
-        self.testTime = datetime.now()
         self.currentFrameTimestamp = datetime.now()
         self.lastFrameTimestamp = datetime.now()
         self.frameTimeCount =0
         self.frameTimeSum=0
         self.frameTimes = deque(maxlen=100)
-        self.robotX = -1
-        self.robotY = -1
+        self.robotPosition = (0, 0)
+        self.lastRobotPosition = (0, 0)
         self.attackedPoint = (0,0)
 
 model = DataModel()
