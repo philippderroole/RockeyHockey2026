@@ -1,3 +1,5 @@
+use std::ops::Sub;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Point {
     pub x: f64,
@@ -15,6 +17,17 @@ impl Point {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
         (dx * dx + dy * dy).sqrt()
+    }
+}
+
+impl Sub for Point {
+    type Output = Point;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Point {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
     }
 }
 

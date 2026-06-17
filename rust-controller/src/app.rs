@@ -6,7 +6,8 @@ use anyhow::Result;
 use crate::config::{
     AGGRESSIVE_COMMAND_MIN_INTERVAL, AGGRESSIVE_MOVE_DEADBAND_MM, BACKPRESSURE_COMMAND_INTERVAL,
     CAMERA_STALE_TIMEOUT, COMMAND_QUEUE_BACKPRESSURE_DEPTH, COMMAND_TTL, METRICS_PRINT_INTERVAL,
-    ROBOT_MOVE_DEADBAND_MM, ROBOT_MOVE_FEEDRATE, ROBOT_TARGET_SMOOTHING_ALPHA,
+    RECENT_CLOSE_COMMAND_DEADBAND_MM, RECENT_CLOSE_COMMAND_INTERVAL, ROBOT_MOVE_DEADBAND_MM,
+    ROBOT_MOVE_FEEDRATE, ROBOT_SLOW_MOVE_FEEDRATE, ROBOT_TARGET_SMOOTHING_ALPHA,
 };
 use crate::stepper::{Stepper, StepperHandle, StepperMoveCommand, spawn_stepper_worker};
 use crate::strategy::RobotController;
@@ -16,7 +17,6 @@ pub struct Runtime {
     rx: Receiver<DetectionSnapshot>,
     controller: RobotController,
     stepper: StepperHandle,
-    bot_active: bool,
     smoothed_target: Option<Point>,
     last_enqueued_target: Option<Point>,
     last_command_ts: Option<Instant>,
@@ -80,18 +80,13 @@ impl RuntimeMetrics {
 }
 
 impl Runtime {
-    pub fn new(
-        rx: Receiver<DetectionSnapshot>,
-        stepper: Box<dyn Stepper>,
-        bot_active: bool,
-    ) -> Result<Self> {
+    pub fn new(rx: Receiver<DetectionSnapshot>, stepper: Box<dyn Stepper>) -> Result<Self> {
         let stepper = spawn_stepper_worker(stepper)?;
 
         Ok(Self {
             rx,
-            controller: RobotController::new(Instant::now()),
+            controller: RobotController::new(),
             stepper,
-            bot_active,
             smoothed_target: None,
             last_enqueued_target: None,
             last_command_ts: None,
@@ -120,10 +115,12 @@ impl Runtime {
 
                     let frame_age = Instant::now().saturating_duration_since(latest.timestamp);
                     let started = Instant::now();
-                    if let Some(target) = self.controller.update(latest, self.bot_active) {
+                    if let Some(target) = self.controller.update(latest) {
                         if self.maybe_send_move(target)? {
                             self.metrics.record_command();
                         }
+                    } else if self.maybe_stop_motion()? {
+                        self.metrics.record_command();
                     }
                     let process_time = started.elapsed();
                     self.metrics
@@ -198,10 +195,29 @@ impl Runtime {
             }
         }
 
+        if is_recent_close_command(
+            self.last_command_ts,
+            self.last_enqueued_target,
+            Instant::now(),
+            smoothed,
+            RECENT_CLOSE_COMMAND_INTERVAL,
+            if aggressive_move {
+                AGGRESSIVE_MOVE_DEADBAND_MM * 2.0
+            } else {
+                RECENT_CLOSE_COMMAND_DEADBAND_MM
+            },
+        ) {
+            return Ok(false);
+        }
+
         let enqueued = self.stepper.try_send_move(StepperMoveCommand {
             x: target.x,
             y: target.y,
-            feedrate: ROBOT_MOVE_FEEDRATE,
+            feedrate: match target.move_type {
+                MoveType::FastIntercept => ROBOT_MOVE_FEEDRATE,
+                MoveType::SlowIntercept => ROBOT_SLOW_MOVE_FEEDRATE,
+                MoveType::Defend => ROBOT_MOVE_FEEDRATE,
+            },
             move_type: target.move_type,
         });
         if !enqueued {
@@ -230,5 +246,75 @@ impl Runtime {
             x: prev.x + ROBOT_TARGET_SMOOTHING_ALPHA * (target.x - prev.x),
             y: prev.y + ROBOT_TARGET_SMOOTHING_ALPHA * (target.y - prev.y),
         }
+    }
+
+    fn maybe_stop_motion(&mut self) -> Result<bool> {
+        self.smoothed_target = None;
+        self.last_enqueued_target = None;
+
+        Ok(self.stepper.try_send_stop())
+    }
+}
+
+fn is_recent_close_command(
+    last_command_ts: Option<Instant>,
+    last_command_target: Option<Point>,
+    now: Instant,
+    target: Point,
+    recent_window: Duration,
+    deadband_mm: f64,
+) -> bool {
+    let Some(last_command_ts) = last_command_ts else {
+        return false;
+    };
+    let Some(last_command_target) = last_command_target else {
+        return false;
+    };
+
+    now.duration_since(last_command_ts) < recent_window
+        && last_command_target.distance_to(target) < deadband_mm
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+    use std::time::Instant;
+
+    use super::is_recent_close_command;
+    use crate::types::Point;
+
+    #[test]
+    fn suppresses_recent_close_commands() {
+        let start = Instant::now();
+        assert!(is_recent_close_command(
+            Some(start),
+            Some(Point { x: 120.0, y: 180.0 }),
+            start + Duration::from_millis(100),
+            Point { x: 142.0, y: 184.0 },
+            Duration::from_millis(250),
+            30.0,
+        ));
+    }
+
+    #[test]
+    fn allows_old_or_far_commands() {
+        let start = Instant::now();
+        assert!(!is_recent_close_command(
+            Some(start),
+            Some(Point { x: 120.0, y: 180.0 }),
+            start + Duration::from_millis(400),
+            Point { x: 142.0, y: 184.0 },
+            Duration::from_millis(250),
+            30.0,
+        ));
+
+        assert!(!is_recent_close_command(
+            Some(start),
+            Some(Point { x: 120.0, y: 180.0 }),
+            start + Duration::from_millis(100),
+            Point { x: 140.0, y: 210.0 },
+            Duration::from_millis(250),
+            30.0,
+        ));
     }
 }

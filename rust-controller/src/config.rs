@@ -6,25 +6,19 @@ pub const BOARD_HEIGHT: f64 = 800.0;
 pub const ROBOT_MAX_X: f64 = 350.0;
 pub const ROBOT_MAX_Y: f64 = 360.0;
 
-pub const PUCK_RADIUS: f64 = 10.0;
-
-pub const SPEED_THRESHOLD: f64 = 300.0;
-pub const STATE_ATTACK_X_THRESHOLD: f64 = 350.0;
-pub const STATE_TRANSITION_SPEED_THRESHOLD: f64 = 50.0;
-pub const PREDICTION_MIN_SPEED: f64 = 50.0;
-pub const PREDICTION_MAX_BOUNCES: usize = 2;
-pub const ATTACK_LANE_SPEED_MAX: f64 = 15.0;
-
 pub const DEFENSIVE_LINE: f64 = 20.0;
-pub const ROBOT_DEFEND_Y: f64 = 110.0;
 
-pub const ROBOT_MOVE_FEEDRATE: u32 = 40_000;
+pub const ROBOT_MOVE_FEEDRATE: u32 = 20_000;
+pub const ROBOT_SLOW_MOVE_FEEDRATE: u32 = 10_000;
+pub const ROBOT_SLOW_MOVE_DISTANCE_MM: f64 = 100.0;
 pub const ROBOT_MOVE_DEADBAND_MM: f64 = 20.0;
 pub const ROBOT_TARGET_SMOOTHING_ALPHA: f64 = 0.35;
 pub const AGGRESSIVE_COMMAND_MIN_INTERVAL: Duration = Duration::from_millis(8);
 pub const BACKPRESSURE_COMMAND_INTERVAL: Duration = Duration::from_millis(80);
-pub const COMMAND_QUEUE_BACKPRESSURE_DEPTH: usize = 4;
-pub const COMMAND_QUEUE_CAPACITY: usize = 8;
+pub const RECENT_CLOSE_COMMAND_INTERVAL: Duration = Duration::from_millis(250);
+pub const RECENT_CLOSE_COMMAND_DEADBAND_MM: f64 = 35.0;
+pub const COMMAND_QUEUE_BACKPRESSURE_DEPTH: usize = 2;
+pub const COMMAND_QUEUE_CAPACITY: usize = 0;
 pub const AGGRESSIVE_MOVE_DEADBAND_MM: f64 = 6.0;
 
 pub const COMMAND_TTL: Duration = Duration::from_millis(60);

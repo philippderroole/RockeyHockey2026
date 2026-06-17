@@ -8,12 +8,13 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result};
 use serialport::SerialPort;
 
-use crate::config::{COMMAND_QUEUE_CAPACITY, ROBOT_MAX_X, ROBOT_MAX_Y, ROBOT_MOVE_FEEDRATE};
+use crate::config::{COMMAND_QUEUE_CAPACITY, ROBOT_MAX_X, ROBOT_MAX_Y};
 use crate::types::MoveType;
 
 pub trait Stepper: Send {
     fn calibrate(&mut self) -> Result<()>;
     fn move_to_position(&mut self, x: f64, y: f64, feedrate: u32) -> Result<()>;
+    fn stop(&mut self) -> Result<()>;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -24,16 +25,37 @@ pub struct StepperMoveCommand {
     pub move_type: MoveType,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum StepperCommand {
+    Move(StepperMoveCommand),
+    Stop,
+}
+
 #[derive(Clone)]
 pub struct StepperHandle {
-    tx: SyncSender<StepperMoveCommand>,
+    tx: SyncSender<StepperCommand>,
     queue_depth: Arc<AtomicUsize>,
 }
 
 impl StepperHandle {
     pub fn try_send_move(&self, command: StepperMoveCommand) -> bool {
         self.queue_depth.fetch_add(1, Ordering::Relaxed);
-        match self.tx.try_send(command) {
+        match self.tx.try_send(StepperCommand::Move(command)) {
+            Ok(()) => true,
+            Err(TrySendError::Full(_)) => {
+                decrement_queue_depth(&self.queue_depth);
+                false
+            }
+            Err(TrySendError::Disconnected(_)) => {
+                decrement_queue_depth(&self.queue_depth);
+                false
+            }
+        }
+    }
+
+    pub fn try_send_stop(&self) -> bool {
+        self.queue_depth.fetch_add(1, Ordering::Relaxed);
+        match self.tx.try_send(StepperCommand::Stop) {
             Ok(()) => true,
             Err(TrySendError::Full(_)) => {
                 decrement_queue_depth(&self.queue_depth);
@@ -52,7 +74,7 @@ impl StepperHandle {
 }
 
 pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHandle> {
-    let (tx, rx) = mpsc::sync_channel::<StepperMoveCommand>(COMMAND_QUEUE_CAPACITY);
+    let (tx, rx) = mpsc::sync_channel::<StepperCommand>(COMMAND_QUEUE_CAPACITY);
     let queue_depth = Arc::new(AtomicUsize::new(0));
     let worker_depth = Arc::clone(&queue_depth);
 
@@ -73,11 +95,22 @@ pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHand
                     }
                 }
 
-                if let Err(err) = stepper.move_to_position(command.x, command.y, command.feedrate) {
-                    eprintln!(
-                        "stepper worker failed for {:?} -> x={:.1} y={:.1}: {err}",
-                        command.move_type, command.x, command.y
-                    );
+                match command {
+                    StepperCommand::Move(command) => {
+                        if let Err(err) =
+                            stepper.move_to_position(command.x, command.y, command.feedrate)
+                        {
+                            eprintln!(
+                                "stepper worker failed for {:?} -> x={:.1} y={:.1}: {err}",
+                                command.move_type, command.x, command.y
+                            );
+                        }
+                    }
+                    StepperCommand::Stop => {
+                        if let Err(err) = stepper.stop() {
+                            eprintln!("stepper worker failed to stop motion: {err}");
+                        }
+                    }
                 }
             }
         })
@@ -111,6 +144,11 @@ impl Stepper for DryRunStepper {
 
     fn move_to_position(&mut self, x: f64, y: f64, _feedrate: u32) -> Result<()> {
         println!("[dry-run] move to ({x:.1}, {y:.1})");
+        Ok(())
+    }
+
+    fn stop(&mut self) -> Result<()> {
+        println!("[dry-run] stop");
         Ok(())
     }
 }
@@ -217,16 +255,18 @@ impl Stepper for GrblStepper {
     fn move_to_position(&mut self, x: f64, y: f64, feedrate: u32) -> Result<()> {
         let x = x.clamp(0.0, ROBOT_MAX_X);
         let y = y.clamp(0.0, ROBOT_MAX_Y);
-        let cmd = format!(
-            "$J=G21G90X{:.2}Y{:.2}F{}",
-            x,
-            y,
-            feedrate.max(ROBOT_MOVE_FEEDRATE)
-        );
+        let cmd = format!("$J=G21G90X{:.2}Y{:.2}F{}", x, y, feedrate.max(1));
         let response = self.send_command(&cmd)?;
         if response.starts_with("error") {
             anyhow::bail!("GRBL error on move command: {response}");
         }
+        Ok(())
+    }
+
+    fn stop(&mut self) -> Result<()> {
+        self.connection
+            .write_all(&[0x85])
+            .context("send GRBL jog cancel")?;
         Ok(())
     }
 }

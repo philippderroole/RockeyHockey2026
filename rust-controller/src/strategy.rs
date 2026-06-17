@@ -1,141 +1,110 @@
 use std::time::Instant;
 
-use crate::config::{
-    ATTACK_LANE_SPEED_MAX, BOARD_HEIGHT, BOARD_WIDTH, DEFENSIVE_LINE, PREDICTION_MAX_BOUNCES,
-    PREDICTION_MIN_SPEED, PUCK_RADIUS, ROBOT_DEFEND_Y, ROBOT_MAX_X, ROBOT_MAX_Y, SPEED_THRESHOLD,
-    STATE_ATTACK_X_THRESHOLD, STATE_TRANSITION_SPEED_THRESHOLD,
-};
-use crate::puck_predictor::{BoardDimensions, PuckPredictor};
+use crate::config::{DEFENSIVE_LINE, ROBOT_MAX_Y, ROBOT_MOVE_DEADBAND_MM, ROBOT_SLOW_MOVE_DISTANCE_MM};
 use crate::types::{DetectionSnapshot, MoveTarget, MoveType, Point, Puck};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {
     Defending,
-    AttackingMode,
+    Attacking,
 }
 
 #[derive(Debug)]
 pub struct RobotController {
-    active: bool,
     state: State,
-    puck: Puck,
+    puck: Option<Puck>,
     last_puck_position: Point,
-    last_frame_timestamp: Instant,
-    predictor: PuckPredictor,
+    last_iteration_timestamp: Instant,
 }
 
 impl RobotController {
-    pub fn new(now: Instant) -> Self {
-        Self::with_board_dimensions(now, BoardDimensions::new(BOARD_WIDTH, BOARD_HEIGHT))
-    }
-
-    pub fn with_board_dimensions(now: Instant, board_dimensions: BoardDimensions) -> Self {
+    pub fn new() -> Self {
         Self {
-            active: false,
             state: State::Defending,
             last_puck_position: Point::default(),
-            last_frame_timestamp: now,
-            puck: Puck::default(),
-            predictor: PuckPredictor::new(board_dimensions, PUCK_RADIUS, PREDICTION_MAX_BOUNCES),
+            last_iteration_timestamp: Instant::now(),
+            puck: None,
         }
     }
 
-    pub fn update(&mut self, snapshot: DetectionSnapshot, bot_active: bool) -> Option<MoveTarget> {
-        self.active = bot_active;
-
-        match snapshot.puck {
-            Some(p) => {
-                self.puck.velocity = calculate_velocity(
-                    p,
-                    self.last_puck_position,
-                    snapshot.timestamp,
-                    self.last_frame_timestamp,
-                );
-                self.puck.position = p;
-            }
-            None => {
-                self.state = State::Defending;
-                self.last_puck_position = Point::default();
-                self.last_frame_timestamp = snapshot.timestamp;
-                self.puck = Puck::default();
-            }
-        };
-
-        let speed = self.speed();
-        let predicted = self.make_prediction(self.puck);
-
-        self.update_state(speed, predicted);
+    pub fn update(&mut self, snapshot: DetectionSnapshot) -> Option<MoveTarget> {
+        self.update_puck(snapshot);
+        self.update_state();
 
         let movement = match self.state {
             State::Defending => {
-                if speed > SPEED_THRESHOLD {
-                    let fast_target_y = self.puck.position.y.clamp(0.0, ROBOT_MAX_Y);
-                    Some(MoveTarget {
-                        x: DEFENSIVE_LINE,
-                        y: fast_target_y,
-                        move_type: MoveType::FastIntercept,
-                    })
+                let puck_position = self.puck.unwrap().position;
+                let delta = self.last_puck_position - puck_position;
+                let distance = (delta.x * delta.x + delta.y * delta.y).sqrt();
+
+                if distance < ROBOT_MOVE_DEADBAND_MM {
+                    None
                 } else {
-                    let target = predicted.unwrap_or(self.puck.position);
+                    let move_type = if distance < ROBOT_SLOW_MOVE_DISTANCE_MM {
+                        MoveType::SlowIntercept
+                    } else {
+                        MoveType::FastIntercept
+                    };
+                    let target_y = self.puck.unwrap().position.y.clamp(0.0, ROBOT_MAX_Y);
                     Some(MoveTarget {
                         x: DEFENSIVE_LINE,
-                        y: target.y,
-                        move_type: MoveType::SlowIntercept,
+                        y: target_y,
+                        move_type,
                     })
                 }
             }
-            State::AttackingMode => Some(MoveTarget {
-                x: self.puck.position.x,
-                y: self.puck.position.y,
+            State::Attacking => Some(MoveTarget {
+                x: self.puck.unwrap().position.x,
+                y: self.puck.unwrap().position.y,
                 move_type: MoveType::Defend,
             }),
         };
 
-        self.last_puck_position = self.puck.position;
-        self.last_frame_timestamp = snapshot.timestamp;
+        self.last_puck_position = self.puck.unwrap().position;
+        self.last_iteration_timestamp = Instant::now();
 
-        if self.is_puck_behind_robot(snapshot.robot, self.puck.position) {
+        if self.is_puck_behind_robot(snapshot.robot, self.puck.unwrap().position) {
             return None;
         }
 
         movement
     }
 
-    fn update_state(&mut self, speed: f64, predicted: Option<Point>) {
-        if !self.active {
-            self.state = State::Defending;
-            return;
+    fn update_puck(&mut self, snapshot: DetectionSnapshot) {
+        if let Some(p) = snapshot.puck {
+            self.puck = Some(Puck {
+                position: p,
+                velocity: calculate_velocity(
+                    p,
+                    self.last_puck_position,
+                    snapshot.timestamp,
+                    self.last_iteration_timestamp,
+                ),
+            });
+        } else {
+            self.puck = None;
         }
+    }
 
-        if let Some(predicted) = predicted {
-            if predicted.y > ROBOT_DEFEND_Y && speed > ATTACK_LANE_SPEED_MAX {
-                self.state = State::Defending;
+    fn update_state(&mut self) {
+        let Some(puck) = self.puck else {
+            return;
+        };
+
+        let x_speed = puck.velocity.x.abs();
+
+        match self.state {
+            State::Defending => {
+                if x_speed > 100.0 {
+                    self.state = State::Attacking;
+                }
+            }
+            State::Attacking => {
+                if x_speed < 100.0 {
+                    self.state = State::Defending;
+                }
             }
         }
-
-        if self.puck.position.x > STATE_ATTACK_X_THRESHOLD
-            && speed < STATE_TRANSITION_SPEED_THRESHOLD
-        {
-            self.state = State::AttackingMode;
-        }
-    }
-
-    #[cfg(test)]
-    pub fn state(&self) -> State {
-        self.state
-    }
-
-    fn speed(&self) -> f64 {
-        (self.puck.velocity.x * self.puck.velocity.x + self.puck.velocity.y * self.puck.velocity.y)
-            .sqrt()
-    }
-
-    fn make_prediction(&self, puck: Puck) -> Option<Point> {
-        if self.speed() < PREDICTION_MIN_SPEED {
-            return None;
-        }
-
-        self.predictor.predict(puck.position, puck.velocity, 0.25)
     }
 
     fn is_puck_behind_robot(&self, robot: Option<Point>, puck: Point) -> bool {
@@ -170,97 +139,33 @@ fn calculate_velocity(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
-    use super::*;
-
-    #[test]
-    fn transitions_to_playback_on_slow_close_puck() {
-        let start = Instant::now();
-        let mut controller = RobotController::new(start);
-
-        let _ = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 200.0, y: 100.0 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(20),
-            },
-            true,
-        );
-
-        let _ = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 196.0, y: 100.0 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(120),
-            },
-            true,
-        );
-
-        assert_eq!(controller.state(), State::AttackingMode);
-    }
+    use super::{RobotController, State};
+    use crate::types::{DetectionSnapshot, MoveType, Point};
 
     #[test]
-    fn attacking_mode_targets_puck() {
+    fn short_travel_distance_uses_slow_intercept() {
+        let mut controller = RobotController::new();
         let start = Instant::now();
-        let mut controller = RobotController::new(start);
 
-        let _ = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 200.0, y: 100.0 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(20),
-            },
-            true,
-        );
+        assert!(controller
+            .update(DetectionSnapshot {
+                puck: Some(Point { x: 0.0, y: 0.0 }),
+                robot: None,
+                timestamp: start,
+            })
+            .is_none());
 
-        let _ = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 196.0, y: 100.0 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(120),
-            },
-            true,
-        );
+        let target = controller
+            .update(DetectionSnapshot {
+                puck: Some(Point { x: 40.0, y: 80.0 }),
+                robot: None,
+                timestamp: start + Duration::from_millis(1000),
+            })
+            .expect("expected a move target");
 
-        assert_eq!(controller.state(), State::AttackingMode);
-        let target = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 195.0, y: 100.0 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(220),
-            },
-            true,
-        );
-        let target = target.expect("attack mode should produce a target");
-        assert_eq!(target.x, 195.0);
-        assert_eq!(target.y, 100.0);
-        assert_eq!(target.move_type, MoveType::Defend);
-    }
-
-    #[test]
-    fn attacks_when_puck_is_nearly_stationary() {
-        let start = Instant::now();
-        let mut controller = RobotController::new(start);
-
-        let _ = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 200.0, y: 100.0 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(20),
-            },
-            true,
-        );
-
-        let _ = controller.update(
-            DetectionSnapshot {
-                puck: Some(Point { x: 199.3, y: 100.2 }),
-                robot: Some(Point { x: 20.0, y: 110.0 }),
-                timestamp: start + Duration::from_millis(120),
-            },
-            true,
-        );
-
-        assert_eq!(controller.state(), State::AttackingMode);
+        assert_eq!(target.move_type, MoveType::SlowIntercept);
+        assert_eq!(controller.state, State::Defending);
     }
 }

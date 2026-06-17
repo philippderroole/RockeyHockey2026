@@ -1,7 +1,6 @@
 mod app;
 mod camera;
 mod config;
-mod line;
 mod puck_predictor;
 mod stepper;
 mod strategy;
@@ -50,5 +49,5 @@ fn main() -> Result<()> {
 
     stepper.calibrate()?;
 
-    Runtime::new(rx, stepper, cli.bot_active)?.run()
+    Runtime::new(rx, stepper)?.run()
 }
