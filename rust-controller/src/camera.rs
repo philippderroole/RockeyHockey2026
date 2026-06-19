@@ -48,10 +48,10 @@ pub fn spawn_camera_listener(host: &str, port: u16) -> Result<Receiver<Detection
                 match socket.recv(&mut buf) {
                     Ok(size) => {
                         let payload = &buf[..size];
-                        if let Some(snapshot) = parse_message(payload) {
-                            if tx.send(snapshot).is_err() {
-                                break;
-                            }
+                        if let Some(snapshot) = parse_message(payload)
+                            && tx.send(snapshot).is_err()
+                        {
+                            break;
                         }
                     }
                     Err(err) if err.kind() == ErrorKind::WouldBlock => {}

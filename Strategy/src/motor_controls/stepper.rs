@@ -1,144 +1,25 @@
 use std::io::{ErrorKind, Write};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
+use nalgebra::Point2;
 use serialport::SerialPort;
 
-use crate::config::{COMMAND_QUEUE_CAPACITY, ROBOT_MAX_X, ROBOT_MAX_Y};
-use crate::types::MoveType;
+use crate::config::{ROBOT_MAX_X, ROBOT_MAX_Y};
+use crate::motor_controls::Stepper;
 
-pub trait Stepper: Send {
-    fn calibrate(&mut self) -> Result<()>;
-    fn move_to_position(&mut self, x: f64, y: f64, feedrate: u32) -> Result<()>;
-    fn stop(&mut self) -> Result<()>;
+pub struct DryRunStepper {
+    target_position: Point2<f64>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct StepperMoveCommand {
-    pub x: f64,
-    pub y: f64,
-    pub feedrate: u32,
-    pub move_type: MoveType,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum StepperCommand {
-    Move(StepperMoveCommand),
-    Stop,
-}
-
-type PendingStepperCommand = Arc<(Mutex<Option<StepperCommand>>, Condvar)>;
-
-#[derive(Clone)]
-pub struct StepperHandle {
-    pending_command: PendingStepperCommand,
-    queue_depth: Arc<AtomicUsize>,
-}
-
-impl StepperHandle {
-    pub fn try_send_move(&self, command: StepperMoveCommand) -> bool {
-        self.enqueue_command(StepperCommand::Move(command))
-    }
-
-    pub fn try_send_stop(&self) -> bool {
-        self.enqueue_command(StepperCommand::Stop)
-    }
-
-    pub fn queue_depth(&self) -> usize {
-        self.queue_depth.load(Ordering::Relaxed)
-    }
-
-    fn enqueue_command(&self, command: StepperCommand) -> bool {
-        let (pending_command, worker_signal) = &*self.pending_command;
-        let Ok(mut pending) = pending_command.lock() else {
-            return false;
-        };
-
-        let was_empty = pending.is_none();
-        *pending = Some(command);
-        if was_empty {
-            self.queue_depth.store(1, Ordering::Relaxed);
-        }
-
-        worker_signal.notify_one();
-        true
-    }
-}
-
-pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHandle> {
-    let pending_command: PendingStepperCommand = Arc::new((Mutex::new(None), Condvar::new()));
-    let queue_depth = Arc::new(AtomicUsize::new(0));
-    let worker_pending_command = Arc::clone(&pending_command);
-    let worker_depth = Arc::clone(&queue_depth);
-
-    thread::Builder::new()
-        .name("stepper-worker".into())
-        .spawn(move || {
-            loop {
-                let command = {
-                    let (pending_command, worker_signal) = &*worker_pending_command;
-                    let mut pending = pending_command
-                        .lock()
-                        .expect("stepper command mutex poisoned");
-
-                    while pending.is_none() {
-                        pending = worker_signal
-                            .wait(pending)
-                            .expect("stepper command mutex poisoned");
-                    }
-
-                    let command = pending.take().expect("pending command disappeared");
-                    decrement_queue_depth(&worker_depth);
-                    command
-                };
-
-                match command {
-                    StepperCommand::Move(command) => {
-                        if let Err(err) =
-                            stepper.move_to_position(command.x, command.y, command.feedrate)
-                        {
-                            eprintln!(
-                                "stepper worker failed for {:?} -> x={:.1} y={:.1}: {err}",
-                                command.move_type, command.x, command.y
-                            );
-                        }
-                    }
-                    StepperCommand::Stop => {
-                        if let Err(err) = stepper.stop() {
-                            eprintln!("stepper worker failed to stop motion: {err}");
-                        }
-                    }
-                }
-            }
-        })
-        .context("spawn stepper worker thread")?;
-
-    Ok(StepperHandle {
-        pending_command,
-        queue_depth,
-    })
-}
-
-fn decrement_queue_depth(depth: &AtomicUsize) {
-    let mut current = depth.load(Ordering::Relaxed);
-    while current > 0 {
-        match depth.compare_exchange_weak(
-            current,
-            current - 1,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(_) => return,
-            Err(next) => current = next,
+impl DryRunStepper {
+    pub fn new() -> Self {
+        Self {
+            target_position: Point2::new(0.0, 0.0),
         }
     }
 }
-
-pub struct DryRunStepper;
 
 impl Stepper for DryRunStepper {
     fn calibrate(&mut self) -> Result<()> {
@@ -146,8 +27,16 @@ impl Stepper for DryRunStepper {
         Ok(())
     }
 
-    fn move_to_position(&mut self, x: f64, y: f64, _feedrate: u32) -> Result<()> {
+    fn move_to_position(&mut self, position: Point2<f64>, _feedrate: u32) -> Result<()> {
+        let x = position.x;
+        let y = position.y;
+
+        if (self.target_position.x - x).abs() < 1e-6 && (self.target_position.y - y).abs() < 1e-6 {
+            return Ok(());
+        }
+
         println!("[dry-run] move to ({x:.1}, {y:.1})");
+        self.target_position = position;
         Ok(())
     }
 
@@ -159,6 +48,7 @@ impl Stepper for DryRunStepper {
 
 pub struct GrblStepper {
     connection: Box<dyn SerialPort>,
+    target_position: Point2<f64>,
 }
 
 impl GrblStepper {
@@ -171,7 +61,10 @@ impl GrblStepper {
         connection.write_all(b"\r\n\r\n").context("wake up GRBL")?;
         thread::sleep(Duration::from_millis(2000));
 
-        let mut stepper = Self { connection };
+        let mut stepper = Self {
+            connection,
+            target_position: Point2::new(0.0, 0.0),
+        };
         let _ = stepper.send_command("$X")?;
         Ok(stepper)
     }
@@ -256,9 +149,14 @@ impl Stepper for GrblStepper {
         Ok(())
     }
 
-    fn move_to_position(&mut self, x: f64, y: f64, feedrate: u32) -> Result<()> {
-        let x = x.clamp(0.0, ROBOT_MAX_X);
-        let y = y.clamp(0.0, ROBOT_MAX_Y);
+    fn move_to_position(&mut self, position: Point2<f64>, feedrate: u32) -> Result<()> {
+        let x = position.x.clamp(0.0, ROBOT_MAX_X);
+        let y = position.y.clamp(0.0, ROBOT_MAX_Y);
+
+        if (self.target_position.x - x).abs() < 1e-6 && (self.target_position.y - y).abs() < 1e-6 {
+            return Ok(());
+        }
+
         let cmd = format!("$J=G21G90X{:.2}Y{:.2}F{}", x, y, feedrate.max(1));
         let response = self.send_command(&cmd)?;
         if response.starts_with("error") {
