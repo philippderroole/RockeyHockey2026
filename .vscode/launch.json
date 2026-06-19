@@ -8,9 +8,9 @@
             "name": "Launch",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceRoot}/rust-controller/target/debug/rust-controller",
+            "program": "${workspaceRoot}/Strategy/target/debug/Strategy",
             "args": [],
-            "cwd": "${workspaceRoot}/rust-controller",
+            "cwd": "${workspaceRoot}/Strategy",
         }
     ]
 }

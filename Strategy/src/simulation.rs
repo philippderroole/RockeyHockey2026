@@ -1,24 +1,33 @@
 use nalgebra::{Point2, Vector2};
 
 use crate::{
-    config::{BOARD_HEIGHT, BOARD_WIDTH},
+    config::{
+        BOARD_HEIGHT, BOARD_WIDTH, GOAL_Y_MAX, GOAL_Y_MIN, PUCK_RADIUS, RESTING_PUCK_THRESHOLD,
+    },
     puck::Puck,
 };
 
 const WINDOW_MARGIN: f64 = 0.0;
-const PUCK_RADIUS: f64 = 10.0;
 
-pub fn predict_puck_path(
-    puck: &Puck,
-    launch_velocity: Vector2<f64>,
-    time_step_seconds: f64,
-    steps: usize,
-) -> Vec<Point2<f64>> {
+pub fn predict_puck_path(puck: &Puck) -> Vec<Point2<f64>> {
+    if puck.velocity().magnitude() < RESTING_PUCK_THRESHOLD {
+        return Vec::new();
+    }
+
+    let steps = ((0.01 * puck.velocity().magnitude()) as usize * 40).max(30);
+    let time_step_seconds = 0.02;
+
     let mut path = Vec::with_capacity(steps + 1);
 
     for step in 0..=steps {
         let time_seconds = step as f64 * time_step_seconds;
-        path.push(predict_puck_position(puck, time_seconds, launch_velocity));
+        let pos = predict_puck_position(puck, time_seconds, Vector2::new(0.0, 0.0));
+        path.push(pos);
+
+        // Stop predicting once the puck would hit the goal area.
+        if pos.x <= PUCK_RADIUS && pos.y >= GOAL_Y_MIN && pos.y <= GOAL_Y_MAX {
+            break;
+        }
     }
 
     path
@@ -71,7 +80,7 @@ fn predict_puck_position(
     launch_velocity: Vector2<f64>,
 ) -> Point2<f64> {
     simulate_puck_motion(
-        puck.position(),
+        Point2::new(puck.x() + PUCK_RADIUS, puck.y() + PUCK_RADIUS),
         puck.velocity() + launch_velocity,
         time_seconds,
         0.02,

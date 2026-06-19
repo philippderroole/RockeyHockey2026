@@ -8,12 +8,14 @@ use anyhow::{Context, Result};
 use nalgebra::Point2;
 use serde::Deserialize;
 
+#[derive(Debug)]
 pub enum DetectionTarget {
     Puck,
     Robot,
     Unknown,
 }
 
+#[derive(Debug)]
 pub struct Detection {
     pub target: DetectionTarget,
     pub position: Point2<f64>,
@@ -43,6 +45,7 @@ pub fn spawn_camera_listener(host: &str, port: u16) -> Result<Receiver<Vec<Detec
     socket
         .set_read_timeout(Some(Duration::from_millis(1000)))
         .context("set UDP read timeout")?;
+    socket.send(b"subscribe").context("send subscribe")?;
 
     let (tx, rx) = mpsc::channel();
 
@@ -79,19 +82,27 @@ fn parse_message(bytes: &[u8]) -> anyhow::Result<Vec<Detection>> {
     Ok(message
         .detections
         .into_iter()
-        .map(|detection| {
-            let target = match detection.target_name.as_str() {
-                "Puck" => DetectionTarget::Puck,
-                "Robot" => DetectionTarget::Robot,
-                _ => DetectionTarget::Unknown,
-            };
-            let position = Point2::new(detection.x, detection.y);
-            let timestamp = Instant::now();
-
-            Detection {
-                target,
-                position,
-                timestamp,
+        .map(|detection| match detection.target_name.as_str() {
+            "Puck" => Detection {
+                target: DetectionTarget::Puck,
+                position: Point2::new(detection.x - 15.0, detection.y - 89.0),
+                timestamp: Instant::now(),
+            },
+            "Robot" => Detection {
+                target: DetectionTarget::Robot,
+                position: Point2::new(detection.x - 30.0, detection.y - 94.0),
+                timestamp: Instant::now(),
+            },
+            _ => {
+                eprintln!(
+                    "Unknown target detected: {} at ({}, {})",
+                    detection.target_name, detection.x, detection.y
+                );
+                Detection {
+                    target: DetectionTarget::Unknown,
+                    position: Point2::new(detection.x - 15.0, detection.y - 89.0),
+                    timestamp: Instant::now(),
+                }
             }
         })
         .collect())

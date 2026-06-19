@@ -3,7 +3,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
-use nalgebra::Point2;
+use nalgebra::{Point2, distance};
 use serialport::SerialPort;
 
 use crate::config::{ROBOT_MAX_X, ROBOT_MAX_Y};
@@ -28,14 +28,10 @@ impl Stepper for DryRunStepper {
     }
 
     fn move_to_position(&mut self, position: Point2<f64>, _feedrate: u32) -> Result<()> {
-        let x = position.x;
-        let y = position.y;
-
-        if (self.target_position.x - x).abs() < 1e-6 && (self.target_position.y - y).abs() < 1e-6 {
+        if distance(&self.target_position, &position) < 0.0 {
             return Ok(());
         }
 
-        println!("[dry-run] move to ({x:.1}, {y:.1})");
         self.target_position = position;
         Ok(())
     }
@@ -153,10 +149,21 @@ impl Stepper for GrblStepper {
         let x = position.x.clamp(0.0, ROBOT_MAX_X);
         let y = position.y.clamp(0.0, ROBOT_MAX_Y);
 
-        if (self.target_position.x - x).abs() < 1e-6 && (self.target_position.y - y).abs() < 1e-6 {
+        if distance(&self.target_position, &position) < 30.0 {
             return Ok(());
         }
 
+        /*println!(
+            "target position: ({x:.1}, {y:.1}), current position: ({:.1}, {:.1})",
+            self.target_position.x, self.target_position.y
+        );
+        println!(
+            "distance to target: {:.1}",
+            distance(&self.target_position, &position)
+        );
+        println!("moving to ({x:.1}, {y:.1})");*/
+
+        self.target_position = position;
         let cmd = format!("$J=G21G90X{:.2}Y{:.2}F{}", x, y, feedrate.max(1));
         let response = self.send_command(&cmd)?;
         if response.starts_with("error") {
