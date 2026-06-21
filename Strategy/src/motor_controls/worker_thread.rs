@@ -59,6 +59,10 @@ impl Stepper for StepperHandle {
 
     fn move_to_position(&mut self, position: Point2<f64>, feedrate: u32) -> Result<()> {
         if self.try_send_move(StepperMoveCommand { position, feedrate }) {
+            println!(
+                "enqueued move command -> x={:.1} y={:.1} feedrate={}",
+                position.x, position.y, feedrate
+            );
             Ok(())
         } else {
             anyhow::bail!("stepper command queue full or disconnected")

@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use nalgebra::{Point2, distance};
 use serialport::SerialPort;
 
-use crate::config::{ROBOT_MAX_X, ROBOT_MAX_Y};
+use crate::config::{ROBOT_MAX_X, ROBOT_MAX_Y, ROBOT_TARGET_OFFSET};
 use crate::motor_controls::Stepper;
 
 pub struct DryRunStepper {
@@ -28,7 +28,12 @@ impl Stepper for DryRunStepper {
     }
 
     fn move_to_position(&mut self, position: Point2<f64>, _feedrate: u32) -> Result<()> {
-        if distance(&self.target_position, &position) < 0.0 {
+        let position = Point2::new(
+            position.x - ROBOT_TARGET_OFFSET,
+            position.y - ROBOT_TARGET_OFFSET,
+        );
+
+        if distance(&self.target_position, &position) < 30.0 {
             return Ok(());
         }
 
@@ -146,8 +151,10 @@ impl Stepper for GrblStepper {
     }
 
     fn move_to_position(&mut self, position: Point2<f64>, feedrate: u32) -> Result<()> {
-        let x = position.x.clamp(0.0, ROBOT_MAX_X);
-        let y = position.y.clamp(0.0, ROBOT_MAX_Y);
+        let position = Point2::new(
+            position.x - ROBOT_TARGET_OFFSET,
+            position.y - ROBOT_TARGET_OFFSET,
+        );
 
         if distance(&self.target_position, &position) < 30.0 {
             return Ok(());
@@ -162,6 +169,9 @@ impl Stepper for GrblStepper {
             distance(&self.target_position, &position)
         );
         println!("moving to ({x:.1}, {y:.1})");*/
+
+        let x = position.x.clamp(0.0, ROBOT_MAX_X);
+        let y = position.y.clamp(0.0, ROBOT_MAX_Y);
 
         self.target_position = position;
         let cmd = format!("$J=G21G90X{:.2}Y{:.2}F{}", x, y, feedrate.max(1));

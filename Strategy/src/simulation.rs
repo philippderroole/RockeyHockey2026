@@ -14,14 +14,14 @@ pub fn predict_puck_path(puck: &Puck) -> Vec<Point2<f64>> {
         return Vec::new();
     }
 
-    let steps = ((0.01 * puck.velocity().magnitude()) as usize * 40).max(30);
+    let steps = ((0.01 * puck.velocity().magnitude()) as usize * 40).min(20);
     let time_step_seconds = 0.02;
 
     let mut path = Vec::with_capacity(steps + 1);
 
     for step in 0..=steps {
         let time_seconds = step as f64 * time_step_seconds;
-        let pos = predict_puck_position(puck, time_seconds, Vector2::new(0.0, 0.0));
+        let pos = predict_puck_position(puck, time_seconds);
         path.push(pos);
 
         // Stop predicting once the puck would hit the goal area.
@@ -39,10 +39,10 @@ fn simulate_puck_motion(
     total_time_seconds: f64,
     step_seconds: f64,
 ) -> (Point2<f64>, Vector2<f64>) {
-    let min_x = WINDOW_MARGIN + PUCK_RADIUS;
-    let max_x = WINDOW_MARGIN + BOARD_HEIGHT - PUCK_RADIUS;
-    let min_y = WINDOW_MARGIN + PUCK_RADIUS;
-    let max_y = WINDOW_MARGIN + BOARD_WIDTH - PUCK_RADIUS;
+    let min_x = WINDOW_MARGIN;
+    let max_x = WINDOW_MARGIN + BOARD_HEIGHT;
+    let min_y = WINDOW_MARGIN;
+    let max_y = WINDOW_MARGIN + BOARD_WIDTH;
 
     let mut remaining_time = total_time_seconds.max(0.0);
     let step_seconds = step_seconds.max(0.001);
@@ -74,14 +74,10 @@ fn simulate_puck_motion(
     (position, velocity)
 }
 
-fn predict_puck_position(
-    puck: &Puck,
-    time_seconds: f64,
-    launch_velocity: Vector2<f64>,
-) -> Point2<f64> {
+fn predict_puck_position(puck: &Puck, time_seconds: f64) -> Point2<f64> {
     simulate_puck_motion(
-        Point2::new(puck.x() + PUCK_RADIUS, puck.y() + PUCK_RADIUS),
-        puck.velocity() + launch_velocity,
+        Point2::new(puck.x(), puck.y()),
+        puck.velocity(),
         time_seconds,
         0.02,
     )

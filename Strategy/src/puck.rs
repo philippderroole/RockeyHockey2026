@@ -55,6 +55,10 @@ impl Puck {
         self.velocity
     }
 
+    pub fn set_velocity(&mut self, velocity: Vector2<f64>) {
+        self.velocity = velocity;
+    }
+
     fn estimate_velocity_from_history(&self) -> Vector2<f64> {
         if self.detection_history.len() < 2 {
             return Vector2::new(0.0, 0.0);
