@@ -37,12 +37,12 @@ impl Stepper for DryRunStepper {
             return Ok(());
         }
 
-        self.target_position = position;
-        Ok(())
-    }
+        println!(
+            "[dry-run] move to ({:.1}, {:.1}) from ({:.1}, {:.1})",
+            position.x, position.y, self.target_position.x, self.target_position.y
+        );
 
-    fn stop(&mut self) -> Result<()> {
-        println!("[dry-run] stop");
+        self.target_position = position;
         Ok(())
     }
 }
@@ -179,13 +179,6 @@ impl Stepper for GrblStepper {
         if response.starts_with("error") {
             anyhow::bail!("GRBL error on move command: {response}");
         }
-        Ok(())
-    }
-
-    fn stop(&mut self) -> Result<()> {
-        self.connection
-            .write_all(&[0x85])
-            .context("send GRBL jog cancel")?;
         Ok(())
     }
 }

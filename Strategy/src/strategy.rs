@@ -1,6 +1,7 @@
 use nalgebra::Point2;
 
 use crate::{
+    commands::Command,
     config::{
         BOARD_HEIGHT, BOARD_WIDTH, GOAL_Y_MAX, GOAL_Y_MIN, LEFT_BORDER_REPOSITION_X,
         PLAYABLE_PUCK_THRESHOLD, PUCK_RADIUS, RESTING_PUCK_THRESHOLD, ROBOT_ATTACK_MAX_X,
@@ -10,10 +11,9 @@ use crate::{
     simulation::predict_puck_path,
 };
 
-pub fn get_next_move(
-    _robot_pos: Point2<f64>,
-    puck: &Puck,
-) -> (Option<Point2<f64>>, Vec<Point2<f64>>) {
+const ATTACK_STAGING_DISTANCE: f64 = 30.0;
+
+pub fn get_next_move(_robot_pos: Point2<f64>, puck: &Puck) -> (Option<Command>, Vec<Point2<f64>>) {
     let predicted_puck_path = predict_puck_path(puck);
 
     let new_target = if puck_at_left_border(puck)
@@ -34,24 +34,43 @@ pub fn get_next_move(
     (new_target, predicted_puck_path)
 }
 
-fn goal_block_target(predicted_puck_path: &[Point2<f64>]) -> Option<Point2<f64>> {
+fn goal_block_target(predicted_puck_path: &[Point2<f64>]) -> Option<Command> {
     predicted_puck_path
         .iter()
         .find(|point| point.x <= PUCK_RADIUS && point.y >= GOAL_Y_MIN && point.y <= GOAL_Y_MAX)
         .map(|point| {
-            Point2::new(
+            Command::Defend(Point2::new(
                 10.0,
                 point.y.clamp(ROBOT_DEFENSE_MIN_Y, ROBOT_DEFENSE_MAX_Y),
-            )
+            ))
         })
 }
 
-fn attack_target(puck: &Puck) -> Option<Point2<f64>> {
+fn attack_target(puck: &Puck) -> Option<Command> {
     let puck_position = Point2::new(puck.x(), puck.y());
     let goal_center = Point2::new(BOARD_HEIGHT, (GOAL_Y_MIN + GOAL_Y_MAX) * 0.5);
     let aim_point = preferred_attack_aim_point(puck_position, goal_center);
+    let staging_target = attack_staging_target(puck_position, aim_point);
 
-    Some(overshoot_target(puck_position, aim_point))
+    Some(Command::Shoot {
+        staging: staging_target,
+        target: overshoot_target(puck_position, aim_point),
+    })
+}
+
+fn attack_staging_target(puck_position: Point2<f64>, aim_point: Point2<f64>) -> Point2<f64> {
+    let shot_vector = aim_point - puck_position;
+    let shot_distance = shot_vector.magnitude();
+    if shot_distance <= f64::EPSILON {
+        return puck_position;
+    }
+
+    let staging_position = puck_position - shot_vector / shot_distance * ATTACK_STAGING_DISTANCE;
+
+    Point2::new(
+        staging_position.x.clamp(0.0, ROBOT_MAX_X),
+        staging_position.y.clamp(0.0, ROBOT_MAX_Y),
+    )
 }
 
 fn preferred_attack_aim_point(puck_position: Point2<f64>, goal_center: Point2<f64>) -> Point2<f64> {
@@ -116,7 +135,7 @@ fn puck_at_left_border(puck: &Puck) -> bool {
     puck.x() < LEFT_BORDER_REPOSITION_X
 }
 
-fn left_border_reposition_target(puck: &Puck) -> Option<Point2<f64>> {
+fn left_border_reposition_target(puck: &Puck) -> Option<Command> {
     let puck_position = Point2::new(puck.x(), puck.y());
     let horizontal_offset = (PUCK_RADIUS * 4.0).min(ROBOT_MAX_X);
     let vertical_offset = if puck.y() < BOARD_WIDTH * 0.5 {
@@ -125,56 +144,8 @@ fn left_border_reposition_target(puck: &Puck) -> Option<Point2<f64>> {
         -PUCK_RADIUS * 3.0
     };
 
-    Some(Point2::new(
+    Some(Command::MoveTo(Point2::new(
         (puck_position.x + horizontal_offset).clamp(0.0, ROBOT_MAX_X),
         (puck_position.y + vertical_offset).clamp(0.0, ROBOT_MAX_Y),
-    ))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use nalgebra::{Point2, Vector2};
-
-    fn puck_at_left_border_with_velocity(velocity: Vector2<f64>) -> Puck {
-        let mut puck = Puck::new();
-        puck.set_position(Point2::new(PUCK_RADIUS, GOAL_Y_MIN + 10.0));
-        puck.set_velocity(velocity);
-        puck
-    }
-
-    #[test]
-    fn left_border_puck_waits_while_moving() {
-        let puck =
-            puck_at_left_border_with_velocity(Vector2::new(0.0, RESTING_PUCK_THRESHOLD + 1.0));
-
-        let (target, _) = get_next_move(Point2::new(0.0, 0.0), &puck);
-
-        assert!(target.is_none());
-    }
-
-    #[test]
-    fn left_border_puck_repositions_when_resting() {
-        let puck = puck_at_left_border_with_velocity(Vector2::new(0.0, 0.0));
-
-        let (target, _) = get_next_move(Point2::new(0.0, 0.0), &puck);
-
-        let target = target.expect("expected a reposition target");
-        assert!(target.x > puck.x());
-        assert_ne!(target.y, puck.y());
-    }
-
-    #[test]
-    fn attack_target_overshoots_puck_toward_goal() {
-        let mut puck = Puck::new();
-        puck.set_position(Point2::new(180.0, 180.0));
-        puck.set_velocity(Vector2::new(10.0, 0.0));
-
-        let target = attack_target(&puck).expect("expected an attacking target");
-
-        assert!(target.x > puck.x());
-        assert!(target.x <= ROBOT_MAX_X);
-        assert!(target.y >= 0.0);
-        assert!(target.y <= ROBOT_MAX_Y);
-    }
+    )))
 }

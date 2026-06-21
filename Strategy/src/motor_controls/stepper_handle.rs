@@ -4,21 +4,21 @@ use std::sync::mpsc::{self, SyncSender, TryRecvError, TrySendError};
 use std::thread;
 
 use anyhow::{Context, Result};
-use nalgebra::Point2;
 
+use crate::commands::Command;
 use crate::config::COMMAND_QUEUE_CAPACITY;
-use crate::motor_controls::{Stepper, StepperCommand, StepperMoveCommand};
+use crate::motor_controls::Stepper;
 
 #[derive(Clone)]
 pub struct StepperHandle {
-    pub(crate) tx: SyncSender<StepperCommand>,
+    pub tx: SyncSender<Command>,
     queue_depth: Arc<AtomicUsize>,
 }
 
 impl StepperHandle {
-    pub fn try_send_move(&self, command: StepperMoveCommand) -> bool {
+    pub fn try_send_move(&self, command: Command) -> bool {
         self.queue_depth.fetch_add(1, Ordering::Relaxed);
-        match self.tx.try_send(StepperCommand::Move(command)) {
+        match self.tx.try_send(command) {
             Ok(()) => true,
             Err(TrySendError::Full(_)) => {
                 decrement_queue_depth(&self.queue_depth);
@@ -31,55 +31,24 @@ impl StepperHandle {
         }
     }
 
-    pub fn try_send_stop(&self) -> bool {
-        self.queue_depth.fetch_add(1, Ordering::Relaxed);
-        match self.tx.try_send(StepperCommand::Stop) {
-            Ok(()) => true,
-            Err(TrySendError::Full(_)) => {
-                decrement_queue_depth(&self.queue_depth);
-                false
-            }
-            Err(TrySendError::Disconnected(_)) => {
-                decrement_queue_depth(&self.queue_depth);
-                false
-            }
+    pub fn execute(&self, command: Command) {
+        if !self.try_send_move(command) {
+            eprintln!("failed to send stepper command: queue is full or worker thread has stopped");
         }
     }
-}
 
-impl Stepper for StepperHandle {
-    fn calibrate(&mut self) -> Result<()> {
+    pub fn calibrate(&mut self) -> Result<()> {
         let (response_tx, response_rx) = mpsc::channel();
         self.tx
-            .send(StepperCommand::Calibrate(response_tx))
+            .send(Command::Calibrate(response_tx))
             .context("enqueue calibrate command")?;
 
         response_rx.recv().context("wait for calibrate command")?
     }
-
-    fn move_to_position(&mut self, position: Point2<f64>, feedrate: u32) -> Result<()> {
-        if self.try_send_move(StepperMoveCommand { position, feedrate }) {
-            println!(
-                "enqueued move command -> x={:.1} y={:.1} feedrate={}",
-                position.x, position.y, feedrate
-            );
-            Ok(())
-        } else {
-            anyhow::bail!("stepper command queue full or disconnected")
-        }
-    }
-
-    fn stop(&mut self) -> Result<()> {
-        if self.try_send_stop() {
-            Ok(())
-        } else {
-            anyhow::bail!("stepper command queue full or disconnected")
-        }
-    }
 }
 
 pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHandle> {
-    let (tx, rx) = mpsc::sync_channel::<StepperCommand>(COMMAND_QUEUE_CAPACITY);
+    let (tx, rx) = mpsc::sync_channel::<Command>(COMMAND_QUEUE_CAPACITY);
     let queue_depth = Arc::new(AtomicUsize::new(0));
     let worker_depth = Arc::clone(&queue_depth);
 
@@ -101,25 +70,40 @@ pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHand
                 }
 
                 match command {
-                    StepperCommand::Calibrate(response_tx) => {
+                    Command::Calibrate(response_tx) => {
                         let result = stepper.calibrate();
                         if let Err(err) = response_tx.send(result) {
                             eprintln!("stepper worker failed to report calibration result: {err}");
                         }
                     }
-                    StepperCommand::Move(command) => {
-                        if let Err(err) =
-                            stepper.move_to_position(command.position, command.feedrate)
-                        {
+                    Command::MoveTo(position) => {
+                        if let Err(err) = stepper.move_to_position(position, 1000) {
                             eprintln!(
                                 "stepper worker failed for -> x={:.1} y={:.1}: {err}",
-                                command.position.x, command.position.y
+                                position.x, position.y
                             );
                         }
                     }
-                    StepperCommand::Stop => {
-                        if let Err(err) = stepper.stop() {
-                            eprintln!("stepper worker failed to stop motion: {err}");
+                    Command::Shoot { staging, target } => {
+                        if let Err(err) = stepper.move_to_position(staging, 1000) {
+                            eprintln!(
+                                "stepper worker failed for staging position -> x={:.1} y={:.1}: {err}",
+                                staging.x, staging.y
+                            );
+                        }
+                        if let Err(err) = stepper.move_to_position(target, 1500) {
+                            eprintln!(
+                                "stepper worker failed for target position -> x={:.1} y={:.1}: {err}",
+                                target.x, target.y
+                            );
+                        }
+                    }
+                    Command::Defend(position) => {
+                        if let Err(err) = stepper.move_to_position(position, 1000) {
+                            eprintln!(
+                                "stepper worker failed for -> x={:.1} y={:.1}: {err}",
+                                position.x, position.y
+                            );
                         }
                     }
                 }

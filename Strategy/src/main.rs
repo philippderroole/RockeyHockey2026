@@ -4,19 +4,21 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 
 use crate::{
     camera::{Detection, DetectionTarget, spawn_camera_listener},
+    commands::Command,
     config::{
         BOARD_HEIGHT, BOARD_WIDTH, DEFAULT_CAMERA_HOST, DEFAULT_CAMERA_PORT,
         DEFAULT_STEPPER_BAUDRATE, DEFAULT_STEPPER_PORT, GOAL_Y_MAX, GOAL_Y_MIN, PUCK_RADIUS,
         SIMULATOR_BORDER, WINDOW_HEIGHT, WINDOW_WIDTH,
     },
-    motor_controls::{DryRunStepper, GrblStepper, Stepper, spawn_stepper_worker},
+    motor_controls::{DryRunStepper, GrblStepper, StepperHandle, spawn_stepper_worker},
     puck::Puck,
 };
 use clap::Parser;
-use nalgebra::Point2;
+use nalgebra::{Point2, distance};
 use piston_window::{texture::TextureSettings, *};
 
 mod camera;
+mod commands;
 mod config;
 mod motor_controls;
 mod puck;
@@ -43,13 +45,13 @@ struct Cli {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    let mut stepper: Box<dyn Stepper> = if cli.dry_run {
-        Box::new(spawn_stepper_worker(Box::new(DryRunStepper::new()))?)
+    let mut stepper = if cli.dry_run {
+        spawn_stepper_worker(Box::new(DryRunStepper::new()))?
     } else {
-        Box::new(spawn_stepper_worker(Box::new(GrblStepper::connect(
+        spawn_stepper_worker(Box::new(GrblStepper::connect(
             &cli.stepper_port,
             cli.stepper_baudrate,
-        )?))?)
+        )?))?
     };
 
     stepper.calibrate()?;
@@ -64,28 +66,29 @@ fn main() -> anyhow::Result<()> {
 struct Board {
     robot_current_position: Point2<f64>,
     robot_target_position: Point2<f64>,
+    last_commanded_target: Option<Point2<f64>>,
     puck: Puck,
     predicted_puck_path: Vec<Point2<f64>>,
     rx: Receiver<Vec<Detection>>,
     cursor_position: Point2<f64>,
     velocity_drag_start: Option<Point2<f64>>,
-    stepper: Box<dyn Stepper>,
+    stepper: StepperHandle,
+    current_command: Option<Command>,
 }
 
 impl Board {
-    pub fn new(
-        rx: Receiver<Vec<Detection>>,
-        stepper: Box<dyn Stepper + 'static>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(rx: Receiver<Vec<Detection>>, stepper: StepperHandle) -> anyhow::Result<Self> {
         Ok(Board {
             robot_current_position: Point2::new(100.0, 200.0),
             robot_target_position: Point2::new(100.0, 200.0),
+            last_commanded_target: None,
             puck: Puck::new(),
             predicted_puck_path: Vec::new(),
             rx,
             cursor_position: Point2::new(0.0, 0.0),
             velocity_drag_start: None,
             stepper,
+            current_command: None,
         })
     }
 
@@ -166,11 +169,9 @@ impl Board {
         self.predicted_puck_path = predicted_puck_path;
 
         if let Some(next_move) = next_move {
-            Self::execute_move(
-                &mut self.stepper,
-                &mut self.robot_target_position,
-                next_move,
-            )?;
+            self.execute(next_move)?;
+        } else {
+            self.last_commanded_target = None;
         }
 
         Ok(())
@@ -304,18 +305,38 @@ impl Board {
         Ok(())
     }
 
-    fn execute_move(
-        stepper: &mut Box<dyn Stepper + 'static>,
-        robot_target_position: &mut Point2<f64>,
-        target: Point2<f64>,
-    ) -> Result<(), anyhow::Error> {
-        *robot_target_position = target;
+    fn execute(&mut self, command: Command) -> Result<(), anyhow::Error> {
+        self.robot_target_position = command.get_target_position();
 
-        let motor_target = Point2::new(
-            (target.x - 2.0) * 138.0 / 106.0,
-            (target.y - 2.0) * 330.0 / 306.0,
-        );
+        if self
+            .current_command
+            .as_ref()
+            .map(|c| distance(&c.get_target_position(), &command.get_target_position()) < 30.0)
+            .unwrap_or(false)
+        {
+            return Ok(());
+        }
 
-        stepper.move_to_position(motor_target, 30000)
+        self.current_command = Some(command.clone());
+        let command = match command {
+            Command::MoveTo(position) => Command::Defend(map_to_motor_coordinates(position)),
+            Command::Shoot { staging, target } => Command::Shoot {
+                staging: map_to_motor_coordinates(staging),
+                target: map_to_motor_coordinates(target),
+            },
+            Command::Defend(position) => Command::Defend(map_to_motor_coordinates(position)),
+            Command::Calibrate(response_tx) => Command::Calibrate(response_tx),
+        };
+
+        self.stepper.execute(command);
+
+        Ok(())
     }
+}
+
+fn map_to_motor_coordinates(position: Point2<f64>) -> Point2<f64> {
+    Point2::new(
+        (position.x - 2.0) * 138.0 / 106.0,
+        (position.y - 2.0) * 330.0 / 306.0,
+    )
 }
