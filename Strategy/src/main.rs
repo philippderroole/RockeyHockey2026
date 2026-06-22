@@ -105,41 +105,18 @@ impl Board {
             TextureSettings::new(),
         )?;
 
-        let mut events = Events::new(EventSettings::new().lazy(true).ups(60).max_fps(60));
+        let mut events = Events::new(EventSettings::new().ups(60).max_fps(60));
         while let Some(e) = events.next(&mut window) {
             self.update(&e)?;
-            self.draw(&e, &mut window, &mut glyphs)?;
+            if e.render_args().is_some() {
+                self.draw(&e, &mut window, &mut glyphs)?;
+            }
         }
 
         Ok(())
     }
 
     pub fn update(&mut self, e: &Event) -> anyhow::Result<()> {
-        match self.rx.try_recv() {
-            Ok(detections) => {
-                for detection in detections {
-                    match detection.target {
-                        DetectionTarget::Puck => {
-                            self.puck.update(detection.position, detection.timestamp);
-                        }
-                        DetectionTarget::Robot => {
-                            self.robot_current_position = detection.position;
-                        }
-                        DetectionTarget::Unknown => {
-                            println!(
-                                "Unknown target detected at ({}, {})",
-                                detection.position.x, detection.position.y
-                            );
-                        }
-                    }
-                }
-            }
-            Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => {
-                anyhow::bail!("camera channel disconnected");
-            }
-        }
-
         e.mouse_cursor(|pos| {
             self.cursor_position = Point2::new(pos[0], pos[1]);
         });
@@ -161,6 +138,37 @@ impl Board {
             let velocity = (self.cursor_position - start_position) * VELOCITY_DRAW_SCALE;
             if velocity.magnitude() > f64::EPSILON {
                 self.puck.set_velocity(velocity);
+            }
+        }
+
+        if e.update_args().is_none() {
+            return Ok(());
+        }
+
+        let mut latest_detections = None;
+        loop {
+            match self.rx.try_recv() {
+                Ok(detections) => {
+                    latest_detections = Some(detections);
+                }
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => {
+                    anyhow::bail!("camera channel disconnected");
+                }
+            }
+        }
+
+        if let Some(detections) = latest_detections {
+            for detection in detections {
+                match detection.target {
+                    DetectionTarget::Puck => {
+                        self.puck.update(detection.position, detection.timestamp);
+                    }
+                    DetectionTarget::Robot => {
+                        self.robot_current_position = detection.position;
+                    }
+                    DetectionTarget::Unknown => {}
+                }
             }
         }
 

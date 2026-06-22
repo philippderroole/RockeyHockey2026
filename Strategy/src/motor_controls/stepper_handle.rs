@@ -77,7 +77,8 @@ pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHand
                         }
                     }
                     Command::MoveTo(position) => {
-                        if let Err(err) = stepper.move_to_position(position, 1000) {
+                        println!("stepper worker received move command -> x={:.1} y={:.1}", position.x, position.y);
+                        if let Err(err) = stepper.move_to_position(position, 20000) {
                             eprintln!(
                                 "stepper worker failed for -> x={:.1} y={:.1}: {err}",
                                 position.x, position.y
@@ -85,13 +86,14 @@ pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHand
                         }
                     }
                     Command::Shoot { staging, target } => {
-                        if let Err(err) = stepper.move_to_position(staging, 1000) {
+                        println!("stepper worker received shoot command -> staging: x={:.1} y={:.1}, target: x={:.1} y={:.1}", staging.x, staging.y, target.x, target.y);
+                        if let Err(err) = stepper.move_to_position(staging, 30000) {
                             eprintln!(
                                 "stepper worker failed for staging position -> x={:.1} y={:.1}: {err}",
                                 staging.x, staging.y
                             );
                         }
-                        if let Err(err) = stepper.move_to_position(target, 1500) {
+                        if let Err(err) = stepper.move_to_position(target, 50000) {
                             eprintln!(
                                 "stepper worker failed for target position -> x={:.1} y={:.1}: {err}",
                                 target.x, target.y
@@ -99,7 +101,8 @@ pub fn spawn_stepper_worker(mut stepper: Box<dyn Stepper>) -> Result<StepperHand
                         }
                     }
                     Command::Defend(position) => {
-                        if let Err(err) = stepper.move_to_position(position, 1000) {
+                        println!("stepper worker received defend command -> x={:.1} y={:.1}", position.x, position.y);
+                        if let Err(err) = stepper.move_to_position(position, 20000) {
                             eprintln!(
                                 "stepper worker failed for -> x={:.1} y={:.1}: {err}",
                                 position.x, position.y

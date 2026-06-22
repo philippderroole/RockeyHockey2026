@@ -14,7 +14,7 @@ pub fn predict_puck_path(puck: &Puck) -> Vec<Point2<f64>> {
         return Vec::new();
     }
 
-    let steps = ((0.01 * puck.velocity().magnitude()) as usize * 40).min(20);
+    let steps = ((0.03 * puck.velocity().magnitude()) as usize * 40).min(20);
     let time_step_seconds = 0.02;
 
     let mut path = Vec::with_capacity(steps + 1);

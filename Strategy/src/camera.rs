@@ -8,6 +8,8 @@ use anyhow::{Context, Result};
 use nalgebra::Point2;
 use serde::Deserialize;
 
+use crate::config::PUCK_RADIUS;
+
 #[derive(Debug)]
 pub enum DetectionTarget {
     Puck,
@@ -85,7 +87,10 @@ fn parse_message(bytes: &[u8]) -> anyhow::Result<Vec<Detection>> {
         .map(|detection| match detection.target_name.as_str() {
             "Puck" => Detection {
                 target: DetectionTarget::Puck,
-                position: Point2::new(detection.x - 15.0, detection.y - 89.0),
+                position: Point2::new(
+                    detection.x - 15.0 + PUCK_RADIUS,
+                    detection.y - 89.0 + PUCK_RADIUS,
+                ),
                 timestamp: Instant::now(),
             },
             "Robot" => Detection {

@@ -12,13 +12,13 @@ pub const ROBOT_MAX_Y: f64 = 360.0;
 // The tracker is not perfectly centered on the robot, so we need to offset the target position to compensate for that
 pub const ROBOT_TARGET_OFFSET: f64 = 7.5;
 
-pub const ROBOT_DEFENSE_MIN_Y: f64 = 135.0;
+pub const ROBOT_DEFENSE_MIN_Y: f64 = 150.0;
 pub const ROBOT_DEFENSE_MAX_Y: f64 = 215.0;
 
 pub const ROBOT_ATTACK_MAX_X: f64 = 300.0;
 
 // If the puck is moving slower than this speed, we consider it "playable" and will try to hit it
-pub const PLAYABLE_PUCK_THRESHOLD: f64 = 200.0;
+pub const PLAYABLE_PUCK_THRESHOLD: f64 = 100.0;
 
 pub const RESTING_PUCK_THRESHOLD: f64 = 100.0;
 pub const LEFT_BORDER_REPOSITION_X: f64 = 80.0;
