@@ -1,4 +1,4 @@
-from StepperController import *
+from Motor import *
 import time
 
 # Run from root project directory with: python -m StepperController.test_worker, because of Constants.py dependency

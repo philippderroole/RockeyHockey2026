@@ -1,4 +1,4 @@
-from StepperController import *
+from Motor import *
 import time
 
 if __name__ == "__main__":
